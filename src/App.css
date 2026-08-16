@@ -10,6 +10,22 @@
   color-scheme: dark;
 }
 
+:root[data-accent='mint'] {
+  --accent: #10b981;
+}
+
+:root[data-accent='purple'] {
+  --accent: #8b5cf6;
+}
+
+:root[data-accent='orange'] {
+  --accent: #f97316;
+}
+
+:root[data-accent='pink'] {
+  --accent: #ec4899;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -618,6 +634,96 @@ body {
   font-size: 14px;
 }
 
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.gear {
+  flex: 0 0 auto;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(5, 8, 12, 0.65);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  animation: promo-fade 0.2s ease;
+}
+
+.settings-panel {
+  width: 100%;
+  max-width: 360px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 18px 18px 22px;
+  animation: promo-pop 0.25s ease;
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.settings-head .promo-x {
+  position: static;
+}
+
+.settings-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.settings-sec {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 14px 0 6px;
+  margin-top: 10px;
+}
+
+.settings-sec-title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.accent-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.accent-dot {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.accent-dot.on {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
 .notify-row {
   display: flex;
   align-items: center;
@@ -707,6 +813,12 @@ body {
 
 .feedback-btn:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+.family-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
 }
 
 .feedback-btn.kakao {

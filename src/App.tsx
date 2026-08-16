@@ -15,9 +15,9 @@ import { loadFavorites, saveFavorites, type Place } from './lib/places'
 import { PARTNERS_NOTICE, partnerPicks, partnersActive } from './lib/partners'
 import RadarMap from './components/RadarMap'
 import KmaNowcast from './components/KmaNowcast'
-import NotifyCard from './components/NotifyCard'
 import PlaceBar from './components/PlaceBar'
 import PromoLayer from './components/PromoLayer'
+import Settings from './components/Settings'
 import { fetchTodayVisitors } from './lib/track'
 import './App.css'
 
@@ -156,11 +156,14 @@ export default function App() {
           <h1 className="brand">무능한 날씨예측기</h1>
           {visitors !== null && <span className="visitors">👀 오늘 {visitors}명 다녀갔어요</span>}
         </div>
-        <button type="button" className="loc" onClick={() => selectPlace(selectedId)} title="새로고침">
-          {selectedId === 'current' ? '📍' : favorites.some((f) => f.id === selectedId) ? '⭐' : '🔍'}{' '}
-          {loc.label}{' '}
-          {selectedId === 'current' && loc.isFallback && <em>(눌러서 내 위치 사용)</em>}
-        </button>
+        <div className="top-right">
+          <button type="button" className="loc" onClick={() => selectPlace(selectedId)} title="새로고침">
+            {selectedId === 'current' ? '📍' : favorites.some((f) => f.id === selectedId) ? '⭐' : '🔍'}{' '}
+            {loc.label}{' '}
+            {selectedId === 'current' && loc.isFallback && <em>(눌러서 내 위치 사용)</em>}
+          </button>
+          <Settings loc={{ lat: loc.lat, lon: loc.lon, label: loc.label }} />
+        </div>
       </header>
 
       <PlaceBar
@@ -300,8 +303,6 @@ export default function App() {
 
       <KmaNowcast />
 
-      <NotifyCard loc={{ lat: loc.lat, lon: loc.lon, label: loc.label }} />
-
       <footer className="foot">
         <a
           className="feedback-btn kakao"
@@ -319,6 +320,12 @@ export default function App() {
           ✉️ 메일로 보내기
         </a>
         <p className="muted small">문의: kdy7854@naver.com</p>
+        <p className="muted small">
+          패밀리 사이트:{' '}
+          <a className="family-link" href="https://doyeonkr.github.io/our-days/" target="_blank" rel="noreferrer">
+            OUR-DAYS (커플 앱)
+          </a>
+        </p>
         {partnersActive() && <p className="muted small">{PARTNERS_NOTICE}</p>}
         <p className="muted small">데이터: 기상청 · Open-Meteo · RainViewer · © OpenStreetMap</p>
       </footer>

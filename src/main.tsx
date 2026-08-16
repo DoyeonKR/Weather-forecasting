@@ -2,8 +2,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import { trackVisit } from './lib/track.ts'
+import { applySavedAccent } from './components/Settings.tsx'
 
 trackVisit()
+applySavedAccent()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

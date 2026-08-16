@@ -45,6 +45,8 @@ interface OpenMeteoResponse {
     precipitation_probability_max: (number | null)[]
     weather_code: number[]
     uv_index_max: (number | null)[]
+    wind_speed_10m_max: (number | null)[]
+    wind_gusts_10m_max: (number | null)[]
   }
 }
 
@@ -55,6 +57,8 @@ function dayStats(d: OpenMeteoResponse['daily'], i: number): DayStats {
     precipSum: d.precipitation_sum[i],
     precipProbMax: d.precipitation_probability_max[i],
     code: d.weather_code[i],
+    windMax: d.wind_speed_10m_max[i],
+    gustMax: d.wind_gusts_10m_max[i],
   }
 }
 
@@ -69,7 +73,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
   url.searchParams.set('hourly', 'temperature_2m,precipitation')
   url.searchParams.set(
     'daily',
-    'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,uv_index_max',
+    'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,uv_index_max,wind_speed_10m_max,wind_gusts_10m_max',
   )
   const res = await fetch(url)
   if (!res.ok) throw new Error(`날씨 API 오류 (${res.status})`)
