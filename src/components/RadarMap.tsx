@@ -33,14 +33,16 @@ const GRID_STEP = 0.25 // ≈ 25km 간격 (전체 ±2.1° 커버)
 const FORECAST_HOURS = 6
 const FORECAST_STEPS = FORECAST_HOURS * 4 // 15분 단위
 
-/** mm/h → RGBA (레이더 팔레트 느낌) */
+/** mm/h → RGBA — RainViewer Universal Blue 실제 타일에서 추출한 팔레트와 동일 */
 function rgbaFor(mmPerHour: number): [number, number, number, number] {
   if (mmPerHour < 0.1) return [0, 0, 0, 0]
-  if (mmPerHour < 0.5) return [116, 187, 250, 150]
-  if (mmPerHour < 1.5) return [56, 146, 245, 185]
-  if (mmPerHour < 4) return [23, 98, 242, 215]
-  if (mmPerHour < 10) return [109, 61, 240, 230]
-  return [192, 38, 211, 240]
+  if (mmPerHour < 0.3) return [195, 180, 129, 140] // 이슬비 헤이즈
+  if (mmPerHour < 0.8) return [136, 221, 238, 255]
+  if (mmPerHour < 2) return [108, 209, 235, 255]
+  if (mmPerHour < 4) return [81, 197, 232, 255]
+  if (mmPerHour < 7) return [54, 186, 229, 255]
+  if (mmPerHour < 12) return [27, 174, 226, 255]
+  return [11, 148, 205, 255]
 }
 
 function timeLabel(epochSec: number): string {
@@ -249,7 +251,7 @@ export default function RadarMap({ lat, lon }: Props) {
       l.setOpacity(item.kind === 'radar' && j === item.layerIdx ? RADAR_OPACITY : 0),
     )
     forecastLayersRef.current.forEach((o, j) =>
-      o.setOpacity(item.kind === 'forecast' && j === item.layerIdx ? 0.8 : 0),
+      o.setOpacity(item.kind === 'forecast' && j === item.layerIdx ? RADAR_OPACITY : 0),
     )
   }, [idx, timeline])
 
