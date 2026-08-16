@@ -26,10 +26,49 @@ body {
   max-width: 520px;
   margin: 0 auto;
   padding: 16px 16px 32px;
+  padding-top: calc(16px + env(safe-area-inset-top));
   display: flex;
   flex-direction: column;
   gap: 14px;
   min-height: 100dvh;
+  transition: background 0.8s ease;
+}
+
+/* ── 날씨 배경 테마 ───────────────────────────── */
+.bg-loading {
+  background: var(--bg);
+}
+
+.bg-clear-day {
+  background: linear-gradient(180deg, #1d5fa8 0%, #16334f 45%, #0e131a 100%);
+}
+
+.bg-partly-day {
+  background: linear-gradient(180deg, #38618c 0%, #223448 50%, #0e131a 100%);
+}
+
+.bg-clear-night {
+  background: linear-gradient(180deg, #101433 0%, #0b0e1f 50%, #08090f 100%);
+}
+
+.bg-cloudy {
+  background: linear-gradient(180deg, #3d4a5a 0%, #232c37 50%, #0e131a 100%);
+}
+
+.bg-rain {
+  background: linear-gradient(180deg, #1d3648 0%, #14222e 50%, #0a0f14 100%);
+}
+
+.bg-snow {
+  background: linear-gradient(180deg, #5a6b80 0%, #2b3644 50%, #10151c 100%);
+}
+
+.bg-fog {
+  background: linear-gradient(180deg, #46505a 0%, #262d34 50%, #101418 100%);
+}
+
+.bg-thunder {
+  background: linear-gradient(180deg, #33255c 0%, #1d1735 50%, #0b0e13 100%);
 }
 
 .shell.center {
@@ -69,10 +108,142 @@ body {
 }
 
 .card {
-  background: var(--card);
-  border: 1px solid var(--line);
+  background: rgba(20, 27, 37, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   padding: 18px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ── 위치 칩 바 ───────────────────────────── */
+.placebar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+  background: rgba(20, 27, 37, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 7px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+.chip.ghost {
+  color: var(--sub);
+  border-style: dashed;
+}
+
+.chip .chip-name {
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
+.chip-x {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 50%;
+  color: inherit;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.search-panel {
+  background: rgba(20, 27, 37, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 10px;
+  backdrop-filter: blur(8px);
+}
+
+.search-row {
+  display: flex;
+  gap: 8px;
+}
+
+.search-input {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 15px;
+  padding: 10px 12px;
+  min-width: 0;
+}
+
+.search-input::placeholder {
+  color: var(--sub);
+}
+
+.search-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 0 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.search-results {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-results button {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-size: 14px;
+  padding: 10px 6px;
+  cursor: pointer;
+}
+
+.search-results button:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .hero-main {
@@ -203,18 +374,19 @@ body {
   background: #0a0e13;
 }
 
-.radar-controls {
-  position: absolute;
-  left: 8px;
-  bottom: 8px;
-  z-index: 1000;
+.radar-bar {
+  background: rgba(14, 19, 26, 0.92);
+  border-top: 1px solid var(--line);
+  padding: 8px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.radar-bar-top {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(14, 19, 26, 0.85);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 4px 12px 4px 4px;
+  gap: 10px;
 }
 
 .radar-btn {
@@ -222,21 +394,63 @@ body {
   color: #fff;
   border: none;
   border-radius: 999px;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   cursor: pointer;
   font-size: 13px;
   display: grid;
   place-items: center;
+  flex: 0 0 auto;
+}
+
+.radar-btn:disabled {
+  opacity: 0.4;
 }
 
 .radar-time {
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex: 1;
+}
+
+.radar-time.future {
+  color: var(--cold);
+}
+
+.radar-now {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.radar-now:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.radar-slider {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--accent);
+  height: 22px;
+  touch-action: none;
+}
+
+.radar-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--sub);
   font-variant-numeric: tabular-nums;
 }
 
 .radar-credit {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--sub);
 }
 

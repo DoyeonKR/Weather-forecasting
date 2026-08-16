@@ -8,6 +8,8 @@ export interface WeatherData {
   nowApparent: number
   /** 현재 날씨 코드 */
   nowCode: number
+  /** 현재 낮 여부 */
+  nowIsDay: boolean
   /** 어제 같은 시각 기온 */
   yesterdaySameHour: number
   yesterday: DayStats
@@ -24,6 +26,7 @@ interface OpenMeteoResponse {
     temperature_2m: number
     apparent_temperature: number
     weather_code: number
+    is_day: number
   }
   hourly: {
     time: string[]
@@ -57,7 +60,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
   url.searchParams.set('timezone', 'auto')
   url.searchParams.set('past_days', '1')
   url.searchParams.set('forecast_days', '2')
-  url.searchParams.set('current', 'temperature_2m,apparent_temperature,weather_code')
+  url.searchParams.set('current', 'temperature_2m,apparent_temperature,weather_code,is_day')
   url.searchParams.set('hourly', 'temperature_2m,precipitation')
   url.searchParams.set(
     'daily',
@@ -75,6 +78,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     nowTemp: data.current.temperature_2m,
     nowApparent: data.current.apparent_temperature,
     nowCode: data.current.weather_code,
+    nowIsDay: data.current.is_day === 1,
     yesterdaySameHour,
     yesterday: dayStats(data.daily, 0),
     today: dayStats(data.daily, 1),

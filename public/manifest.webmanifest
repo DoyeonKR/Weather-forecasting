@@ -1,0 +1,25 @@
+{
+  "name": "어제보다 — 어제와 비교하는 날씨",
+  "short_name": "어제보다",
+  "description": "어제와 비교해서 알려주는 날씨. 비구름 레이더까지.",
+  "start_url": "/Weather-forecasting/",
+  "scope": "/Weather-forecasting/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0e131a",
+  "theme_color": "#0e131a",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

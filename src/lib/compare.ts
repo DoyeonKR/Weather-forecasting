@@ -78,3 +78,14 @@ export function codeLabel(code: number): { label: string; emoji: string } {
 export function isSnowCode(code: number): boolean {
   return (code >= 71 && code <= 77) || code === 85 || code === 86
 }
+
+/** 현재 날씨 → 배경 테마 클래스 */
+export function themeClass(code: number, isDay: boolean): string {
+  if (code >= 95) return 'bg-thunder'
+  if (isSnowCode(code)) return 'bg-snow'
+  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return 'bg-rain'
+  if (code === 45 || code === 48) return 'bg-fog'
+  if (code === 3) return 'bg-cloudy'
+  if (code === 2) return isDay ? 'bg-partly-day' : 'bg-clear-night'
+  return isDay ? 'bg-clear-day' : 'bg-clear-night'
+}

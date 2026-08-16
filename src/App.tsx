@@ -7,9 +7,12 @@ import {
   nowHeadline,
   precipSummary,
   round1,
+  themeClass,
   tomorrowAlerts,
 } from './lib/compare'
+import { loadFavorites, saveFavorites, type Place } from './lib/places'
 import RadarMap from './components/RadarMap'
+import PlaceBar from './components/PlaceBar'
 import './App.css'
 
 type Status = 'loading' | 'ready' | 'error'
@@ -26,29 +29,61 @@ function DeltaBadge({ delta }: { delta: number }) {
 
 export default function App() {
   const [status, setStatus] = useState<Status>('loading')
+  const [favorites, setFavorites] = useState<Place[]>(loadFavorites)
+  const [selectedId, setSelectedId] = useState<string>('current')
   const [loc, setLoc] = useState<Located | null>(null)
   const [wx, setWx] = useState<WeatherData | null>(null)
 
-  const load = useCallback(async () => {
-    setStatus('loading')
-    try {
-      const where = await locate()
-      setLoc(where)
-      const weather = await fetchWeather(where.lat, where.lon)
-      setWx(weather)
-      setStatus('ready')
-    } catch {
-      setStatus('error')
-    }
-  }, [])
+  const load = useCallback(
+    async (id: string) => {
+      setStatus('loading')
+      try {
+        let where: Located
+        const fav = favorites.find((p) => p.id === id)
+        if (fav) {
+          where = { lat: fav.lat, lon: fav.lon, label: fav.name, isFallback: false }
+        } else {
+          where = await locate()
+        }
+        setLoc(where)
+        setWx(await fetchWeather(where.lat, where.lon))
+        setStatus('ready')
+      } catch {
+        setStatus('error')
+      }
+    },
+    [favorites],
+  )
 
   useEffect(() => {
-    load()
-  }, [load])
+    load(selectedId)
+    // favorites 변경만으로는 재로드하지 않음 (선택 변경 시에만)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId])
+
+  function addFavorite(p: Place) {
+    setFavorites((prev) => {
+      if (prev.some((f) => f.id === p.id)) return prev
+      const next = [...prev, p]
+      saveFavorites(next)
+      return next
+    })
+  }
+
+  function removeFavorite(id: string) {
+    setFavorites((prev) => {
+      const next = prev.filter((f) => f.id !== id)
+      saveFavorites(next)
+      return next
+    })
+    if (selectedId === id) setSelectedId('current')
+  }
+
+  const theme = wx ? themeClass(wx.nowCode, wx.nowIsDay) : 'bg-loading'
 
   if (status === 'loading') {
     return (
-      <div className="shell center">
+      <div className={`shell center ${theme}`}>
         <div className="spinner" aria-label="불러오는 중" />
         <p className="muted">위치와 날씨를 확인하고 있어요…</p>
       </div>
@@ -57,9 +92,9 @@ export default function App() {
 
   if (status === 'error' || !wx || !loc) {
     return (
-      <div className="shell center">
+      <div className="shell center bg-loading">
         <p>날씨를 불러오지 못했어요.</p>
-        <button type="button" className="retry" onClick={load}>
+        <button type="button" className="retry" onClick={() => load(selectedId)}>
           다시 시도
         </button>
       </div>
@@ -73,13 +108,22 @@ export default function App() {
   const tomorrowLabel = codeLabel(wx.tomorrow.code)
 
   return (
-    <div className="shell">
+    <div className={`shell ${theme}`}>
       <header className="top">
         <h1 className="brand">어제보다</h1>
-        <button type="button" className="loc" onClick={load} title="위치·날씨 새로고침">
-          📍 {loc.label} {loc.isFallback && <em>(위치 권한 필요)</em>}
+        <button type="button" className="loc" onClick={() => load(selectedId)} title="새로고침">
+          {selectedId === 'current' ? '📍' : '⭐'} {loc.label}{' '}
+          {selectedId === 'current' && loc.isFallback && <em>(위치 권한 필요)</em>}
         </button>
       </header>
+
+      <PlaceBar
+        favorites={favorites}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+        onAdd={addFavorite}
+        onRemove={removeFavorite}
+      />
 
       <section className="hero card">
         <div className="hero-main">
