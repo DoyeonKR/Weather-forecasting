@@ -88,18 +88,48 @@ export function funTips(opts: {
   const { today, yesterday, uvMax } = opts
   const tips: string[] = []
   const rainsToday = today.precipSum >= 0.5 || (today.precipProbMax ?? 0) >= 60
-  if (isSnowCode(today.code)) tips.push('☃️ 눈 소식이 있어요. 길이 미끄러우니 조심조심')
-  else if (rainsToday) tips.push(`☂️ 강수확률 ${today.precipProbMax ?? '?'}%, 우산 꼭 챙기세요`)
-  else if (yesterday.precipSum >= 0.5) tips.push('🌤️ 어제 내리던 비가 그쳤어요. 빨래 찬스!')
+  if (isSnowCode(today.code))
+    tips.push(
+      '☃️ 오늘 눈 소식이 있어요. 길이 미끄러울 수 있으니 평소보다 일찍 나서고, 접지력 좋은 신발을 신는 게 좋아요. 운전하신다면 차간거리를 넉넉하게 잡으세요.',
+    )
+  else if (rainsToday)
+    tips.push(
+      `☂️ 오늘 강수확률이 ${today.precipProbMax ?? '?'}%나 돼요. 나갈 때 우산을 꼭 챙기시고, 바람까지 불 수 있으니 접이식보다는 튼튼한 장우산이 낫습니다. 소중한 신발이라면 오늘은 잠시 쉬게 해주세요.`,
+    )
+  else if (yesterday.precipSum >= 0.5)
+    tips.push(
+      '🌤️ 어제 내리던 비가 오늘은 그쳐요. 미뤄뒀던 빨래를 돌리기 딱 좋은 날이고, 눅눅해진 이불도 한번 털어서 널어보세요. 창문 열고 환기하기에도 좋습니다.',
+    )
   const dMax = round1(today.tmax - yesterday.tmax)
-  if (dMax <= -4) tips.push(`🧥 어제보다 낮이 ${Math.abs(dMax)}° 서늘해요. 겉옷 하나 걸치세요`)
-  else if (dMax >= 4) tips.push(`🥵 어제보다 ${dMax}° 더워요. 최대한 얇게 입으세요`)
-  if (today.tmax >= 31) tips.push('💧 한낮이 푹푹 쪄요. 물 자주 마셔요')
-  if (today.tmin <= 5) tips.push('🧣 아침엔 꽤 추워요. 따뜻하게 입고 나가요')
-  else if (today.tmin <= 12) tips.push('🧥 아침저녁 쌀쌀해요. 긴팔 추천')
+  if (dMax <= -4)
+    tips.push(
+      `🧥 어제보다 낮 기온이 ${Math.abs(dMax)}°나 낮아요. 어제 입던 대로 나가면 분명 후회하니까 겉옷을 하나 꼭 걸치세요. 따뜻한 음료 한 잔 들고 나가는 것도 괜찮은 선택입니다.`,
+    )
+  else if (dMax >= 4)
+    tips.push(
+      `🥵 어제보다 ${dMax}°나 더 더워요. 어제 기억만 믿고 껴입었다간 고생하니 최대한 얇고 시원하게 입으세요. 야외 일정은 가능하면 한낮을 피하는 게 좋아요.`,
+    )
+  if (today.tmax >= 31)
+    tips.push(
+      '💧 한낮이 푹푹 찌는 날이에요. 목이 마르기 전에 물을 미리미리 마시고, 뙤약볕 아래 오래 있는 일정은 짧게 끊어 가세요. 실내와 기온차가 크니 냉방병도 조심하세요.',
+    )
+  if (today.tmin <= 5)
+    tips.push(
+      '🧣 아침 기온이 한 자릿수 초반까지 떨어져요. 목도리나 두꺼운 겉옷으로 단단히 챙겨 입고 나가세요. 아침 공기가 차니 따뜻한 아침 한 끼도 잊지 마시고요.',
+    )
+  else if (today.tmin <= 12)
+    tips.push(
+      '🧥 아침저녁으로 제법 쌀쌀해요. 한낮만 보고 얇게 나갔다간 퇴근길에 떨 수 있으니, 긴팔이나 가볍게 걸칠 겉옷을 챙기는 걸 추천해요.',
+    )
   if (uvMax !== null) {
-    if (uvMax >= 8) tips.push(`🧴 자외선 지수 ${round1(uvMax)}, 선크림 필수!`)
-    else if (uvMax >= 6 && !rainsToday) tips.push(`🕶️ 자외선이 강한 편이에요. 선크림 바르면 좋아요`)
+    if (uvMax >= 8)
+      tips.push(
+        `🧴 자외선 지수가 ${round1(uvMax)}로 매우 강해요. 선크림을 꼭 바르고, 한낮에는 모자나 양산까지 챙기면 좋습니다. 야외에 오래 있는 날이라면 두세 시간마다 덧발라 주세요.`,
+      )
+    else if (uvMax >= 6 && !rainsToday)
+      tips.push(
+        `🕶️ 자외선이 강한 편이에요. 잠깐 나가는 길이라도 선크림을 발라두면 피부가 고마워할 거예요. 선글라스가 있다면 오늘 쓰기 좋은 날입니다.`,
+      )
   }
   return tips.slice(0, 3)
 }
