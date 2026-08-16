@@ -72,7 +72,7 @@ export function codeLabel(code: number): { label: string; emoji: string } {
   if (code >= 80 && code <= 82) return { label: '소나기', emoji: '🌧️' }
   if (code === 85 || code === 86) return { label: '소낙눈', emoji: '🌨️' }
   if (code >= 95) return { label: '뇌우', emoji: '⛈️' }
-  return { label: '—', emoji: '🌡️' }
+  return { label: '날씨', emoji: '🌡️' }
 }
 
 export function isSnowCode(code: number): boolean {
@@ -88,18 +88,18 @@ export function funTips(opts: {
   const { today, yesterday, uvMax } = opts
   const tips: string[] = []
   const rainsToday = today.precipSum >= 0.5 || (today.precipProbMax ?? 0) >= 60
-  if (isSnowCode(today.code)) tips.push('☃️ 눈 소식이 있어요 — 길이 미끄러우니 조심조심')
-  else if (rainsToday) tips.push(`☂️ 우산 꼭 챙기세요 — 강수확률 ${today.precipProbMax ?? '—'}%`)
-  else if (yesterday.precipSum >= 0.5) tips.push('🌤️ 어제 내리던 비가 그쳤어요 — 빨래 찬스!')
+  if (isSnowCode(today.code)) tips.push('☃️ 눈 소식이 있어요. 길이 미끄러우니 조심조심')
+  else if (rainsToday) tips.push(`☂️ 강수확률 ${today.precipProbMax ?? '?'}%, 우산 꼭 챙기세요`)
+  else if (yesterday.precipSum >= 0.5) tips.push('🌤️ 어제 내리던 비가 그쳤어요. 빨래 찬스!')
   const dMax = round1(today.tmax - yesterday.tmax)
-  if (dMax <= -4) tips.push(`🧥 어제보다 낮이 ${Math.abs(dMax)}° 서늘해요 — 겉옷 하나 걸치세요`)
-  else if (dMax >= 4) tips.push(`🥵 어제보다 ${dMax}° 더워요 — 최대한 얇게 입으세요`)
-  if (today.tmax >= 31) tips.push('💧 한낮이 푹푹 쪄요 — 물 자주 마시기')
-  if (today.tmin <= 5) tips.push('🧣 아침엔 꽤 추워요 — 따뜻하게 입고 나가요')
-  else if (today.tmin <= 12) tips.push('🧥 아침저녁 쌀쌀해요 — 긴팔 추천')
+  if (dMax <= -4) tips.push(`🧥 어제보다 낮이 ${Math.abs(dMax)}° 서늘해요. 겉옷 하나 걸치세요`)
+  else if (dMax >= 4) tips.push(`🥵 어제보다 ${dMax}° 더워요. 최대한 얇게 입으세요`)
+  if (today.tmax >= 31) tips.push('💧 한낮이 푹푹 쪄요. 물 자주 마셔요')
+  if (today.tmin <= 5) tips.push('🧣 아침엔 꽤 추워요. 따뜻하게 입고 나가요')
+  else if (today.tmin <= 12) tips.push('🧥 아침저녁 쌀쌀해요. 긴팔 추천')
   if (uvMax !== null) {
-    if (uvMax >= 8) tips.push(`🧴 자외선 지수 ${round1(uvMax)} 매우 강함 — 선크림 필수!`)
-    else if (uvMax >= 6 && !rainsToday) tips.push(`🕶️ 자외선 지수 ${round1(uvMax)} 강한 편 — 선크림 바르면 좋아요`)
+    if (uvMax >= 8) tips.push(`🧴 자외선 지수 ${round1(uvMax)}, 선크림 필수!`)
+    else if (uvMax >= 6 && !rainsToday) tips.push(`🕶️ 자외선이 강한 편이에요. 선크림 바르면 좋아요`)
   }
   return tips.slice(0, 3)
 }

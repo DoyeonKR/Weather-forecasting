@@ -28,8 +28,9 @@ interface Props {
 }
 
 const RADAR_OPACITY = 0.65
-const GRID_N = 17 // 17x17 격자
-const GRID_STEP = 0.25 // ≈ 25km 간격 (전체 ±2.1° 커버)
+const GRID_N = 13 // 13x13 격자 (169좌표 — Open-Meteo 무료 한도 고려)
+const GRID_STEP = 0.28 // ≈ 28km 간격 (전체 ±1.8° 커버)
+const GRID_CACHE_TTL = 20 * 60 * 1000 // 20분 캐시로 호출량 절약
 const FORECAST_HOURS = 6
 const FORECAST_STEPS = FORECAST_HOURS * 4 // 15분 단위
 
@@ -50,10 +51,41 @@ function timeLabel(epochSec: number): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
+interface ForecastGrid {
+  times: number[]
+  grid: number[][]
+}
+
+function gridCacheKey(lat: number, lon: number): string {
+  return `eojeboda:fgrid:${lat.toFixed(1)},${lon.toFixed(1)}`
+}
+
+function readGridCache(lat: number, lon: number, maxAgeMs: number): ForecastGrid | null {
+  try {
+    const raw = localStorage.getItem(gridCacheKey(lat, lon))
+    if (!raw) return null
+    const c = JSON.parse(raw)
+    if (typeof c.at !== 'number' || Date.now() - c.at > maxAgeMs) return null
+    return { times: c.times, grid: c.grid }
+  } catch {
+    return null
+  }
+}
+
+function writeGridCache(lat: number, lon: number, g: ForecastGrid): void {
+  try {
+    localStorage.setItem(gridCacheKey(lat, lon), JSON.stringify({ at: Date.now(), ...g }))
+  } catch {
+    // 저장 공간 부족 등은 무시
+  }
+}
+
 async function fetchForecastGrid(
   lat: number,
   lon: number,
-): Promise<{ times: number[]; grid: number[][] }> {
+): Promise<ForecastGrid> {
+  const cached = readGridCache(lat, lon, GRID_CACHE_TTL)
+  if (cached) return cached
   // grid[t][i] = i번째 격자점의 t시점 강수(mm/15분)
   const lats: number[] = []
   const lons: number[] = []
@@ -72,14 +104,21 @@ async function fetchForecastGrid(
   url.searchParams.set('timeformat', 'unixtime')
   url.searchParams.set('timezone', 'auto')
   const res = await fetch(url)
-  if (!res.ok) throw new Error('forecast grid fetch failed')
+  if (!res.ok) {
+    // 한도 초과 등 실패 시 오래된 캐시라도 사용 (최대 2시간)
+    const stale = readGridCache(lat, lon, 2 * 60 * 60 * 1000)
+    if (stale) return stale
+    throw new Error('forecast grid fetch failed')
+  }
   const data = await res.json()
   const list = Array.isArray(data) ? data : [data]
   const times: number[] = list[0]?.minutely_15?.time ?? []
   const grid = times.map((_, t) =>
     list.map((d: { minutely_15: { precipitation: number[] } }) => d.minutely_15.precipitation[t] ?? 0),
   )
-  return { times, grid }
+  const result = { times, grid }
+  writeGridCache(lat, lon, result)
+  return result
 }
 
 /** 격자값(GRID_N×GRID_N)을 보간·블러로 레이더 느낌의 이미지로 렌더 */
@@ -109,7 +148,7 @@ function renderFrameImage(values: number[]): string | null {
   const bctx = big.getContext('2d')!
   bctx.imageSmoothingEnabled = true
   bctx.imageSmoothingQuality = 'high'
-  bctx.filter = 'blur(4px)'
+  bctx.filter = 'blur(2px)'
   bctx.drawImage(small, 0, 0, 512, 512) // 가장자리는 블러로 자연스럽게 페이드
   return big.toDataURL('image/png')
 }
@@ -257,7 +296,7 @@ export default function RadarMap({ lat, lon }: Props) {
       l.setOpacity(item.kind === 'radar' && j === item.layerIdx ? RADAR_OPACITY : 0),
     )
     forecastLayersRef.current.forEach((o, j) =>
-      o.setOpacity(item.kind === 'forecast' && j === item.layerIdx ? RADAR_OPACITY : 0),
+      o.setOpacity(item.kind === 'forecast' && j === item.layerIdx ? 0.8 : 0),
     )
   }, [idx, timeline])
 

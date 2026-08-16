@@ -176,7 +176,7 @@ export default function App() {
           </div>
           <div className="stat">
             <span className="stat-label">강수확률</span>
-            <span className="stat-value">{wx.today.precipProbMax ?? '—'}%</span>
+            <span className="stat-value">{wx.today.precipProbMax ?? '?'}%</span>
           </div>
         </div>
       </section>
