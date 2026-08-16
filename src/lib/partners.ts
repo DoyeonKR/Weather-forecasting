@@ -10,11 +10,11 @@ export interface PartnerItem {
 }
 
 const LINKS = {
-  umbrella: '', // 우산
-  sunscreen: '', // 선크림
-  fan: '', // 휴대용 선풍기
-  hotpack: '', // 핫팩
-  outer: '', // 겉옷/경량패딩
+  umbrella: 'https://link.coupang.com/a/ggKhagRleu', // 우산
+  sunscreen: 'https://link.coupang.com/a/ggKiJhjVNk', // 선크림
+  fan: 'https://link.coupang.com/a/ggKkznhCkS', // 휴대용 선풍기
+  hotpack: 'https://link.coupang.com/a/ggKlv86k44', // 핫팩
+  outer: 'https://link.coupang.com/a/ggKne0I1fg', // 경량 겉옷
 }
 
 /** 오늘 날씨 조건에 맞는 추천 상품 (최대 2개) */
