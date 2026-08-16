@@ -472,6 +472,25 @@ body {
   color: var(--sub);
 }
 
+.kma-card {
+  padding: 12px;
+}
+
+.kma-card .section-title {
+  padding: 4px 6px 0;
+}
+
+.kma-gif {
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+  background: #fff;
+}
+
+.kma-credit {
+  margin: 8px 6px 2px;
+}
+
 .tomorrow-row {
   display: flex;
   align-items: center;

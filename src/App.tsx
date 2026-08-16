@@ -13,6 +13,7 @@ import {
 } from './lib/compare'
 import { loadFavorites, saveFavorites, type Place } from './lib/places'
 import RadarMap from './components/RadarMap'
+import KmaNowcast from './components/KmaNowcast'
 import PlaceBar from './components/PlaceBar'
 import './App.css'
 
@@ -185,6 +186,8 @@ export default function App() {
         <h2 className="section-title">비구름 레이더</h2>
         <RadarMap lat={loc.lat} lon={loc.lon} />
       </section>
+
+      <KmaNowcast />
 
       <section className="card">
         <h2 className="section-title">내일은 오늘보다</h2>
