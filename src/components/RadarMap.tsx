@@ -269,13 +269,16 @@ export default function RadarMap({ lat, lon }: Props) {
       if (!map) return
       try {
         const useKma = inKorea(lat, lon)
-        const gridPromise = fetchForecastGrid(lat, lon).catch(
-          () =>
-            // 일시 실패(레이트리밋 등) 시 1회 재시도
-            new Promise<Awaited<ReturnType<typeof fetchForecastGrid>> | null>((resolve) => {
-              setTimeout(() => fetchForecastGrid(lat, lon).then(resolve).catch(() => resolve(null)), 2500)
-            }),
-        )
+        // 한국: 미래는 아래 기상청 공식 예측 카드가 담당 (연한 모델 예보 오버레이 제거)
+        const gridPromise = useKma
+          ? Promise.resolve(null)
+          : fetchForecastGrid(lat, lon).catch(
+              () =>
+                // 일시 실패(레이트리밋 등) 시 1회 재시도
+                new Promise<Awaited<ReturnType<typeof fetchForecastGrid>> | null>((resolve) => {
+                  setTimeout(() => fetchForecastGrid(lat, lon).then(resolve).catch(() => resolve(null)), 2500)
+                }),
+            )
 
         let items: TimelineItem[]
         if (useKma) {
@@ -431,7 +434,7 @@ export default function RadarMap({ lat, lon }: Props) {
               <div className="radar-ticks">
                 <span>{timeLabel(timeline[0].time)}</span>
                 <span className="radar-credit">
-                  {inKorea(lat, lon) ? '실황 기상청 · 예측 Open-Meteo' : '실황 RainViewer · 예측 Open-Meteo'}
+                  {inKorea(lat, lon) ? '실황 기상청 · 예측은 아래 카드' : '실황 RainViewer · 예측 Open-Meteo'}
                 </span>
                 <span>{timeLabel(timeline[timeline.length - 1].time)}</span>
               </div>
