@@ -184,17 +184,20 @@ body {
   place-items: center;
 }
 
-.search-panel {
-  background: rgba(20, 27, 37, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  padding: 10px;
-  backdrop-filter: blur(8px);
-}
-
 .search-row {
   display: flex;
   gap: 8px;
+}
+
+.star-add {
+  background: rgba(255, 205, 60, 0.12);
+  border: 1px solid rgba(255, 205, 60, 0.4);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 14px;
+  padding: 10px 14px;
+  cursor: pointer;
+  text-align: center;
 }
 
 .search-input {
@@ -615,6 +618,61 @@ body {
   font-size: 14px;
 }
 
+.notify-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notify-title {
+  margin-bottom: 4px;
+}
+
+.notify-desc {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.notify-toggle {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.08);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.notify-toggle .notify-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+}
+
+.notify-toggle.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.notify-toggle.on .notify-knob {
+  transform: translateX(22px);
+}
+
+.visitors {
+  color: var(--sub);
+  font-size: 11px;
+  display: block;
+  margin-top: 2px;
+}
+
 .muted {
   color: var(--sub);
 }
@@ -649,6 +707,17 @@ body {
 
 .feedback-btn:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+.feedback-btn.kakao {
+  background: #fee500;
+  border-color: #fee500;
+  color: #191919;
+  font-weight: 700;
+}
+
+.feedback-btn.kakao:hover {
+  background: #fada0a;
 }
 
 .retry {

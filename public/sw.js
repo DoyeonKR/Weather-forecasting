@@ -1,5 +1,28 @@
-// 어제보다 서비스워커 — 네트워크 우선, 실패 시 캐시 (앱 셸 오프라인 대비)
-const CACHE = 'eojeboda-v1'
+// 무능한 날씨예측기 서비스워커 — 네트워크 우선 캐시 + 푸시 알림 수신
+const CACHE = 'eojeboda-v2'
+
+self.addEventListener('push', (e) => {
+  let data = { title: '무능한 날씨예측기', body: '' }
+  try {
+    data = e.data.json()
+  } catch {
+    // 텍스트 페이로드 대비
+    data.body = e.data ? e.data.text() : ''
+  }
+  e.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: 'icon.svg',
+      badge: 'icon.svg',
+      data: { url: self.registration.scope },
+    }),
+  )
+})
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close()
+  e.waitUntil(self.clients.openWindow((e.notification.data && e.notification.data.url) || self.registration.scope))
+})
 
 self.addEventListener('install', (e) => {
   self.skipWaiting()

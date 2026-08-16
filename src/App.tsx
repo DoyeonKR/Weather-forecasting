@@ -15,8 +15,10 @@ import { loadFavorites, saveFavorites, type Place } from './lib/places'
 import { PARTNERS_NOTICE, partnerPicks, partnersActive } from './lib/partners'
 import RadarMap from './components/RadarMap'
 import KmaNowcast from './components/KmaNowcast'
+import NotifyCard from './components/NotifyCard'
 import PlaceBar from './components/PlaceBar'
 import PromoLayer from './components/PromoLayer'
+import { fetchTodayVisitors } from './lib/track'
 import './App.css'
 
 type Status = 'loading' | 'ready' | 'error'
@@ -38,8 +40,15 @@ export default function App() {
   const [status, setStatus] = useState<Status>('loading')
   const [favorites, setFavorites] = useState<Place[]>(loadFavorites)
   const [selectedId, setSelectedId] = useState<string>('current')
+  /** 검색으로 보는 임시 장소 (즐겨찾기 아님) */
+  const [tempPlace, setTempPlace] = useState<Place | null>(null)
   const [loc, setLoc] = useState<Located | null>(null)
   const [wx, setWx] = useState<WeatherData | null>(null)
+  const [visitors, setVisitors] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetchTodayVisitors().then(setVisitors)
+  }, [])
 
   // 위치 권한 팝업은 사용자가 "현재 위치"를 직접 눌렀을 때만
   const promptRef = useRef(false)
@@ -49,7 +58,8 @@ export default function App() {
       setStatus('loading')
       try {
         let where: Located
-        const fav = favorites.find((p) => p.id === id)
+        const fav =
+          favorites.find((p) => p.id === id) ?? (tempPlace?.id === id ? tempPlace : undefined)
         if (fav) {
           where = { lat: fav.lat, lon: fav.lon, label: fav.name, isFallback: false }
         } else {
@@ -69,13 +79,19 @@ export default function App() {
         setStatus('error')
       }
     },
-    [favorites],
+    [favorites, tempPlace],
   )
 
   function selectPlace(id: string) {
     if (id === 'current') promptRef.current = true
     if (id === selectedId) load(id)
     else setSelectedId(id)
+  }
+
+  function viewPlace(p: Place) {
+    setTempPlace(p)
+    if (p.id === selectedId) load(p.id)
+    else setSelectedId(p.id)
   }
 
   useEffect(() => {
@@ -136,9 +152,13 @@ export default function App() {
     <div className={`shell ${theme}`}>
       <PromoLayer picks={picks} />
       <header className="top">
-        <h1 className="brand">무능한 날씨예측기</h1>
+        <div>
+          <h1 className="brand">무능한 날씨예측기</h1>
+          {visitors !== null && <span className="visitors">👀 오늘 {visitors}명 다녀갔어요</span>}
+        </div>
         <button type="button" className="loc" onClick={() => selectPlace(selectedId)} title="새로고침">
-          {selectedId === 'current' ? '📍' : '⭐'} {loc.label}{' '}
+          {selectedId === 'current' ? '📍' : favorites.some((f) => f.id === selectedId) ? '⭐' : '🔍'}{' '}
+          {loc.label}{' '}
           {selectedId === 'current' && loc.isFallback && <em>(눌러서 내 위치 사용)</em>}
         </button>
       </header>
@@ -147,9 +167,15 @@ export default function App() {
         favorites={favorites}
         selectedId={selectedId}
         onSelect={selectPlace}
-        onAdd={addFavorite}
+        onView={viewPlace}
         onRemove={removeFavorite}
       />
+
+      {tempPlace?.id === selectedId && !favorites.some((f) => f.id === selectedId) && (
+        <button type="button" className="star-add" onClick={() => addFavorite(tempPlace)}>
+          ⭐ {tempPlace.name} 즐겨찾기에 추가
+        </button>
+      )}
 
       <section className="hero card">
         <div className="hero-main">
@@ -213,13 +239,6 @@ export default function App() {
         </div>
       </section>
 
-      <section className="card radar-card">
-        <h2 className="section-title">비구름 레이더</h2>
-        <RadarMap lat={loc.lat} lon={loc.lon} />
-      </section>
-
-      <KmaNowcast />
-
       <section className="card">
         <h2 className="section-title">내일은 오늘보다</h2>
         <div className="tomorrow-row">
@@ -274,12 +293,30 @@ export default function App() {
         </ul>
       </section>
 
+      <section className="card radar-card">
+        <h2 className="section-title">비구름 레이더</h2>
+        <RadarMap lat={loc.lat} lon={loc.lon} />
+      </section>
+
+      <KmaNowcast />
+
+      <NotifyCard loc={{ lat: loc.lat, lon: loc.lon, label: loc.label }} />
+
       <footer className="foot">
+        <a
+          className="feedback-btn kakao"
+          href="https://open.kakao.com/o/sMM1eS0f"
+          target="_blank"
+          rel="noreferrer"
+        >
+          💬 오픈채팅으로 문의하기
+        </a>
+        <p className="muted small">오픈채팅으로 보내주시면 개선 의견을 실시간으로 반영해드려요.</p>
         <a
           className="feedback-btn"
           href={`mailto:kdy7854@naver.com?subject=${encodeURIComponent('[무능한 날씨예측기] 개선 의견')}&body=${encodeURIComponent('앱을 쓰다가 이런 점이 아쉬웠어요:\n\n')}`}
         >
-          ✉️ 개선점이 있다면 메일 보내기
+          ✉️ 메일로 보내기
         </a>
         <p className="muted small">문의: kdy7854@naver.com</p>
         {partnersActive() && <p className="muted small">{PARTNERS_NOTICE}</p>}

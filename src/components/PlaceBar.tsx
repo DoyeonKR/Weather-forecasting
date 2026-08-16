@@ -1,18 +1,18 @@
-// 위치 칩 바 — 현재 위치 + 즐겨찾기 + 장소 검색 추가
+// 위치 바 — 항상 보이는 동네 검색 + 현재 위치/즐겨찾기 칩
 import { useRef, useState } from 'react'
 import { searchPlaces, type Place } from '../lib/places'
 
 interface Props {
   favorites: Place[]
-  /** 'current' 또는 즐겨찾기 id */
+  /** 'current' 또는 장소 id */
   selectedId: string
   onSelect: (id: string) => void
-  onAdd: (place: Place) => void
+  /** 검색 결과를 바로 보기 (즐겨찾기 추가 아님) */
+  onView: (place: Place) => void
   onRemove: (id: string) => void
 }
 
-export default function PlaceBar({ favorites, selectedId, onSelect, onAdd, onRemove }: Props) {
-  const [searching, setSearching] = useState(false)
+export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRemove }: Props) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Place[]>([])
   const [busy, setBusy] = useState(false)
@@ -31,15 +31,42 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onAdd, onRem
   }
 
   function pick(p: Place) {
-    onAdd(p)
-    onSelect(p.id)
-    setSearching(false)
+    onView(p)
     setQuery('')
     setResults([])
+    inputRef.current?.blur()
   }
 
   return (
     <div className="placebar">
+      <div className="search-row">
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') runSearch()
+          }}
+          placeholder="🔍 동네 검색 (예: 판교, 부산 해운대)"
+          className="search-input"
+          enterKeyHint="search"
+        />
+        <button type="button" className="search-btn" onClick={runSearch} disabled={busy}>
+          {busy ? '…' : '검색'}
+        </button>
+      </div>
+      {results.length > 0 && (
+        <ul className="search-results">
+          {results.map((r) => (
+            <li key={r.id}>
+              <button type="button" onClick={() => pick(r)}>
+                📍 {r.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       <div className="chips" role="tablist" aria-label="위치 선택">
         <button
           type="button"
@@ -52,7 +79,13 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onAdd, onRem
         </button>
         {favorites.map((p) => (
           <span key={p.id} className={`chip ${selectedId === p.id ? 'on' : ''}`}>
-            <button type="button" role="tab" aria-selected={selectedId === p.id} className="chip-name" onClick={() => onSelect(p.id)}>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={selectedId === p.id}
+              className="chip-name"
+              onClick={() => onSelect(p.id)}
+            >
               ⭐ {p.name}
             </button>
             {editMode && (
@@ -67,54 +100,12 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onAdd, onRem
             )}
           </span>
         ))}
-        <button
-          type="button"
-          className="chip ghost"
-          onClick={() => {
-            setSearching((s) => !s)
-            setTimeout(() => inputRef.current?.focus(), 50)
-          }}
-        >
-          ＋ 추가
-        </button>
         {favorites.length > 0 && (
           <button type="button" className="chip ghost" onClick={() => setEditMode((e) => !e)}>
             {editMode ? '완료' : '편집'}
           </button>
         )}
       </div>
-
-      {searching && (
-        <div className="search-panel">
-          <div className="search-row">
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') runSearch()
-              }}
-              placeholder="동네 이름 검색 (예: 판교, 부산 해운대)"
-              className="search-input"
-              enterKeyHint="search"
-            />
-            <button type="button" className="search-btn" onClick={runSearch} disabled={busy}>
-              {busy ? '…' : '검색'}
-            </button>
-          </div>
-          {results.length > 0 && (
-            <ul className="search-results">
-              {results.map((r) => (
-                <li key={r.id}>
-                  <button type="button" onClick={() => pick(r)}>
-                    ⭐ {r.name}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
     </div>
   )
 }
