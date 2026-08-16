@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// GitHub Pages: https://<user>.github.io/eojeboda/
+// GitHub Pages: https://doyeonkr.github.io/Weather-forecasting/
 export default defineConfig({
-  base: '/eojeboda/',
+  base: '/Weather-forecasting/',
   plugins: [react()],
 })
