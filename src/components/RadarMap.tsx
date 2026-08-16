@@ -28,16 +28,19 @@ interface Props {
 }
 
 const RADAR_OPACITY = 0.65
-const GRID_N = 11 // 11x11 격자
-const GRID_STEP = 0.2 // ≈ 20km 간격
+const GRID_N = 17 // 17x17 격자
+const GRID_STEP = 0.25 // ≈ 25km 간격 (전체 ±2.1° 커버)
 const FORECAST_HOURS = 6
+const FORECAST_STEPS = FORECAST_HOURS * 4 // 15분 단위
 
-function fillFor(mm: number): { color: string; opacity: number } | null {
-  if (mm < 0.1) return null
-  if (mm < 0.5) return { color: '#7cc0fa', opacity: 0.3 }
-  if (mm < 2) return { color: '#3b82f6', opacity: 0.45 }
-  if (mm < 5) return { color: '#1d4ed8', opacity: 0.55 }
-  return { color: '#7c3aed', opacity: 0.65 }
+/** mm/h → RGBA (레이더 팔레트 느낌) */
+function rgbaFor(mmPerHour: number): [number, number, number, number] {
+  if (mmPerHour < 0.1) return [0, 0, 0, 0]
+  if (mmPerHour < 0.5) return [116, 187, 250, 150]
+  if (mmPerHour < 1.5) return [56, 146, 245, 185]
+  if (mmPerHour < 4) return [23, 98, 242, 215]
+  if (mmPerHour < 10) return [109, 61, 240, 230]
+  return [192, 38, 211, 240]
 }
 
 function timeLabel(epochSec: number): string {
@@ -48,7 +51,8 @@ function timeLabel(epochSec: number): string {
 async function fetchForecastGrid(
   lat: number,
   lon: number,
-): Promise<{ times: number[]; cells: { lat: number; lon: number; precip: number[] }[] }> {
+): Promise<{ times: number[]; grid: number[][] }> {
+  // grid[t][i] = i번째 격자점의 t시점 강수(mm/15분)
   const lats: number[] = []
   const lons: number[] = []
   const half = Math.floor(GRID_N / 2)
@@ -61,28 +65,58 @@ async function fetchForecastGrid(
   const url = new URL('https://api.open-meteo.com/v1/forecast')
   url.searchParams.set('latitude', lats.join(','))
   url.searchParams.set('longitude', lons.join(','))
-  url.searchParams.set('hourly', 'precipitation')
-  url.searchParams.set('forecast_hours', String(FORECAST_HOURS + 1))
+  url.searchParams.set('minutely_15', 'precipitation')
+  url.searchParams.set('forecast_minutely_15', String(FORECAST_STEPS + 4))
   url.searchParams.set('timeformat', 'unixtime')
   url.searchParams.set('timezone', 'auto')
   const res = await fetch(url)
   if (!res.ok) throw new Error('forecast grid fetch failed')
   const data = await res.json()
   const list = Array.isArray(data) ? data : [data]
-  const times: number[] = list[0]?.hourly?.time ?? []
-  const cells = list.map((d: { latitude: number; longitude: number; hourly: { precipitation: number[] } }) => ({
-    lat: d.latitude,
-    lon: d.longitude,
-    precip: d.hourly.precipitation,
-  }))
-  return { times, cells }
+  const times: number[] = list[0]?.minutely_15?.time ?? []
+  const grid = times.map((_, t) =>
+    list.map((d: { minutely_15: { precipitation: number[] } }) => d.minutely_15.precipitation[t] ?? 0),
+  )
+  return { times, grid }
+}
+
+/** 격자값(GRID_N×GRID_N)을 보간·블러로 레이더 느낌의 이미지로 렌더 */
+function renderFrameImage(values: number[]): string | null {
+  if (!values.some((v) => v >= 0.025)) return null // 비 없는 프레임은 오버레이 생략
+  const small = document.createElement('canvas')
+  small.width = GRID_N
+  small.height = GRID_N
+  const sctx = small.getContext('2d')!
+  const img = sctx.createImageData(GRID_N, GRID_N)
+  for (let i = 0; i < values.length; i++) {
+    // 격자는 (위도 -half→+half, 경도 -half→+half) 순서 → 캔버스 y는 북쪽이 위
+    const row = Math.floor(i / GRID_N)
+    const col = i % GRID_N
+    const y = GRID_N - 1 - row
+    const [r, g, b, a] = rgbaFor((values[i] ?? 0) * 4) // mm/15분 → mm/h
+    const o = (y * GRID_N + col) * 4
+    img.data[o] = r
+    img.data[o + 1] = g
+    img.data[o + 2] = b
+    img.data[o + 3] = a
+  }
+  sctx.putImageData(img, 0, 0)
+  const big = document.createElement('canvas')
+  big.width = 512
+  big.height = 512
+  const bctx = big.getContext('2d')!
+  bctx.imageSmoothingEnabled = true
+  bctx.imageSmoothingQuality = 'high'
+  bctx.filter = 'blur(4px)'
+  bctx.drawImage(small, 0, 0, 512, 512) // 가장자리는 블러로 자연스럽게 페이드
+  return big.toDataURL('image/png')
 }
 
 export default function RadarMap({ lat, lon }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const radarLayersRef = useRef<L.TileLayer[]>([])
-  const forecastLayersRef = useRef<L.LayerGroup[]>([])
+  const forecastLayersRef = useRef<L.ImageOverlay[]>([])
   const markerRef = useRef<L.CircleMarker | null>(null)
   const [timeline, setTimeline] = useState<TimelineItem[]>([])
   const [nowIdx, setNowIdx] = useState(0)
@@ -162,32 +196,30 @@ export default function RadarMap({ lat, lon }: Props) {
         }))
         const now = items.length - 1
 
-        // ── 미래: 강수 예보 격자 (6시간, 1시간 간격)
+        // ── 미래: 강수 예보를 보간 이미지 오버레이로 (6시간, 15분 간격)
         if (grid) {
           const lastRadarTime = past[past.length - 1]?.time ?? Date.now() / 1000
-          const renderer = L.canvas()
-          grid.times.forEach((t, hi) => {
-            if (t <= lastRadarTime || items.filter((x) => x.kind === 'forecast').length >= FORECAST_HOURS)
-              return
-            const group = L.layerGroup()
-            grid.cells.forEach((c) => {
-              const fill = fillFor(c.precip[hi] ?? 0)
-              if (!fill) return
-              L.rectangle(
-                [
-                  [c.lat - GRID_STEP / 2, c.lon - GRID_STEP / 2],
-                  [c.lat + GRID_STEP / 2, c.lon + GRID_STEP / 2],
-                ],
-                {
-                  renderer,
-                  stroke: false,
-                  fillColor: fill.color,
-                  fillOpacity: fill.opacity,
-                },
-              ).addTo(group)
-            })
-            forecastLayersRef.current.push(group)
-            items.push({ time: t, kind: 'forecast', layerIdx: forecastLayersRef.current.length - 1 })
+          const half = Math.floor(GRID_N / 2)
+          const extent = half * GRID_STEP + GRID_STEP / 2
+          const bounds: L.LatLngBoundsExpression = [
+            [lat - extent, lon - extent],
+            [lat + extent, lon + extent],
+          ]
+          grid.times.forEach((t, ti) => {
+            if (t <= lastRadarTime) return
+            if (items.filter((x) => x.kind === 'forecast').length >= FORECAST_STEPS) return
+            const dataUrl = renderFrameImage(grid.grid[ti])
+            // 비가 전혀 없는 프레임도 타임라인에는 포함(오버레이만 없음)
+            let layerIdx = -1
+            if (dataUrl) {
+              const overlay = L.imageOverlay(dataUrl, bounds, {
+                opacity: 0,
+                interactive: false,
+              }).addTo(mapRef.current!)
+              forecastLayersRef.current.push(overlay)
+              layerIdx = forecastLayersRef.current.length - 1
+            }
+            items.push({ time: t, kind: 'forecast', layerIdx })
           })
         }
 
@@ -211,19 +243,14 @@ export default function RadarMap({ lat, lon }: Props) {
 
   // 선택된 프레임 표시
   useEffect(() => {
-    const map = mapRef.current
     const item = timeline[idx]
-    if (!map || !item) return
+    if (!item) return
     radarLayersRef.current.forEach((l, j) =>
       l.setOpacity(item.kind === 'radar' && j === item.layerIdx ? RADAR_OPACITY : 0),
     )
-    forecastLayersRef.current.forEach((g, j) => {
-      if (item.kind === 'forecast' && j === item.layerIdx) {
-        if (!map.hasLayer(g)) map.addLayer(g)
-      } else if (map.hasLayer(g)) {
-        map.removeLayer(g)
-      }
-    })
+    forecastLayersRef.current.forEach((o, j) =>
+      o.setOpacity(item.kind === 'forecast' && j === item.layerIdx ? 0.8 : 0),
+    )
   }, [idx, timeline])
 
   // 재생
