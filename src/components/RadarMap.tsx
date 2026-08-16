@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import { lccForward, lccInverse } from '../lib/lcc'
 
 interface RadarFrame {
   time: number
@@ -34,16 +35,74 @@ const GRID_CACHE_TTL = 20 * 60 * 1000 // 20분 캐시로 호출량 절약
 const FORECAST_HOURS = 6
 const FORECAST_STEPS = FORECAST_HOURS * 4 // 15분 단위
 
-/** mm/h → RGBA — RainViewer Universal Blue 실제 타일에서 추출한 팔레트와 동일 */
+/** mm/h → RGBA — 기상청 레이더 색상표 계열(하늘색→초록→노랑→주황→빨강→보라) */
 function rgbaFor(mmPerHour: number): [number, number, number, number] {
   if (mmPerHour < 0.1) return [0, 0, 0, 0]
-  if (mmPerHour < 0.3) return [195, 180, 129, 140] // 이슬비 헤이즈
-  if (mmPerHour < 0.8) return [136, 221, 238, 255]
-  if (mmPerHour < 2) return [108, 209, 235, 255]
-  if (mmPerHour < 4) return [81, 197, 232, 255]
-  if (mmPerHour < 7) return [54, 186, 229, 255]
-  if (mmPerHour < 12) return [27, 174, 226, 255]
-  return [11, 148, 205, 255]
+  if (mmPerHour < 1) return [0, 190, 255, 255]
+  if (mmPerHour < 3) return [0, 210, 60, 255]
+  if (mmPerHour < 6) return [250, 218, 0, 255]
+  if (mmPerHour < 12) return [255, 144, 0, 255]
+  if (mmPerHour < 25) return [255, 40, 40, 255]
+  return [180, 14, 220, 255]
+}
+
+// ── 기상청(KMA) 실황 레이더 GIS 오버레이 ──────────────────
+// radar.kma.go.kr GIS 뷰어의 com_gis CGI 를 재현: 임의 bbox 의 투명 레이더 PNG (인증 불필요)
+
+const KMA_BOX_M = 700_000 // 위치 중심 700km 정사각 (남한 전역 커버)
+
+function inKorea(lat: number, lon: number): boolean {
+  return lat > 32.5 && lat < 40.5 && lon > 123 && lon < 132.5
+}
+
+/** KST 10분 단위 프레임 시각들 (과거 minutes 분 전부터 현재까지) */
+function kmaFrameTimes(count: number): { stamp: string; epoch: number }[] {
+  const now = Date.now()
+  const kstNow = new Date(now + 9 * 3600_000)
+  kstNow.setUTCMinutes(Math.floor((kstNow.getUTCMinutes() - 6) / 10) * 10, 0, 0)
+  const frames: { stamp: string; epoch: number }[] = []
+  const p = (n: number) => String(n).padStart(2, '0')
+  for (let i = count - 1; i >= 0; i--) {
+    const d = new Date(kstNow.getTime() - i * 10 * 60_000)
+    frames.push({
+      stamp: `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}${p(d.getUTCHours())}${p(d.getUTCMinutes())}`,
+      epoch: (d.getTime() - 9 * 3600_000) / 1000,
+    })
+  }
+  return frames
+}
+
+function kmaBox(lat: number, lon: number): {
+  urlPart: string
+  bounds: L.LatLngBoundsExpression
+} {
+  const c = lccForward(lat, lon)
+  const half = KMA_BOX_M / 2
+  const x0 = c.x - half, x1 = c.x + half, y0 = c.y - half, y1 = c.y + half
+  const nw = lccInverse(x0, y1)
+  const ne = lccInverse(x1, y1)
+  const sw = lccInverse(x0, y0)
+  const se = lccInverse(x1, y0)
+  // 기상청 뷰어와 동일하게 우하단을 20% 연장해 요청
+  const rlLon = se.lon + (se.lon - nw.lon) * 0.2
+  const rlLat = se.lat + (se.lat - nw.lat) * 0.2
+  const urlPart =
+    `LU_LON=${nw.lon.toFixed(5)}&LU_LAT=${nw.lat.toFixed(5)}` +
+    `&RL_LON=${rlLon.toFixed(5)}&RL_LAT=${rlLat.toFixed(5)}` +
+    `&IMG_XDIM=700&IMG_YDIM=700&X_DIST=${KMA_BOX_M}&Y_DIST=${KMA_BOX_M}` +
+    `&UNIT_BAR=0&ECHO_OPACITY=1`
+  const bounds: L.LatLngBoundsExpression = [
+    [(sw.lat + se.lat) / 2, (nw.lon + sw.lon) / 2],
+    [(nw.lat + ne.lat) / 2, (ne.lon + se.lon) / 2],
+  ]
+  return { urlPart, bounds }
+}
+
+function kmaFrameUrl(stamp: string, urlPart: string): string {
+  return (
+    'https://radar.kma.go.kr/cgi-bin/com_gis/radar_comp_gis_realtime_hsp' +
+    `?D_VER=HSP&D_TYPE=RN&COMP_MIX=2&IS_SMOOTH=1&FLICKER=0&ACC=0&HT=0&DATE=${stamp}&${urlPart}`
+  )
 }
 
 function timeLabel(epochSec: number): string {
@@ -156,7 +215,7 @@ function renderFrameImage(values: number[]): string | null {
 export default function RadarMap({ lat, lon }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
-  const radarLayersRef = useRef<L.TileLayer[]>([])
+  const radarLayersRef = useRef<(L.TileLayer | L.ImageOverlay)[]>([])
   const forecastLayersRef = useRef<L.ImageOverlay[]>([])
   const markerRef = useRef<L.CircleMarker | null>(null)
   const [timeline, setTimeline] = useState<TimelineItem[]>([])
@@ -209,12 +268,7 @@ export default function RadarMap({ lat, lon }: Props) {
       const map = mapRef.current
       if (!map) return
       try {
-        const radarPromise = fetch('https://api.rainviewer.com/public/weather-maps.json').then(
-          (r) => {
-            if (!r.ok) throw new Error()
-            return r.json() as Promise<RadarApi>
-          },
-        )
+        const useKma = inKorea(lat, lon)
         const gridPromise = fetchForecastGrid(lat, lon).catch(
           () =>
             // 일시 실패(레이트리밋 등) 시 1회 재시도
@@ -222,30 +276,44 @@ export default function RadarMap({ lat, lon }: Props) {
               setTimeout(() => fetchForecastGrid(lat, lon).then(resolve).catch(() => resolve(null)), 2500)
             }),
         )
-        const api = await radarPromise
+
+        let items: TimelineItem[]
+        if (useKma) {
+          // ── 과거: 기상청 실황 레이더 오버레이 (2시간, 10분 간격)
+          const frames = kmaFrameTimes(13)
+          const box = kmaBox(lat, lon)
+          radarLayersRef.current = frames.map((f) =>
+            L.imageOverlay(kmaFrameUrl(f.stamp, box.urlPart), box.bounds, {
+              opacity: 0,
+              interactive: false,
+            }).addTo(mapRef.current!),
+          )
+          items = frames.map((f, i) => ({ time: f.epoch, kind: 'radar', layerIdx: i }))
+        } else {
+          // ── 해외 위치: RainViewer 타일 폴백
+          const api: RadarApi = await fetch('https://api.rainviewer.com/public/weather-maps.json').then((r) => {
+            if (!r.ok) throw new Error()
+            return r.json()
+          })
+          if (cancelled || !mapRef.current) return
+          const past = [...api.radar.past.slice(-12), ...api.radar.nowcast]
+          radarLayersRef.current = past.map((f) =>
+            L.tileLayer(`${api.host}${f.path}/256/{z}/{x}/{y}/2/1_1.png`, {
+              opacity: 0,
+              maxZoom: 12,
+              maxNativeZoom: 7, // RainViewer 실데이터는 z7까지, 그 이상 줌은 확대 표시
+            }).addTo(mapRef.current!),
+          )
+          items = past.map((f, i) => ({ time: f.time, kind: 'radar', layerIdx: i }))
+        }
+
         const grid = await gridPromise
         if (cancelled || !mapRef.current) return
-
-        // ── 과거: 레이더 타일 (2시간, 10분 간격)
-        const past = [...api.radar.past.slice(-12), ...api.radar.nowcast]
-        radarLayersRef.current = past.map((f) =>
-          L.tileLayer(`${api.host}${f.path}/256/{z}/{x}/{y}/2/1_1.png`, {
-            opacity: 0,
-            maxZoom: 12,
-            // RainViewer 실데이터는 z7까지 — 그 이상 줌은 z7 타일 확대(줌인 시 사라짐 방지)
-            maxNativeZoom: 7,
-          }).addTo(mapRef.current!),
-        )
-        const items: TimelineItem[] = past.map((f, i) => ({
-          time: f.time,
-          kind: 'radar',
-          layerIdx: i,
-        }))
         const now = items.length - 1
 
         // ── 미래: 강수 예보를 보간 이미지 오버레이로 (6시간, 15분 간격)
         if (grid) {
-          const lastRadarTime = past[past.length - 1]?.time ?? Date.now() / 1000
+          const lastRadarTime = items[items.length - 1]?.time ?? Date.now() / 1000
           const half = Math.floor(GRID_N / 2)
           const extent = half * GRID_STEP + GRID_STEP / 2
           const bounds: L.LatLngBoundsExpression = [
@@ -362,7 +430,9 @@ export default function RadarMap({ lat, lon }: Props) {
             {timeline.length > 0 && (
               <div className="radar-ticks">
                 <span>{timeLabel(timeline[0].time)}</span>
-                <span className="radar-credit">실측 RainViewer · 예측 Open-Meteo</span>
+                <span className="radar-credit">
+                  {inKorea(lat, lon) ? '실황 기상청 · 예측 Open-Meteo' : '실황 RainViewer · 예측 Open-Meteo'}
+                </span>
                 <span>{timeLabel(timeline[timeline.length - 1].time)}</span>
               </div>
             )}

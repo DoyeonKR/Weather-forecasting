@@ -215,7 +215,7 @@ export default function App() {
       </section>
 
       <footer className="foot muted small">
-        데이터: Open-Meteo · RainViewer · © OpenStreetMap
+        데이터: 기상청 · Open-Meteo · RainViewer · © OpenStreetMap
       </footer>
     </div>
   )
