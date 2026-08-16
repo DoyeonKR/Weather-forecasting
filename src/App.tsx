@@ -4,6 +4,7 @@ import { fetchWeather, type WeatherData } from './lib/weather'
 import {
   codeLabel,
   deltaText,
+  funTips,
   nowHeadline,
   precipSummary,
   round1,
@@ -17,12 +18,13 @@ import './App.css'
 
 type Status = 'loading' | 'ready' | 'error'
 
-function DeltaBadge({ delta }: { delta: number }) {
+function DeltaBadge({ delta, unit = '°' }: { delta: number; unit?: string }) {
   if (Math.abs(delta) < 0.5) return <span className="delta same">≈ 어제와 비슷</span>
   const up = delta > 0
   return (
     <span className={`delta ${up ? 'up' : 'down'}`}>
-      {up ? '▲' : '▼'} {Math.abs(round1(delta))}°
+      {up ? '▲' : '▼'} {Math.abs(round1(delta))}
+      {unit}
     </span>
   )
 }
@@ -104,6 +106,7 @@ export default function App() {
   const now = codeLabel(wx.nowCode)
   const head = nowHeadline(wx.nowTemp, wx.yesterdaySameHour)
   const rain = precipSummary(wx.today, wx.yesterday)
+  const tips = funTips({ today: wx.today, yesterday: wx.yesterday, uvMax: wx.uvMaxToday })
   const alerts = tomorrowAlerts(wx.tomorrow, wx.today)
   const tomorrowLabel = codeLabel(wx.tomorrow.code)
 
@@ -141,6 +144,13 @@ export default function App() {
           {head.text}
         </p>
         {rain && <p className="rain-note">☔ {rain}</p>}
+        {tips.length > 0 && (
+          <ul className="tips">
+            {tips.map((t) => (
+              <li key={t}>{t}</li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <section className="card">
@@ -161,6 +171,7 @@ export default function App() {
           <div className="stat">
             <span className="stat-label">강수량</span>
             <span className="stat-value">{round1(wx.today.precipSum)}mm</span>
+            <DeltaBadge delta={wx.today.precipSum - wx.yesterday.precipSum} unit="mm" />
             <span className="stat-yesterday">어제 {round1(wx.yesterday.precipSum)}mm</span>
           </div>
           <div className="stat">

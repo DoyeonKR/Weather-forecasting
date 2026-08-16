@@ -176,7 +176,13 @@ export default function RadarMap({ lat, lon }: Props) {
             return r.json() as Promise<RadarApi>
           },
         )
-        const gridPromise = fetchForecastGrid(lat, lon).catch(() => null)
+        const gridPromise = fetchForecastGrid(lat, lon).catch(
+          () =>
+            // 일시 실패(레이트리밋 등) 시 1회 재시도
+            new Promise<Awaited<ReturnType<typeof fetchForecastGrid>> | null>((resolve) => {
+              setTimeout(() => fetchForecastGrid(lat, lon).then(resolve).catch(() => resolve(null)), 2500)
+            }),
+        )
         const api = await radarPromise
         const grid = await gridPromise
         if (cancelled || !mapRef.current) return

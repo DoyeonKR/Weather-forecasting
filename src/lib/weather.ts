@@ -12,6 +12,8 @@ export interface WeatherData {
   nowIsDay: boolean
   /** 어제 같은 시각 기온 */
   yesterdaySameHour: number
+  /** 오늘 자외선 지수 최대 */
+  uvMaxToday: number | null
   yesterday: DayStats
   today: DayStats
   tomorrow: DayStats
@@ -40,6 +42,7 @@ interface OpenMeteoResponse {
     precipitation_sum: number[]
     precipitation_probability_max: (number | null)[]
     weather_code: number[]
+    uv_index_max: (number | null)[]
   }
 }
 
@@ -64,7 +67,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
   url.searchParams.set('hourly', 'temperature_2m,precipitation')
   url.searchParams.set(
     'daily',
-    'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code',
+    'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,uv_index_max',
   )
   const res = await fetch(url)
   if (!res.ok) throw new Error(`날씨 API 오류 (${res.status})`)
@@ -80,6 +83,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     nowCode: data.current.weather_code,
     nowIsDay: data.current.is_day === 1,
     yesterdaySameHour,
+    uvMaxToday: data.daily.uv_index_max[1] ?? null,
     yesterday: dayStats(data.daily, 0),
     today: dayStats(data.daily, 1),
     tomorrow: dayStats(data.daily, 2),

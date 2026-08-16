@@ -79,6 +79,31 @@ export function isSnowCode(code: number): boolean {
   return (code >= 71 && code <= 77) || code === 85 || code === 86
 }
 
+/** 오늘의 실용 멘트 — 어제 비교 + 우산/옷차림/자외선 */
+export function funTips(opts: {
+  today: DayStats
+  yesterday: DayStats
+  uvMax: number | null
+}): string[] {
+  const { today, yesterday, uvMax } = opts
+  const tips: string[] = []
+  const rainsToday = today.precipSum >= 0.5 || (today.precipProbMax ?? 0) >= 60
+  if (isSnowCode(today.code)) tips.push('☃️ 눈 소식이 있어요 — 길이 미끄러우니 조심조심')
+  else if (rainsToday) tips.push(`☂️ 우산 꼭 챙기세요 — 강수확률 ${today.precipProbMax ?? '—'}%`)
+  else if (yesterday.precipSum >= 0.5) tips.push('🌤️ 어제 내리던 비가 그쳤어요 — 빨래 찬스!')
+  const dMax = round1(today.tmax - yesterday.tmax)
+  if (dMax <= -4) tips.push(`🧥 어제보다 낮이 ${Math.abs(dMax)}° 서늘해요 — 겉옷 하나 걸치세요`)
+  else if (dMax >= 4) tips.push(`🥵 어제보다 ${dMax}° 더워요 — 최대한 얇게 입으세요`)
+  if (today.tmax >= 31) tips.push('💧 한낮이 푹푹 쪄요 — 물 자주 마시기')
+  if (today.tmin <= 5) tips.push('🧣 아침엔 꽤 추워요 — 따뜻하게 입고 나가요')
+  else if (today.tmin <= 12) tips.push('🧥 아침저녁 쌀쌀해요 — 긴팔 추천')
+  if (uvMax !== null) {
+    if (uvMax >= 8) tips.push(`🧴 자외선 지수 ${round1(uvMax)} 매우 강함 — 선크림 필수!`)
+    else if (uvMax >= 6 && !rainsToday) tips.push(`🕶️ 자외선 지수 ${round1(uvMax)} 강한 편 — 선크림 바르면 좋아요`)
+  }
+  return tips.slice(0, 3)
+}
+
 /** 현재 날씨 → 배경 테마 클래스 */
 export function themeClass(code: number, isDay: boolean): string {
   if (code >= 95) return 'bg-thunder'
