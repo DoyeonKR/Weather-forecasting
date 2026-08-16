@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { locate, type Located } from './lib/geo'
 import { fetchWeather, type WeatherData } from './lib/weather'
 import {
@@ -21,6 +21,8 @@ import './App.css'
 
 type Status = 'loading' | 'ready' | 'error'
 
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
+
 function DeltaBadge({ delta, unit = '°' }: { delta: number; unit?: string }) {
   if (Math.abs(delta) < 0.5) return <span className="delta same">≈ 어제와 비슷</span>
   const up = delta > 0
@@ -39,6 +41,9 @@ export default function App() {
   const [loc, setLoc] = useState<Located | null>(null)
   const [wx, setWx] = useState<WeatherData | null>(null)
 
+  // 위치 권한 팝업은 사용자가 "현재 위치"를 직접 눌렀을 때만
+  const promptRef = useRef(false)
+
   const load = useCallback(
     async (id: string) => {
       setStatus('loading')
@@ -48,7 +53,14 @@ export default function App() {
         if (fav) {
           where = { lat: fav.lat, lon: fav.lon, label: fav.name, isFallback: false }
         } else {
-          where = await locate()
+          const wantPrompt = promptRef.current
+          promptRef.current = false
+          where = await locate(wantPrompt)
+          // 권한이 없고 사용자가 요청한 것도 아니면, 즐겨찾기가 있을 때 그쪽을 우선
+          if (where.isFallback && !wantPrompt && favorites.length > 0) {
+            setSelectedId(favorites[0].id)
+            return
+          }
         }
         setLoc(where)
         setWx(await fetchWeather(where.lat, where.lon))
@@ -59,6 +71,12 @@ export default function App() {
     },
     [favorites],
   )
+
+  function selectPlace(id: string) {
+    if (id === 'current') promptRef.current = true
+    if (id === selectedId) load(id)
+    else setSelectedId(id)
+  }
 
   useEffect(() => {
     load(selectedId)
@@ -119,16 +137,16 @@ export default function App() {
       <PromoLayer picks={picks} />
       <header className="top">
         <h1 className="brand">무능한 날씨예측기</h1>
-        <button type="button" className="loc" onClick={() => load(selectedId)} title="새로고침">
+        <button type="button" className="loc" onClick={() => selectPlace(selectedId)} title="새로고침">
           {selectedId === 'current' ? '📍' : '⭐'} {loc.label}{' '}
-          {selectedId === 'current' && loc.isFallback && <em>(위치 권한 필요)</em>}
+          {selectedId === 'current' && loc.isFallback && <em>(눌러서 내 위치 사용)</em>}
         </button>
       </header>
 
       <PlaceBar
         favorites={favorites}
         selectedId={selectedId}
-        onSelect={setSelectedId}
+        onSelect={selectPlace}
         onAdd={addFavorite}
         onRemove={removeFavorite}
       />
@@ -225,6 +243,35 @@ export default function App() {
             ))}
           </ul>
         )}
+      </section>
+
+      <section className="card">
+        <h2 className="section-title">이번 주 날씨</h2>
+        <ul className="week">
+          {wx.week.map((d, i) => {
+            const dt = new Date(`${d.date}T00:00:00`)
+            const lb = codeLabel(d.stats.code)
+            const dayName = i === 0 ? '오늘' : WEEKDAYS[dt.getDay()]
+            return (
+              <li key={d.date} className={i === 0 ? 'week-today' : ''}>
+                <span className={`week-day ${dt.getDay() === 0 ? 'sun' : dt.getDay() === 6 ? 'sat' : ''}`}>
+                  {dayName}
+                </span>
+                <span className="week-date">
+                  {dt.getMonth() + 1}.{dt.getDate()}
+                </span>
+                <span className="week-emoji" aria-hidden>
+                  {lb.emoji}
+                </span>
+                <span className="week-prob">
+                  {(d.stats.precipProbMax ?? 0) >= 20 ? `${d.stats.precipProbMax}%` : ''}
+                </span>
+                <span className="week-min">{Math.round(d.stats.tmin)}°</span>
+                <span className="week-max">{Math.round(d.stats.tmax)}°</span>
+              </li>
+            )
+          })}
+        </ul>
       </section>
 
       <footer className="foot">

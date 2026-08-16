@@ -17,6 +17,8 @@ export interface WeatherData {
   yesterday: DayStats
   today: DayStats
   tomorrow: DayStats
+  /** 오늘부터 7일 (date: YYYY-MM-DD) */
+  week: { date: string; stats: DayStats }[]
   /** 시간별 (어제 0시 ~ 내일 23시, 로컬) */
   hourly: { time: string[]; temp: number[]; precip: number[] }
   fetchedAt: number
@@ -36,7 +38,7 @@ interface OpenMeteoResponse {
     precipitation: number[]
   }
   daily: {
-    time: string[]
+    time: string[] // YYYY-MM-DD
     temperature_2m_max: number[]
     temperature_2m_min: number[]
     precipitation_sum: number[]
@@ -62,7 +64,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
   url.searchParams.set('longitude', String(lon))
   url.searchParams.set('timezone', 'auto')
   url.searchParams.set('past_days', '1')
-  url.searchParams.set('forecast_days', '2')
+  url.searchParams.set('forecast_days', '8')
   url.searchParams.set('current', 'temperature_2m,apparent_temperature,weather_code,is_day')
   url.searchParams.set('hourly', 'temperature_2m,precipitation')
   url.searchParams.set(
@@ -87,6 +89,9 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     yesterday: dayStats(data.daily, 0),
     today: dayStats(data.daily, 1),
     tomorrow: dayStats(data.daily, 2),
+    week: data.daily.time
+      .map((date, i) => ({ date, stats: dayStats(data.daily, i) }))
+      .slice(1, 8),
     hourly: {
       time: data.hourly.time,
       temp: data.hourly.temperature_2m,

@@ -39,7 +39,19 @@ export async function reverseGeocode(lat: number, lon: number): Promise<string |
   }
 }
 
-export async function locate(): Promise<Located> {
+/**
+ * 현재 위치 파악. requestIfNeeded 가 false 면 이미 허용된 경우에만 위치를 쓰고,
+ * 권한 팝업은 절대 띄우지 않는다 (위치 동의는 선택 사항).
+ */
+export async function locate(requestIfNeeded: boolean): Promise<Located> {
+  if (!requestIfNeeded) {
+    try {
+      const perm = await navigator.permissions.query({ name: 'geolocation' })
+      if (perm.state !== 'granted') return { ...FALLBACK, isFallback: true }
+    } catch {
+      return { ...FALLBACK, isFallback: true }
+    }
+  }
   const pos = await getPosition()
   if (!pos) return { ...FALLBACK, isFallback: true }
   const label = await reverseGeocode(pos.lat, pos.lon)
