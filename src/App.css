@@ -480,49 +480,11 @@ body {
   padding: 4px 6px 0;
 }
 
-.kma-canvas-wrap {
-  position: relative;
-  border-radius: 12px 12px 0 0;
-  overflow: hidden;
-  background: #fff;
-}
-
-.kma-canvas {
+.kma-gif {
   width: 100%;
+  border-radius: 12px;
   display: block;
-}
-
-.kma-zoom-btns {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.kma-zoom-btns button {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
-  background: rgba(255, 255, 255, 0.92);
-  color: #1e293b;
-  font-size: 18px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.kma-loading {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  background: rgba(255, 255, 255, 0.7);
-}
-
-.kma-bar {
-  border-radius: 0 0 12px 12px;
+  background: #fff;
 }
 
 .kma-credit {
