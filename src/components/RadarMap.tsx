@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { lccForward, lccInverse } from '../lib/lcc'
+import { mapleForecastOverlays } from '../lib/kmaMaple'
 
 interface RadarFrame {
   time: number
@@ -75,6 +76,8 @@ function kmaFrameTimes(count: number): { stamp: string; epoch: number }[] {
 function kmaBox(lat: number, lon: number): {
   urlPart: string
   bounds: L.LatLngBoundsExpression
+  rectX0: number
+  rectY1: number
 } {
   const c = lccForward(lat, lon)
   const half = KMA_BOX_M / 2
@@ -95,7 +98,7 @@ function kmaBox(lat: number, lon: number): {
     [(sw.lat + se.lat) / 2, (nw.lon + sw.lon) / 2],
     [(nw.lat + ne.lat) / 2, (ne.lon + se.lon) / 2],
   ]
-  return { urlPart, bounds }
+  return { urlPart, bounds, rectX0: x0, rectY1: y1 }
 }
 
 function kmaFrameUrl(stamp: string, urlPart: string): string {
@@ -292,6 +295,26 @@ export default function RadarMap({ lat, lon }: Props) {
             }).addTo(mapRef.current!),
           )
           items = frames.map((f, i) => ({ time: f.epoch, kind: 'radar', layerIdx: i }))
+
+          // ── 미래: 기상청 MAPLE 예측(+10분~+3시간)을 재투영해 오버레이
+          const lastObs = items[items.length - 1].time
+          const maple = await mapleForecastOverlays(box.rectX0, box.rectY1, KMA_BOX_M, 512).catch(
+            () => [],
+          )
+          if (cancelled || !mapRef.current) return
+          for (const mf of maple) {
+            if (mf.time <= lastObs) continue // 실황과 겹치는 구간 제외
+            const overlay = L.imageOverlay(mf.url, box.bounds, {
+              opacity: 0,
+              interactive: false,
+            }).addTo(mapRef.current!)
+            forecastLayersRef.current.push(overlay)
+            items.push({
+              time: mf.time,
+              kind: 'forecast',
+              layerIdx: forecastLayersRef.current.length - 1,
+            })
+          }
         } else {
           // ── 해외 위치: RainViewer 타일 폴백
           const api: RadarApi = await fetch('https://api.rainviewer.com/public/weather-maps.json').then((r) => {
@@ -312,7 +335,8 @@ export default function RadarMap({ lat, lon }: Props) {
 
         const grid = await gridPromise
         if (cancelled || !mapRef.current) return
-        const now = items.length - 1
+        // "현재" = 마지막 실황 프레임 (실황은 항상 타임라인 앞쪽에 연속 배치)
+        const now = items.filter((it) => it.kind === 'radar').length - 1
 
         // ── 미래: 강수 예보를 보간 이미지 오버레이로 (6시간, 15분 간격)
         if (grid) {
@@ -367,7 +391,7 @@ export default function RadarMap({ lat, lon }: Props) {
       l.setOpacity(item.kind === 'radar' && j === item.layerIdx ? RADAR_OPACITY : 0),
     )
     forecastLayersRef.current.forEach((o, j) =>
-      o.setOpacity(item.kind === 'forecast' && j === item.layerIdx ? 0.8 : 0),
+      o.setOpacity(item.kind === 'forecast' && j === item.layerIdx ? RADAR_OPACITY : 0),
     )
   }, [idx, timeline])
 
@@ -434,7 +458,7 @@ export default function RadarMap({ lat, lon }: Props) {
               <div className="radar-ticks">
                 <span>{timeLabel(timeline[0].time)}</span>
                 <span className="radar-credit">
-                  {inKorea(lat, lon) ? '실황 기상청 · 예측은 아래 카드' : '실황 RainViewer · 예측 Open-Meteo'}
+                  {inKorea(lat, lon) ? '실황·예측 기상청 레이더' : '실황 RainViewer · 예측 Open-Meteo'}
                 </span>
                 <span>{timeLabel(timeline[timeline.length - 1].time)}</span>
               </div>
