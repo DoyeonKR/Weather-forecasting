@@ -123,6 +123,7 @@ export default function App() {
   if (status === 'loading') {
     return (
       <div className={`shell center ${theme}`}>
+        <div className="neon-frame" aria-hidden />
         <div className="spinner" aria-label="불러오는 중" />
         <p className="muted">위치와 날씨를 확인하고 있어요…</p>
       </div>
@@ -132,6 +133,7 @@ export default function App() {
   if (status === 'error' || !wx || !loc) {
     return (
       <div className="shell center bg-loading">
+        <div className="neon-frame" aria-hidden />
         <p>날씨를 불러오지 못했어요.</p>
         <button type="button" className="retry" onClick={() => load(selectedId)}>
           다시 시도
@@ -150,6 +152,7 @@ export default function App() {
 
   return (
     <div className={`shell ${theme}`}>
+      <div className="neon-frame" aria-hidden />
       <PromoLayer picks={picks} />
       <header className="top">
         <div>
@@ -323,7 +326,7 @@ export default function App() {
         <p className="muted small">
           패밀리 사이트:{' '}
           <a className="family-link" href="https://doyeonkr.github.io/our-days/" target="_blank" rel="noreferrer">
-            OUR-DAYS (커플 앱)
+            우리들의 하루 (커플 앱)
           </a>
         </p>
         {partnersActive() && <p className="muted small">{PARTNERS_NOTICE}</p>}

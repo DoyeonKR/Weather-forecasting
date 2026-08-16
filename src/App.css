@@ -38,6 +38,18 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* 테마 색 형광 프레임 (우리들의 하루 스타일) */
+.neon-frame {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3000;
+  border: 2px solid color-mix(in srgb, var(--accent) 85%, #fff);
+  box-shadow:
+    inset 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent),
+    inset 0 0 3px color-mix(in srgb, var(--accent) 80%, transparent);
+}
+
 .shell {
   max-width: 520px;
   margin: 0 auto;
@@ -50,41 +62,81 @@ body {
   transition: background 0.8s ease;
 }
 
-/* ── 날씨 배경 테마 ───────────────────────────── */
+/* ── 날씨 배경 테마 (테마 색이 전체 분위기에 스며들도록 color-mix) ── */
 .bg-loading {
-  background: var(--bg);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg));
 }
 
 .bg-clear-day {
-  background: linear-gradient(180deg, #1d5fa8 0%, #16334f 45%, #0e131a 100%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 42%, #16334f) 0%,
+    color-mix(in srgb, var(--accent) 18%, #16334f) 45%,
+    color-mix(in srgb, var(--accent) 8%, #0e131a) 100%
+  );
 }
 
 .bg-partly-day {
-  background: linear-gradient(180deg, #38618c 0%, #223448 50%, #0e131a 100%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 34%, #223448) 0%,
+    color-mix(in srgb, var(--accent) 14%, #223448) 50%,
+    color-mix(in srgb, var(--accent) 7%, #0e131a) 100%
+  );
 }
 
 .bg-clear-night {
-  background: linear-gradient(180deg, #101433 0%, #0b0e1f 50%, #08090f 100%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 22%, #0b0e1f) 0%,
+    color-mix(in srgb, var(--accent) 10%, #0b0e1f) 50%,
+    color-mix(in srgb, var(--accent) 4%, #08090f) 100%
+  );
 }
 
 .bg-cloudy {
-  background: linear-gradient(180deg, #3d4a5a 0%, #232c37 50%, #0e131a 100%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 20%, #3d4a5a) 0%,
+    color-mix(in srgb, var(--accent) 10%, #232c37) 50%,
+    color-mix(in srgb, var(--accent) 5%, #0e131a) 100%
+  );
 }
 
 .bg-rain {
-  background: linear-gradient(180deg, #1d3648 0%, #14222e 50%, #0a0f14 100%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 22%, #14222e) 0%,
+    color-mix(in srgb, var(--accent) 10%, #14222e) 50%,
+    color-mix(in srgb, var(--accent) 4%, #0a0f14) 100%
+  );
 }
 
 .bg-snow {
-  background: linear-gradient(180deg, #5a6b80 0%, #2b3644 50%, #10151c 100%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 18%, #5a6b80) 0%,
+    color-mix(in srgb, var(--accent) 10%, #2b3644) 50%,
+    color-mix(in srgb, var(--accent) 5%, #10151c) 100%
+  );
 }
 
 .bg-fog {
-  background: linear-gradient(180deg, #46505a 0%, #262d34 50%, #101418 100%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 16%, #46505a) 0%,
+    color-mix(in srgb, var(--accent) 8%, #262d34) 50%,
+    color-mix(in srgb, var(--accent) 4%, #101418) 100%
+  );
 }
 
 .bg-thunder {
-  background: linear-gradient(180deg, #33255c 0%, #1d1735 50%, #0b0e13 100%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 24%, #1d1735) 0%,
+    color-mix(in srgb, var(--accent) 12%, #1d1735) 50%,
+    color-mix(in srgb, var(--accent) 5%, #0b0e13) 100%
+  );
 }
 
 .shell.center {
@@ -124,8 +176,8 @@ body {
 }
 
 .card {
-  background: rgba(20, 27, 37, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--accent) 7%, rgba(20, 27, 37, 0.78));
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, rgba(255, 255, 255, 0.08));
   border-radius: 16px;
   padding: 18px;
   backdrop-filter: blur(8px);
@@ -367,8 +419,8 @@ body {
 }
 
 .stat {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--accent) 5%, rgba(255, 255, 255, 0.03));
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--line));
   border-radius: 12px;
   padding: 12px;
   display: flex;
