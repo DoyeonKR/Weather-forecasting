@@ -113,7 +113,7 @@ export default function App() {
   return (
     <div className={`shell ${theme}`}>
       <header className="top">
-        <h1 className="brand">어제보다</h1>
+        <h1 className="brand">무능한 날씨예측기</h1>
         <button type="button" className="loc" onClick={() => load(selectedId)} title="새로고침">
           {selectedId === 'current' ? '📍' : '⭐'} {loc.label}{' '}
           {selectedId === 'current' && loc.isFallback && <em>(위치 권한 필요)</em>}

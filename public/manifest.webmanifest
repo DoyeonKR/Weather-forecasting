@@ -1,6 +1,6 @@
 {
-  "name": "어제보다 — 어제와 비교하는 날씨",
-  "short_name": "어제보다",
+  "name": "무능한 날씨예측기",
+  "short_name": "무능한 날씨예측기",
   "description": "어제와 비교해서 알려주는 날씨. 비구름 레이더까지.",
   "start_url": "/Weather-forecasting/",
   "scope": "/Weather-forecasting/",

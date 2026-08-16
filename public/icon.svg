@@ -13,5 +13,5 @@
     <circle cx="330" cy="300" r="50"/>
     <rect x="140" y="300" width="230" height="72" rx="36"/>
   </g>
-  <text x="256" y="452" font-family="sans-serif" font-size="64" font-weight="800" fill="#cfe3f7" text-anchor="middle">어제보다</text>
+  <text x="256" y="452" font-family="sans-serif" font-size="54" font-weight="800" fill="#cfe3f7" text-anchor="middle">무능한 날씨</text>
 </svg>
