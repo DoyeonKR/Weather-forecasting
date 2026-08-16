@@ -214,8 +214,15 @@ export default function App() {
         )}
       </section>
 
-      <footer className="foot muted small">
-        데이터: 기상청 · Open-Meteo · RainViewer · © OpenStreetMap
+      <footer className="foot">
+        <a
+          className="feedback-btn"
+          href={`mailto:kdy7854@naver.com?subject=${encodeURIComponent('[무능한 날씨예측기] 개선 의견')}&body=${encodeURIComponent('앱을 쓰다가 이런 점이 아쉬웠어요:\n\n')}`}
+        >
+          ✉️ 개선점이 있다면 메일 보내기
+        </a>
+        <p className="muted small">문의: kdy7854@naver.com</p>
+        <p className="muted small">데이터: 기상청 · Open-Meteo · RainViewer · © OpenStreetMap</p>
       </footer>
     </div>
   )
