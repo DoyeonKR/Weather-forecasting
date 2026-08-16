@@ -16,6 +16,7 @@ import { PARTNERS_NOTICE, partnerPicks, partnersActive } from './lib/partners'
 import RadarMap from './components/RadarMap'
 import KmaNowcast from './components/KmaNowcast'
 import PlaceBar from './components/PlaceBar'
+import PromoLayer from './components/PromoLayer'
 import './App.css'
 
 type Status = 'loading' | 'ready' | 'error'
@@ -115,6 +116,7 @@ export default function App() {
 
   return (
     <div className={`shell ${theme}`}>
+      <PromoLayer picks={picks} />
       <header className="top">
         <h1 className="brand">무능한 날씨예측기</h1>
         <button type="button" className="loc" onClick={() => load(selectedId)} title="새로고침">

@@ -593,6 +593,115 @@ body {
   cursor: pointer;
 }
 
+/* ── 접속 1회 추천 레이어 ───────────────────────────── */
+.promo-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(5, 8, 12, 0.65);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  animation: promo-fade 0.25s ease;
+}
+
+@keyframes promo-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.promo-card {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 28px 22px 16px;
+  text-align: center;
+  animation: promo-pop 0.3s ease;
+}
+
+@keyframes promo-pop {
+  from {
+    transform: translateY(14px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.promo-x {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--sub);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.promo-emoji {
+  font-size: 44px;
+  line-height: 1;
+}
+
+.promo-title {
+  margin: 10px 0 4px;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.promo-desc {
+  margin: 0 0 16px;
+  color: var(--sub);
+  font-size: 14px;
+}
+
+.promo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.promo-cta {
+  display: block;
+  background: var(--accent);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 12px;
+  padding: 13px 16px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.promo-later {
+  background: none;
+  border: none;
+  color: var(--sub);
+  font-size: 13px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.promo-notice {
+  margin: 12px 0 0;
+  color: var(--sub);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
 .spinner {
   width: 28px;
   height: 28px;
