@@ -1,0 +1,47 @@
+// 쿠팡 파트너스 날씨 연동 추천 (파트너스 ID: AF2713725)
+// 링크는 반드시 파트너스 대시보드 "링크 생성"으로 만든 공식 단축링크여야 수수료가 집계됨.
+// 링크가 비어 있는 항목은 화면에 표시되지 않음.
+import type { DayStats } from './compare'
+
+export interface PartnerItem {
+  emoji: string
+  label: string
+  url: string
+}
+
+const LINKS = {
+  umbrella: '', // 우산
+  sunscreen: '', // 선크림
+  fan: '', // 휴대용 선풍기
+  hotpack: '', // 핫팩
+  outer: '', // 겉옷/경량패딩
+}
+
+/** 오늘 날씨 조건에 맞는 추천 상품 (최대 2개) */
+export function partnerPicks(opts: {
+  today: DayStats
+  uvMax: number | null
+}): PartnerItem[] {
+  const { today, uvMax } = opts
+  const picks: PartnerItem[] = []
+  const rains = today.precipSum >= 0.5 || (today.precipProbMax ?? 0) >= 60
+  if (rains && LINKS.umbrella)
+    picks.push({ emoji: '☂️', label: '튼튼한 장우산 보러가기', url: LINKS.umbrella })
+  if ((uvMax ?? 0) >= 6 && LINKS.sunscreen)
+    picks.push({ emoji: '🧴', label: '선크림 보러가기', url: LINKS.sunscreen })
+  if (today.tmax >= 30 && LINKS.fan)
+    picks.push({ emoji: '🌀', label: '휴대용 선풍기 보러가기', url: LINKS.fan })
+  if (today.tmin <= 3 && LINKS.hotpack)
+    picks.push({ emoji: '🔥', label: '핫팩 보러가기', url: LINKS.hotpack })
+  if (today.tmin <= 8 && LINKS.outer)
+    picks.push({ emoji: '🧥', label: '가벼운 겉옷 보러가기', url: LINKS.outer })
+  return picks.slice(0, 2)
+}
+
+export const PARTNERS_NOTICE =
+  '이 앱은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.'
+
+/** 노출할 링크가 하나라도 등록되어 있는지 */
+export function partnersActive(): boolean {
+  return Object.values(LINKS).some((v) => v.length > 0)
+}

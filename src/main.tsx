@@ -1,6 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
+import { trackVisit } from './lib/track.ts'
+
+trackVisit()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

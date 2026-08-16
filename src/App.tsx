@@ -12,6 +12,7 @@ import {
   tomorrowAlerts,
 } from './lib/compare'
 import { loadFavorites, saveFavorites, type Place } from './lib/places'
+import { PARTNERS_NOTICE, partnerPicks, partnersActive } from './lib/partners'
 import RadarMap from './components/RadarMap'
 import KmaNowcast from './components/KmaNowcast'
 import PlaceBar from './components/PlaceBar'
@@ -108,6 +109,7 @@ export default function App() {
   const head = nowHeadline(wx.nowTemp, wx.yesterdaySameHour)
   const rain = precipSummary(wx.today, wx.yesterday)
   const tips = funTips({ today: wx.today, yesterday: wx.yesterday, uvMax: wx.uvMaxToday })
+  const picks = partnerPicks({ today: wx.today, uvMax: wx.uvMaxToday })
   const alerts = tomorrowAlerts(wx.tomorrow, wx.today)
   const tomorrowLabel = codeLabel(wx.tomorrow.code)
 
@@ -151,6 +153,15 @@ export default function App() {
               <li key={t}>{t}</li>
             ))}
           </ul>
+        )}
+        {picks.length > 0 && (
+          <div className="picks">
+            {picks.map((p) => (
+              <a key={p.url} className="pick-btn" href={p.url} target="_blank" rel="noreferrer">
+                {p.emoji} {p.label}
+              </a>
+            ))}
+          </div>
         )}
       </section>
 
@@ -222,6 +233,7 @@ export default function App() {
           ✉️ 개선점이 있다면 메일 보내기
         </a>
         <p className="muted small">문의: kdy7854@naver.com</p>
+        {partnersActive() && <p className="muted small">{PARTNERS_NOTICE}</p>}
         <p className="muted small">데이터: 기상청 · Open-Meteo · RainViewer · © OpenStreetMap</p>
       </footer>
     </div>

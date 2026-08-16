@@ -317,6 +317,30 @@ body {
   letter-spacing: 0.02em;
 }
 
+.picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.pick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(47, 129, 247, 0.15);
+  border: 1px solid rgba(47, 129, 247, 0.4);
+  border-radius: 999px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+  padding: 8px 14px;
+}
+
+.pick-btn:hover {
+  background: rgba(47, 129, 247, 0.25);
+}
+
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
