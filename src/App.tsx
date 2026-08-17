@@ -35,6 +35,7 @@ export default function App() {
   const [wx, setWx] = useState<WeatherData | null>(null)
   const [kmaNow, setKmaNow] = useState<KmaNow | null>(null)
   const [visitors, setVisitors] = useState<number | null>(null)
+  const [tipsOpen, setTipsOpen] = useState(false)
 
   useEffect(() => {
     fetchTodayVisitors().then(setVisitors)
@@ -156,13 +157,17 @@ export default function App() {
       <header className="top">
         <div>
           <h1 className="brand">무능한 날씨예측기</h1>
-          {visitors !== null && <span className="visitors">👀 오늘 {visitors}명 다녀갔어요</span>}
+          {visitors !== null && <span className="visitors">👀 오늘 {visitors}명</span>}
         </div>
         <div className="top-right">
-          <button type="button" className="loc" onClick={() => selectPlace(selectedId)} title="새로고침">
+          <button
+            type="button"
+            className="loc"
+            onClick={() => selectPlace(selectedId)}
+            title={loc.isFallback && selectedId === 'current' ? '눌러서 내 위치 사용' : `${loc.label} 새로고침`}
+          >
             {selectedId === 'current' ? '📍' : favorites.some((f) => f.id === selectedId) ? '⭐' : '🔍'}{' '}
-            {loc.label}{' '}
-            {selectedId === 'current' && loc.isFallback && <em>(눌러서 내 위치 사용)</em>}
+            <span className="loc-name">{loc.label.replace(' (기본 위치)', '(기본)')}</span>
           </button>
           <Settings loc={{ lat: loc.lat, lon: loc.lon, label: loc.label }} />
         </div>
@@ -200,11 +205,18 @@ export default function App() {
           <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
         </div>
         {tips.length > 0 && (
-          <ul className="tips">
-            {tips.map((t) => (
-              <li key={t}>{t}</li>
-            ))}
-          </ul>
+          <>
+            <ul className="tips">
+              {(tipsOpen ? tips : tips.slice(0, 1)).map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ul>
+            {tips.length > 1 && (
+              <button type="button" className="tips-more" onClick={() => setTipsOpen((o) => !o)}>
+                {tipsOpen ? '접기 ▲' : `조언 ${tips.length - 1}개 더 보기 ▼`}
+              </button>
+            )}
+          </>
         )}
         {picks.length > 0 && (
           <div className="picks">
@@ -261,29 +273,39 @@ export default function App() {
       <section className="card">
         <h2 className="section-title">이번 주 날씨</h2>
         <ul className="week">
-          {wx.week.map((d, i) => {
-            const dt = new Date(`${d.date}T00:00:00`)
-            const lb = codeLabel(d.stats.code)
-            const dayName = i === 0 ? '오늘' : WEEKDAYS[dt.getDay()]
-            return (
-              <li key={d.date} className={i === 0 ? 'week-today' : ''}>
-                <span className={`week-day ${dt.getDay() === 0 ? 'sun' : dt.getDay() === 6 ? 'sat' : ''}`}>
-                  {dayName}
-                </span>
-                <span className="week-date">
-                  {dt.getMonth() + 1}.{dt.getDate()}
-                </span>
-                <span className="week-emoji" aria-hidden>
-                  {lb.emoji}
-                </span>
-                <span className="week-prob">
-                  {(d.stats.precipProbMax ?? 0) >= 20 ? `${d.stats.precipProbMax}%` : ''}
-                </span>
-                <span className="week-min">{Math.round(d.stats.tmin)}°</span>
-                <span className="week-max">{Math.round(d.stats.tmax)}°</span>
-              </li>
-            )
-          })}
+          {(() => {
+            const lo = Math.floor(Math.min(...wx.week.map((d) => d.stats.tmin))) - 1
+            const hi = Math.ceil(Math.max(...wx.week.map((d) => d.stats.tmax))) + 1
+            const span = hi - lo
+            return wx.week.map((d, i) => {
+              const dt = new Date(`${d.date}T00:00:00`)
+              const lb = codeLabel(d.stats.code)
+              const dayName = i === 0 ? '오늘' : WEEKDAYS[dt.getDay()]
+              const left = ((d.stats.tmin - lo) / span) * 100
+              const width = Math.max(((d.stats.tmax - d.stats.tmin) / span) * 100, 4)
+              return (
+                <li key={d.date} className={i === 0 ? 'week-today' : ''}>
+                  <span className={`week-day ${dt.getDay() === 0 ? 'sun' : dt.getDay() === 6 ? 'sat' : ''}`}>
+                    {dayName}
+                  </span>
+                  <span className="week-date">
+                    {dt.getMonth() + 1}.{dt.getDate()}
+                  </span>
+                  <span className="week-emoji" aria-hidden>
+                    {lb.emoji}
+                  </span>
+                  <span className="week-prob">
+                    {(d.stats.precipProbMax ?? 0) >= 20 ? `${d.stats.precipProbMax}%` : ''}
+                  </span>
+                  <span className="week-min">{Math.round(d.stats.tmin)}°</span>
+                  <div className="week-track">
+                    <div className="week-bar" style={{ left: `${left}%`, width: `${width}%` }} />
+                  </div>
+                  <span className="week-max">{Math.round(d.stats.tmax)}°</span>
+                </li>
+              )
+            })
+          })()}
         </ul>
       </section>
 

@@ -2,21 +2,24 @@
 import type { DayStats } from '../lib/compare'
 import { round1 } from '../lib/compare'
 
-/** 지금 vs 어제 같은 시각: 큰 화살표 + 숫자 */
+/** 지금 vs 어제 같은 시각: 큰 화살표 + 숫자 (캡슐 강조) */
 export function DeltaHero({ nowTemp, yesterdaySameHour }: { nowTemp: number; yesterdaySameHour: number }) {
   const d = round1(nowTemp - yesterdaySameHour)
   const same = Math.abs(d) < 0.5
+  const mood = same ? 'same' : d > 0 ? 'warm' : 'cold'
   return (
-    <div className="delta-hero">
-      {same ? (
-        <span className="delta-hero-num same">≈</span>
-      ) : (
-        <>
-          <span className={`delta-hero-arrow ${d > 0 ? 'warm' : 'cold'}`}>{d > 0 ? '▲' : '▼'}</span>
-          <span className={`delta-hero-num ${d > 0 ? 'warm' : 'cold'}`}>{Math.abs(d)}°</span>
-        </>
-      )}
-      <span className="delta-hero-cap">어제 이 시간</span>
+    <div className={`delta-hero ${mood}`}>
+      <div className="delta-hero-main">
+        {same ? (
+          <span className="delta-hero-num same">≈</span>
+        ) : (
+          <>
+            <span className={`delta-hero-arrow ${mood}`}>{d > 0 ? '▲' : '▼'}</span>
+            <span className={`delta-hero-num ${mood}`}>{Math.abs(d)}°</span>
+          </>
+        )}
+      </div>
+      <span className="delta-hero-cap">어제 이 시간 {round1(yesterdaySameHour)}°</span>
     </div>
   )
 }

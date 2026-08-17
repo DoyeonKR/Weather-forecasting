@@ -173,10 +173,20 @@ body {
 }
 
 .brand {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 800;
   margin: 0;
   letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.loc-name {
+  display: inline-block;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 .loc {
@@ -382,8 +392,28 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
-  min-width: 72px;
+  gap: 2px;
+  min-width: 84px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.delta-hero.warm {
+  border-color: rgba(255, 138, 92, 0.45);
+  background: rgba(255, 138, 92, 0.1);
+}
+
+.delta-hero.cold {
+  border-color: rgba(92, 179, 255, 0.45);
+  background: rgba(92, 179, 255, 0.1);
+}
+
+.delta-hero-main {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .delta-hero-arrow {
@@ -392,7 +422,7 @@ body {
 }
 
 .delta-hero-num {
-  font-size: 30px;
+  font-size: 32px;
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -576,6 +606,16 @@ body {
   padding: 8px 12px;
   font-size: 14px;
   line-height: 1.45;
+}
+
+.tips-more {
+  margin-top: 8px;
+  background: none;
+  border: none;
+  color: var(--sub);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 2px;
 }
 
 .section-title {
@@ -794,12 +834,27 @@ body {
 
 .week li {
   display: grid;
-  grid-template-columns: 44px 40px 34px 1fr 44px 44px;
+  grid-template-columns: 40px 36px 30px 40px 34px 1fr 34px;
   align-items: center;
   gap: 4px;
   padding: 9px 4px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   font-size: 14px;
+}
+
+.week-track {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.week-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--cold), var(--warm));
 }
 
 .week li:first-child {
@@ -1024,9 +1079,9 @@ body {
 
 .visitors {
   color: var(--sub);
-  font-size: 11px;
+  font-size: 10px;
   display: block;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .muted {

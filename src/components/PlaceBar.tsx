@@ -39,34 +39,6 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
 
   return (
     <div className="placebar">
-      <div className="search-row">
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') runSearch()
-          }}
-          placeholder="🔍 동네 검색 (예: 판교, 부산 해운대)"
-          className="search-input"
-          enterKeyHint="search"
-        />
-        <button type="button" className="search-btn" onClick={runSearch} disabled={busy}>
-          {busy ? '…' : '검색'}
-        </button>
-      </div>
-      {results.length > 0 && (
-        <ul className="search-results">
-          {results.map((r) => (
-            <li key={r.id}>
-              <button type="button" onClick={() => pick(r)}>
-                📍 {r.name}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-
       <div className="chips" role="tablist" aria-label="위치 선택">
         <button
           type="button"
@@ -106,6 +78,34 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
           </button>
         )}
       </div>
+
+      <div className="search-row">
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') runSearch()
+          }}
+          placeholder="🔍 동네 검색 (예: 판교, 부산 해운대)"
+          className="search-input"
+          enterKeyHint="search"
+        />
+        <button type="button" className="search-btn" onClick={runSearch} disabled={busy}>
+          {busy ? '…' : '검색'}
+        </button>
+      </div>
+      {results.length > 0 && (
+        <ul className="search-results">
+          {results.map((r) => (
+            <li key={r.id}>
+              <button type="button" onClick={() => pick(r)}>
+                📍 {r.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
