@@ -17,7 +17,7 @@ import PlaceBar from './components/PlaceBar'
 import PromoLayer from './components/PromoLayer'
 import Settings from './components/Settings'
 import WeatherFx from './components/WeatherFx'
-import { DeltaHero, PrecipCompare, TempRangeBars } from './components/CompareGraphic'
+import { DeltaHero, PrecipCompare, TempRangeBars, WindCompare } from './components/CompareGraphic'
 import { fetchTodayVisitors } from './lib/track'
 import './App.css'
 
@@ -219,8 +219,18 @@ export default function App() {
 
       <section className="card">
         <h2 className="section-title">오늘 vs 어제</h2>
-        <TempRangeBars today={wx.today} yesterday={wx.yesterday} />
-        <PrecipCompare today={wx.today} yesterday={wx.yesterday} />
+        <div className="cmp-sec">
+          <h3 className="cmp-title">🌡️ 기온</h3>
+          <TempRangeBars today={wx.today} yesterday={wx.yesterday} />
+        </div>
+        <div className="cmp-sec">
+          <h3 className="cmp-title">💧 강수</h3>
+          <PrecipCompare today={wx.today} yesterday={wx.yesterday} />
+        </div>
+        <div className="cmp-sec">
+          <h3 className="cmp-title">💨 바람</h3>
+          <WindCompare today={wx.today} yesterday={wx.yesterday} />
+        </div>
       </section>
 
       <section className="card">

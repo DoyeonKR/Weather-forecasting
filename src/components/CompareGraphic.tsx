@@ -53,11 +53,10 @@ export function TempRangeBars({ today, yesterday }: { today: DayStats; yesterday
   )
 }
 
-/** 강수 비교: 물방울 + 비례 바 (비가 없으면 렌더 안 함) */
+/** 강수 비교: 물방울 + 비례 바 */
 export function PrecipCompare({ today, yesterday }: { today: DayStats; yesterday: DayStats }) {
   const t = today.precipSum
   const y = yesterday.precipSum
-  if (t < 0.5 && y < 0.5) return null
   const max = Math.max(t, y, 1)
   return (
     <div className="precip-wrap">
@@ -67,7 +66,7 @@ export function PrecipCompare({ today, yesterday }: { today: DayStats; yesterday
           <div className="precip-bar today" style={{ width: `${(t / max) * 100}%` }} />
         </div>
         <span className="precip-val">
-          💧 {round1(t)}mm{today.precipProbMax !== null ? ` · ${today.precipProbMax}%` : ''}
+          {round1(t)}mm{today.precipProbMax !== null ? ` · ${today.precipProbMax}%` : ''}
         </span>
       </div>
       <div className="precip-row">
@@ -75,7 +74,37 @@ export function PrecipCompare({ today, yesterday }: { today: DayStats; yesterday
         <div className="precip-track">
           <div className="precip-bar yesterday" style={{ width: `${(y / max) * 100}%` }} />
         </div>
-        <span className="precip-val">💧 {round1(y)}mm</span>
+        <span className="precip-val">{round1(y)}mm</span>
+      </div>
+    </div>
+  )
+}
+
+/** 바람 비교: 최대 풍속 비례 바 (돌풍 병기) */
+export function WindCompare({ today, yesterday }: { today: DayStats; yesterday: DayStats }) {
+  const t = today.windMax ?? 0
+  const y = yesterday.windMax ?? 0
+  const max = Math.max(t, y, 10)
+  const gust = (s: DayStats) => (s.gustMax ? ` · 돌풍 ${Math.round(s.gustMax)}` : '')
+  return (
+    <div className="precip-wrap">
+      <div className="precip-row">
+        <span className="range-name">오늘</span>
+        <div className="precip-track">
+          <div className="precip-bar wind today" style={{ width: `${(t / max) * 100}%` }} />
+        </div>
+        <span className="precip-val">
+          {Math.round(t)}km/h{gust(today)}
+        </span>
+      </div>
+      <div className="precip-row">
+        <span className="range-name">어제</span>
+        <div className="precip-track">
+          <div className="precip-bar wind yesterday" style={{ width: `${(y / max) * 100}%` }} />
+        </div>
+        <span className="precip-val">
+          {Math.round(y)}km/h{gust(yesterday)}
+        </span>
       </div>
     </div>
   )

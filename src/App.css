@@ -481,11 +481,27 @@ body {
   background: rgba(255, 255, 255, 0.28);
 }
 
-.precip-wrap {
+.cmp-sec + .cmp-sec {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   margin-top: 14px;
+  padding-top: 12px;
+}
+
+.cmp-title {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sub);
+}
+
+.precip-wrap {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.precip-bar.wind.today {
+  background: #7dd3a8;
 }
 
 .precip-row {
