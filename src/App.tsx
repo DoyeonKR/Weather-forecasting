@@ -12,6 +12,7 @@ import {
   tomorrowAlerts,
 } from './lib/compare'
 import { loadFavorites, saveFavorites, type Place } from './lib/places'
+import { fetchKmaNow, inKoreaBounds, ptyLabel, type KmaNow } from './lib/kmaNow'
 import { PARTNERS_NOTICE, partnerPicks, partnersActive } from './lib/partners'
 import RadarMap from './components/RadarMap'
 import PlaceBar from './components/PlaceBar'
@@ -43,6 +44,7 @@ export default function App() {
   const [tempPlace, setTempPlace] = useState<Place | null>(null)
   const [loc, setLoc] = useState<Located | null>(null)
   const [wx, setWx] = useState<WeatherData | null>(null)
+  const [kmaNow, setKmaNow] = useState<KmaNow | null>(null)
   const [visitors, setVisitors] = useState<number | null>(null)
 
   useEffect(() => {
@@ -72,7 +74,12 @@ export default function App() {
           }
         }
         setLoc(where)
-        setWx(await fetchWeather(where.lat, where.lon))
+        const [weather, obs] = await Promise.all([
+          fetchWeather(where.lat, where.lon),
+          inKoreaBounds(where.lat, where.lon) ? fetchKmaNow(where.lat, where.lon) : Promise.resolve(null),
+        ])
+        setWx(weather)
+        setKmaNow(obs)
         setStatus('ready')
       } catch {
         setStatus('error')
@@ -141,7 +148,9 @@ export default function App() {
     )
   }
 
-  const now = codeLabel(wx.nowCode)
+  // 현재 날씨 상태: 기상청 관측(PTY)이 강수를 잡으면 관측값 우선, 아니면 모델 라벨
+  const obsLabel = ptyLabel(kmaNow?.pty ?? null)
+  const now = obsLabel ?? codeLabel(wx.nowCode)
   const head = nowHeadline(wx.nowTemp, wx.yesterdaySameHour)
   const rain = precipSummary(wx.today, wx.yesterday)
   const tips = funTips({ today: wx.today, yesterday: wx.yesterday, uvMax: wx.uvMaxToday })
@@ -191,7 +200,11 @@ export default function App() {
             <div className="hero-temp">{round1(wx.nowTemp)}°</div>
             <div className="hero-sub">
               {now.label} · 체감 {round1(wx.nowApparent)}°
+              {kmaNow !== null && (kmaNow.rn1 ?? 0) > 0 && ` · 시간당 ${kmaNow.rn1}mm`}
             </div>
+            {kmaNow !== null && (
+              <div className="obs-badge">기상청 관측 반영</div>
+            )}
           </div>
         </div>
         <p className={`headline ${head.delta > 0.4 ? 'warm' : head.delta < -0.4 ? 'cold' : ''}`}>
