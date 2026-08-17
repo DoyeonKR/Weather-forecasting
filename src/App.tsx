@@ -18,6 +18,7 @@ import RadarMap from './components/RadarMap'
 import PlaceBar from './components/PlaceBar'
 import PromoLayer from './components/PromoLayer'
 import Settings from './components/Settings'
+import WeatherFx from './components/WeatherFx'
 import { fetchTodayVisitors } from './lib/track'
 import './App.css'
 
@@ -124,7 +125,10 @@ export default function App() {
     if (selectedId === id) setSelectedId('current')
   }
 
-  const theme = wx ? themeClass(wx.nowCode, wx.nowIsDay) : 'bg-loading'
+  // 배경 테마: 기상청 관측(PTY)이 강수를 잡으면 관측 기준으로 (비=61, 눈·진눈깨비=73)
+  const effCode =
+    kmaNow?.pty && kmaNow.pty > 0 ? (kmaNow.pty === 1 || kmaNow.pty === 5 ? 61 : 73) : wx?.nowCode
+  const theme = wx ? themeClass(effCode ?? wx.nowCode, wx.nowIsDay) : 'bg-loading'
 
   if (status === 'loading') {
     return (
@@ -160,6 +164,7 @@ export default function App() {
 
   return (
     <div className={`shell ${theme}`}>
+      <WeatherFx theme={theme} />
       <div className="neon-frame" aria-hidden />
       <PromoLayer picks={picks} />
       <header className="top">
