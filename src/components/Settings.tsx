@@ -1,5 +1,6 @@
 // 설정 패널 — 알림 온오프 + 색상 테마(포인트 컬러)
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { disableNotify, enableNotify, getNotifyState, type NotifyState } from '../lib/push'
 
 const ACCENT_KEY = 'eojeboda:accent'
@@ -108,8 +109,9 @@ export default function Settings({ loc }: Props) {
       <button type="button" className="gear" aria-label="설정" onClick={() => setOpen(true)}>
         ⚙️
       </button>
-      {open && (
-        <div className="settings-backdrop" role="dialog" aria-modal="true" aria-label="설정">
+      {open &&
+        createPortal(
+          <div className="settings-backdrop" role="dialog" aria-modal="true" aria-label="설정">
           <div className="settings-panel">
             <div className="settings-head">
               <h2 className="settings-title">설정</h2>
@@ -175,8 +177,9 @@ export default function Settings({ loc }: Props) {
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </>
   )
 }
