@@ -1010,6 +1010,36 @@ body {
   font-weight: 700;
 }
 
+.night-row {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.night-times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.night-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 6px 11px;
+  cursor: pointer;
+}
+
+.night-chip.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
 .accent-row {
   display: flex;
   gap: 12px;

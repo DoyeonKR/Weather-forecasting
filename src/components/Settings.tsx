@@ -3,6 +3,15 @@ import { useEffect, useState } from 'react'
 import { disableNotify, enableNotify, getNotifyState, type NotifyState } from '../lib/push'
 
 const ACCENT_KEY = 'eojeboda:accent'
+const NIGHT_KEY = 'eojeboda:nighttime'
+
+const NIGHT_TIMES = [
+  { v: '2100', label: '밤 9:00' },
+  { v: '2130', label: '밤 9:30' },
+  { v: '2200', label: '밤 10:00' },
+  { v: '2230', label: '밤 10:30' },
+  { v: '2300', label: '밤 11:00' },
+]
 
 export const ACCENTS = [
   { id: 'blue', name: '파랑', color: '#2f81f7' },
@@ -36,6 +45,13 @@ export default function Settings({ loc }: Props) {
       return 'blue'
     }
   })
+  const [nightTime, setNightTime] = useState<string>(() => {
+    try {
+      return localStorage.getItem(NIGHT_KEY) ?? '2130'
+    } catch {
+      return '2130'
+    }
+  })
 
   useEffect(() => {
     getNotifyState().then(setNotify)
@@ -60,12 +76,30 @@ export default function Settings({ loc }: Props) {
         await disableNotify()
         setNotify('off')
       } else {
-        const ok = await enableNotify(loc)
+        const ok = await enableNotify(loc, nightTime)
         setNotify(ok ? 'on' : 'off')
         if (!ok) alert('알림 권한이 필요해요. 브라우저 설정에서 알림을 허용해주세요.')
       }
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function pickNightTime(v: string) {
+    setNightTime(v)
+    try {
+      localStorage.setItem(NIGHT_KEY, v)
+    } catch {
+      // 무시
+    }
+    // 이미 켜져 있으면 새 시간으로 재등록
+    if (notify === 'on' && !busy) {
+      setBusy(true)
+      try {
+        await enableNotify(loc, v)
+      } finally {
+        setBusy(false)
+      }
     }
   }
 
@@ -89,7 +123,8 @@ export default function Settings({ loc }: Props) {
                 <div>
                   <h3 className="settings-sec-title">🔔 날씨 알림</h3>
                   <p className="muted small notify-desc">
-                    매일 아침 7:30 오늘 브리핑, 밤 9:30 내일이 크게 달라질 때 알려드려요.
+                    아침 7:30 오늘 브리핑, 그리고 내일이 오늘과 크게 다르면 밤에 출근 준비물을
+                    알려드려요.
                     {notify === 'on' ? ` 지금은 ${loc.label} 기준으로 받는 중.` : ''}
                     {notify === 'unsupported' ? ' 이 브라우저에서는 지원되지 않아요.' : ''}
                   </p>
@@ -103,6 +138,22 @@ export default function Settings({ loc }: Props) {
                 >
                   <span className="notify-knob" />
                 </button>
+              </div>
+              <div className="night-row">
+                <span className="muted small">밤 알림 시간</span>
+                <div className="night-times">
+                  {NIGHT_TIMES.map((t) => (
+                    <button
+                      key={t.v}
+                      type="button"
+                      className={`night-chip ${nightTime === t.v ? 'on' : ''}`}
+                      onClick={() => pickNightTime(t.v)}
+                      disabled={busy}
+                    >
+                      {t.label.replace('밤 ', '')}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 

@@ -28,8 +28,11 @@ export async function getNotifyState(): Promise<NotifyState> {
   }
 }
 
-/** 알림 켜기 — 권한 요청 후 구독을 서버에 저장 */
-export async function enableNotify(loc: { lat: number; lon: number; label: string }): Promise<boolean> {
+/** 알림 켜기 — 권한 요청 후 구독을 서버에 저장. nightTime: 밤 알림 슬롯(예 '2130') */
+export async function enableNotify(
+  loc: { lat: number; lon: number; label: string },
+  nightTime = '2130',
+): Promise<boolean> {
   try {
     const perm = await Notification.requestPermission()
     if (perm !== 'granted') return false
@@ -60,6 +63,7 @@ export async function enableNotify(loc: { lat: number; lon: number; label: strin
         lat: loc.lat,
         lon: loc.lon,
         label: loc.label.slice(0, 60),
+        night_time: nightTime,
       }),
     })
     return res.ok
