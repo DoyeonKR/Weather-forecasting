@@ -70,7 +70,8 @@ export function codeLabel(code: number): { label: string; emoji: string } {
   if (code === 2) return { label: '구름 조금', emoji: '⛅' }
   if (code === 3) return { label: '흐림', emoji: '☁️' }
   if (code === 45 || code === 48) return { label: '안개', emoji: '🌫️' }
-  if (code >= 51 && code <= 57) return { label: '이슬비', emoji: '🌦️' }
+  // 강수형태 세부 구분(이슬비 등)은 수치모델 신뢰도가 낮아 단정하지 않는다
+  if (code >= 51 && code <= 57) return { label: '약한 비', emoji: '🌦️' }
   if (code >= 61 && code <= 67) return { label: '비', emoji: '🌧️' }
   if (code >= 71 && code <= 77) return { label: '눈', emoji: '🌨️' }
   if (code >= 80 && code <= 82) return { label: '소나기', emoji: '🌧️' }

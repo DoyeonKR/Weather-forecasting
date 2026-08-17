@@ -14,7 +14,6 @@ import {
 import { loadFavorites, saveFavorites, type Place } from './lib/places'
 import { PARTNERS_NOTICE, partnerPicks, partnersActive } from './lib/partners'
 import RadarMap from './components/RadarMap'
-import KmaNowcast from './components/KmaNowcast'
 import PlaceBar from './components/PlaceBar'
 import PromoLayer from './components/PromoLayer'
 import Settings from './components/Settings'
@@ -303,8 +302,6 @@ export default function App() {
         <h2 className="section-title">비구름 레이더</h2>
         <RadarMap lat={loc.lat} lon={loc.lon} />
       </section>
-
-      <KmaNowcast />
 
       <footer className="foot">
         <a
