@@ -195,7 +195,8 @@ export default function App() {
           <div>
             <div className="hero-temp">{round1(wx.nowTemp)}°</div>
             <div className="hero-sub">
-              {now.label} · 체감 {round1(wx.nowApparent)}°
+              {now.label} · 체감 {round1(wx.nowApparent)}° · 습도{' '}
+              {Math.round(kmaNow?.reh ?? wx.nowHumidity)}%
               {kmaNow !== null && (kmaNow.rn1 ?? 0) > 0 && ` · 시간당 ${kmaNow.rn1}mm`}
             </div>
             {kmaNow !== null && (
@@ -273,6 +274,15 @@ export default function App() {
       <section className="card">
         <h2 className="section-title">이번 주 날씨</h2>
         <ul className="week">
+          <li className="week-head" aria-hidden>
+            <span>요일</span>
+            <span>날짜</span>
+            <span style={{ textAlign: 'center' }}>날씨</span>
+            <span style={{ textAlign: 'right', paddingRight: 8 }}>강수</span>
+            <span style={{ textAlign: 'right' }}>최저</span>
+            <span />
+            <span style={{ textAlign: 'right' }}>최고</span>
+          </li>
           {(() => {
             const lo = Math.floor(Math.min(...wx.week.map((d) => d.stats.tmin))) - 1
             const hi = Math.ceil(Math.max(...wx.week.map((d) => d.stats.tmax))) + 1

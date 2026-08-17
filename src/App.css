@@ -842,6 +842,14 @@ body {
   font-size: 14px;
 }
 
+.week-head {
+  font-size: 11px;
+  color: var(--sub);
+  border-top: none !important;
+  padding-top: 0 !important;
+  padding-bottom: 2px !important;
+}
+
 .week-track {
   position: relative;
   height: 8px;
