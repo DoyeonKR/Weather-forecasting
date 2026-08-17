@@ -370,6 +370,159 @@ body {
   padding: 1px 6px;
 }
 
+/* ── 그래픽 비교 요소 ───────────────────────────── */
+.hero-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.delta-hero {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  min-width: 72px;
+}
+
+.delta-hero-arrow {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.delta-hero-num {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.delta-hero-num.same {
+  color: var(--sub);
+}
+
+.delta-hero-arrow.warm,
+.delta-hero-num.warm {
+  color: var(--warm);
+}
+
+.delta-hero-arrow.cold,
+.delta-hero-num.cold {
+  color: var(--cold);
+}
+
+.delta-hero-cap {
+  font-size: 10px;
+  color: var(--sub);
+  margin-top: 2px;
+}
+
+.range-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.range-row {
+  display: grid;
+  grid-template-columns: 34px 34px 1fr 34px;
+  align-items: center;
+  gap: 8px;
+}
+
+.range-name {
+  font-size: 12px;
+  color: var(--sub);
+  font-weight: 700;
+}
+
+.range-min,
+.range-max {
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.range-min {
+  text-align: right;
+  color: var(--cold);
+}
+
+.range-max {
+  color: var(--warm);
+}
+
+.range-min.yesterday,
+.range-max.yesterday {
+  color: var(--sub);
+  font-weight: 600;
+}
+
+.range-track {
+  position: relative;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.range-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.range-bar.today {
+  background: linear-gradient(90deg, var(--cold), var(--warm));
+}
+
+.range-bar.yesterday {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.precip-wrap {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.precip-row {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.precip-track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.precip-bar {
+  height: 100%;
+  border-radius: 999px;
+  min-width: 3px;
+}
+
+.precip-bar.today {
+  background: var(--cold);
+}
+
+.precip-bar.yesterday {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.precip-val {
+  font-size: 12px;
+  color: var(--sub);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .headline {
   margin: 14px 0 0;
   font-size: 20px;

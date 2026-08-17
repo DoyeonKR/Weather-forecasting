@@ -5,8 +5,6 @@ import {
   codeLabel,
   deltaText,
   funTips,
-  nowHeadline,
-  precipSummary,
   round1,
   themeClass,
   tomorrowAlerts,
@@ -19,23 +17,13 @@ import PlaceBar from './components/PlaceBar'
 import PromoLayer from './components/PromoLayer'
 import Settings from './components/Settings'
 import WeatherFx from './components/WeatherFx'
+import { DeltaHero, PrecipCompare, TempRangeBars } from './components/CompareGraphic'
 import { fetchTodayVisitors } from './lib/track'
 import './App.css'
 
 type Status = 'loading' | 'ready' | 'error'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
-
-function DeltaBadge({ delta, unit = '°' }: { delta: number; unit?: string }) {
-  if (Math.abs(delta) < 0.5) return <span className="delta same">≈ 어제와 비슷</span>
-  const up = delta > 0
-  return (
-    <span className={`delta ${up ? 'up' : 'down'}`}>
-      {up ? '▲' : '▼'} {Math.abs(round1(delta))}
-      {unit}
-    </span>
-  )
-}
 
 export default function App() {
   const [status, setStatus] = useState<Status>('loading')
@@ -155,8 +143,6 @@ export default function App() {
   // 현재 날씨 상태: 기상청 관측(PTY)이 강수를 잡으면 관측값 우선, 아니면 모델 라벨
   const obsLabel = ptyLabel(kmaNow?.pty ?? null)
   const now = obsLabel ?? codeLabel(wx.nowCode)
-  const head = nowHeadline(wx.nowTemp, wx.yesterdaySameHour)
-  const rain = precipSummary(wx.today, wx.yesterday)
   const tips = funTips({ today: wx.today, yesterday: wx.yesterday, uvMax: wx.uvMaxToday })
   const picks = partnerPicks({ today: wx.today, uvMax: wx.uvMaxToday })
   const alerts = tomorrowAlerts(wx.tomorrow, wx.today)
@@ -211,11 +197,8 @@ export default function App() {
               <div className="obs-badge">기상청 관측 반영</div>
             )}
           </div>
+          <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
         </div>
-        <p className={`headline ${head.delta > 0.4 ? 'warm' : head.delta < -0.4 ? 'cold' : ''}`}>
-          {head.text}
-        </p>
-        {rain && <p className="rain-note">☔ {rain}</p>}
         {tips.length > 0 && (
           <ul className="tips">
             {tips.map((t) => (
@@ -236,30 +219,8 @@ export default function App() {
 
       <section className="card">
         <h2 className="section-title">오늘 vs 어제</h2>
-        <div className="grid2">
-          <div className="stat">
-            <span className="stat-label">최고</span>
-            <span className="stat-value">{round1(wx.today.tmax)}°</span>
-            <DeltaBadge delta={wx.today.tmax - wx.yesterday.tmax} />
-            <span className="stat-yesterday">어제 {round1(wx.yesterday.tmax)}°</span>
-          </div>
-          <div className="stat">
-            <span className="stat-label">최저</span>
-            <span className="stat-value">{round1(wx.today.tmin)}°</span>
-            <DeltaBadge delta={wx.today.tmin - wx.yesterday.tmin} />
-            <span className="stat-yesterday">어제 {round1(wx.yesterday.tmin)}°</span>
-          </div>
-          <div className="stat">
-            <span className="stat-label">강수량</span>
-            <span className="stat-value">{round1(wx.today.precipSum)}mm</span>
-            <DeltaBadge delta={wx.today.precipSum - wx.yesterday.precipSum} unit="mm" />
-            <span className="stat-yesterday">어제 {round1(wx.yesterday.precipSum)}mm</span>
-          </div>
-          <div className="stat">
-            <span className="stat-label">강수확률</span>
-            <span className="stat-value">{wx.today.precipProbMax ?? '?'}%</span>
-          </div>
-        </div>
+        <TempRangeBars today={wx.today} yesterday={wx.yesterday} />
+        <PrecipCompare today={wx.today} yesterday={wx.yesterday} />
       </section>
 
       <section className="card">
