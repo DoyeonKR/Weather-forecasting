@@ -28,10 +28,11 @@ export async function getNotifyState(): Promise<NotifyState> {
   }
 }
 
-/** 알림 켜기 — 권한 요청 후 구독을 서버에 저장. nightTime: 밤 알림 슬롯(예 '2130') */
+/** 알림 켜기 — 권한 요청 후 구독을 서버에 저장. 슬롯 형식 'HHmm' (예 '0730', '2130') */
 export async function enableNotify(
   loc: { lat: number; lon: number; label: string },
   nightTime = '2130',
+  morningTime = '0730',
 ): Promise<boolean> {
   try {
     const perm = await Notification.requestPermission()
@@ -64,6 +65,7 @@ export async function enableNotify(
         lon: loc.lon,
         label: loc.label.slice(0, 60),
         night_time: nightTime,
+        morning_time: morningTime,
       }),
     })
     return res.ok

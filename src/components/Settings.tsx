@@ -5,14 +5,11 @@ import { disableNotify, enableNotify, getNotifyState, type NotifyState } from '.
 
 const ACCENT_KEY = 'eojeboda:accent'
 const NIGHT_KEY = 'eojeboda:nighttime'
+const MORNING_KEY = 'eojeboda:morningtime'
 
-const NIGHT_TIMES = [
-  { v: '2100', label: '밤 9:00' },
-  { v: '2130', label: '밤 9:30' },
-  { v: '2200', label: '밤 10:00' },
-  { v: '2230', label: '밤 10:30' },
-  { v: '2300', label: '밤 11:00' },
-]
+const fmt = (v: string) => `${v.slice(0, 2)}:${v.slice(2)}`
+const MORNING_TIMES = ['0600', '0630', '0700', '0730', '0800', '0830', '0900']
+const NIGHT_TIMES = ['2100', '2130', '2200', '2230', '2300']
 
 export const ACCENTS = [
   { id: 'blue', name: '파랑', color: '#2f81f7' },
@@ -53,6 +50,13 @@ export default function Settings({ loc }: Props) {
       return '2130'
     }
   })
+  const [morningTime, setMorningTime] = useState<string>(() => {
+    try {
+      return localStorage.getItem(MORNING_KEY) ?? '0730'
+    } catch {
+      return '0730'
+    }
+  })
 
   useEffect(() => {
     getNotifyState().then(setNotify)
@@ -77,7 +81,7 @@ export default function Settings({ loc }: Props) {
         await disableNotify()
         setNotify('off')
       } else {
-        const ok = await enableNotify(loc, nightTime)
+        const ok = await enableNotify(loc, nightTime, morningTime)
         setNotify(ok ? 'on' : 'off')
         if (!ok) alert('알림 권한이 필요해요. 브라우저 설정에서 알림을 허용해주세요.')
       }
@@ -86,10 +90,13 @@ export default function Settings({ loc }: Props) {
     }
   }
 
-  async function pickNightTime(v: string) {
-    setNightTime(v)
+  async function pickTime(kind: 'morning' | 'night', v: string) {
+    const nextMorning = kind === 'morning' ? v : morningTime
+    const nextNight = kind === 'night' ? v : nightTime
+    if (kind === 'morning') setMorningTime(v)
+    else setNightTime(v)
     try {
-      localStorage.setItem(NIGHT_KEY, v)
+      localStorage.setItem(kind === 'morning' ? MORNING_KEY : NIGHT_KEY, v)
     } catch {
       // 무시
     }
@@ -97,7 +104,7 @@ export default function Settings({ loc }: Props) {
     if (notify === 'on' && !busy) {
       setBusy(true)
       try {
-        await enableNotify(loc, v)
+        await enableNotify(loc, nextNight, nextMorning)
       } finally {
         setBusy(false)
       }
@@ -125,8 +132,8 @@ export default function Settings({ loc }: Props) {
                 <div>
                   <h3 className="settings-sec-title">🔔 날씨 알림</h3>
                   <p className="muted small notify-desc">
-                    아침 7:30 오늘 브리핑, 그리고 내일이 오늘과 크게 다르면 밤에 출근 준비물을
-                    알려드려요.
+                    아침엔 오늘 날씨 브리핑, 밤엔 내일이 오늘과 크게 다를 때 출근 준비물을
+                    알려드려요. 시간은 아래에서 선택하세요.
                     {notify === 'on' ? ` 지금은 ${loc.label} 기준으로 받는 중.` : ''}
                     {notify === 'unsupported' ? ' 이 브라우저에서는 지원되지 않아요.' : ''}
                   </p>
@@ -142,17 +149,33 @@ export default function Settings({ loc }: Props) {
                 </button>
               </div>
               <div className="night-row">
-                <span className="muted small">밤 알림 시간</span>
+                <span className="muted small">☀️ 아침 브리핑 시간</span>
                 <div className="night-times">
-                  {NIGHT_TIMES.map((t) => (
+                  {MORNING_TIMES.map((v) => (
                     <button
-                      key={t.v}
+                      key={v}
                       type="button"
-                      className={`night-chip ${nightTime === t.v ? 'on' : ''}`}
-                      onClick={() => pickNightTime(t.v)}
+                      className={`night-chip ${morningTime === v ? 'on' : ''}`}
+                      onClick={() => pickTime('morning', v)}
                       disabled={busy}
                     >
-                      {t.label.replace('밤 ', '')}
+                      {fmt(v)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="night-row">
+                <span className="muted small">🌙 내일 준비 알림 시간</span>
+                <div className="night-times">
+                  {NIGHT_TIMES.map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      className={`night-chip ${nightTime === v ? 'on' : ''}`}
+                      onClick={() => pickTime('night', v)}
+                      disabled={busy}
+                    >
+                      {fmt(v)}
                     </button>
                   ))}
                 </div>
