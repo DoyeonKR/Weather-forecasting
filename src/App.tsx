@@ -18,6 +18,7 @@ import PromoLayer from './components/PromoLayer'
 import Settings from './components/Settings'
 import WeatherFx from './components/WeatherFx'
 import { DeltaHero, PrecipCompare, TempRangeBars, WindCompare } from './components/CompareGraphic'
+import ComparePlaces from './components/ComparePlaces'
 import { fetchTodayVisitors } from './lib/track'
 import './App.css'
 
@@ -318,6 +319,8 @@ export default function App() {
           })()}
         </ul>
       </section>
+
+      <ComparePlaces baseLabel={loc.label} baseWx={wx} favorites={favorites} />
 
       <section className="card radar-card">
         <h2 className="section-title">비구름 레이더</h2>
