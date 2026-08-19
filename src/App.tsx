@@ -198,6 +198,10 @@ export default function App() {
             <div className="hero-sub">
               {now.label} · 체감 {round1(wx.nowApparent)}° · 습도{' '}
               {Math.round(kmaNow?.reh ?? wx.nowHumidity)}%
+            </div>
+            <div className="hero-sub">
+              ☔ 확률 {wx.today.precipProbMax ?? '?'}%
+              {wx.today.precipSum >= 0.1 && ` · 오늘 ${round1(wx.today.precipSum)}mm`}
               {kmaNow !== null && (kmaNow.rn1 ?? 0) > 0 && ` · 시간당 ${kmaNow.rn1}mm`}
             </div>
             {kmaNow !== null && (
