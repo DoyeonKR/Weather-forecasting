@@ -193,7 +193,7 @@ export default function App() {
           <span className="hero-emoji" aria-hidden>
             {now.emoji}
           </span>
-          <div>
+          <div className="hero-info">
             <div className="hero-temp">{round1(wx.nowTemp)}°</div>
             <div className="hero-sub">
               {now.label} · 체감 {round1(wx.nowApparent)}° · 습도{' '}

@@ -368,6 +368,27 @@ body {
   color: var(--sub);
   font-size: 14px;
   margin-top: 2px;
+  word-break: keep-all;
+  line-height: 1.5;
+}
+
+@media (max-width: 380px) {
+  .hero-emoji {
+    font-size: 42px;
+  }
+
+  .hero-temp {
+    font-size: 38px;
+  }
+
+  .delta-hero {
+    min-width: 76px;
+    padding: 8px 10px;
+  }
+
+  .delta-hero-num {
+    font-size: 26px;
+  }
 }
 
 .obs-badge {
@@ -385,6 +406,12 @@ body {
   display: flex;
   align-items: center;
   gap: 14px;
+  flex-wrap: wrap;
+}
+
+.hero-info {
+  flex: 1;
+  min-width: 170px;
 }
 
 .delta-hero {
