@@ -355,7 +355,16 @@ export default function App() {
         </p>
         {partnersActive() && <p className="muted small">{PARTNERS_NOTICE}</p>}
         <p className="muted small">데이터: 기상청 · Open-Meteo · RainViewer · © OpenStreetMap</p>
-        <p className="muted small">v{__APP_VERSION__}</p>
+        <p className="muted small">
+          <a
+            className="family-link"
+            href="https://blog.naver.com/kdy7854/224386138785"
+            target="_blank"
+            rel="noreferrer"
+          >
+            v{__APP_VERSION__} 패치 노트
+          </a>
+        </p>
       </footer>
     </div>
   )
