@@ -208,7 +208,6 @@ export default function App() {
           {wx.today.precipSum >= 0.1 && ` · 오늘 ${round1(wx.today.precipSum)}mm`}
           {kmaNow !== null && (kmaNow.rn1 ?? 0) > 0 && ` · 시간당 ${kmaNow.rn1}mm`}
           </div>
-          {kmaNow !== null && <div className="obs-badge">기상청 관측 반영</div>}
         </div>
         {tips.length > 0 && (
           <>
