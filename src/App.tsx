@@ -19,6 +19,7 @@ import Settings from './components/Settings'
 import WeatherFx from './components/WeatherFx'
 import { DeltaHero, PrecipCompare, TempRangeBars, WindCompare } from './components/CompareGraphic'
 import ComparePlaces from './components/ComparePlaces'
+import CoupangBanner from './components/CoupangBanner'
 import { fetchTodayVisitors } from './lib/track'
 import './App.css'
 
@@ -323,12 +324,16 @@ export default function App() {
         </ul>
       </section>
 
+      <CoupangBanner id={1020558} template="carousel" height={140} />
+
       <ComparePlaces baseLabel={loc.label} baseWx={wx} favorites={favorites} />
 
       <section className="card radar-card">
         <h2 className="section-title">비구름 레이더</h2>
         <RadarMap lat={loc.lat} lon={loc.lon} />
       </section>
+
+      <CoupangBanner id={1020557} template="banner" height={90} maxWidth={728} />
 
       <footer className="foot">
         <a

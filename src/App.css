@@ -52,7 +52,8 @@ body {
 .shell > .top,
 .shell > .placebar,
 .shell > .foot,
-.shell > .star-add {
+.shell > .star-add,
+.shell > .cp-banner {
   position: relative;
   z-index: 1;
 }
@@ -1500,4 +1501,10 @@ body {
   to {
     transform: rotate(360deg);
   }
+}
+
+.cp-banner {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 12px;
 }
