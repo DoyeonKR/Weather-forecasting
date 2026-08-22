@@ -10,9 +10,11 @@ interface Props {
   /** 검색 결과를 바로 보기 (즐겨찾기 추가 아님) */
   onView: (place: Place) => void
   onRemove: (id: string) => void
+  /** 즐겨찾기 순서 이동 */
+  onMove: (id: string, dir: -1 | 1) => void
 }
 
-export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRemove }: Props) {
+export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRemove, onMove }: Props) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Place[]>([])
   const [busy, setBusy] = useState(false)
@@ -60,6 +62,16 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
             >
               ⭐ {p.name}
             </button>
+            {editMode && (
+              <>
+                <button type="button" className="chip-x" aria-label="앞으로 이동" onClick={() => onMove(p.id, -1)}>
+                  ◀
+                </button>
+                <button type="button" className="chip-x" aria-label="뒤로 이동" onClick={() => onMove(p.id, 1)}>
+                  ▶
+                </button>
+              </>
+            )}
             {editMode && (
               <button
                 type="button"

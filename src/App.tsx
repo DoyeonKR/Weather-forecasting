@@ -9,7 +9,7 @@ import {
   themeClass,
   tomorrowAlerts,
 } from './lib/compare'
-import { loadFavorites, saveFavorites, type Place } from './lib/places'
+import { loadFavorites, loadHome, saveFavorites, saveHome, type Place } from './lib/places'
 import { fetchKmaNow, inKoreaBounds, ptyLabel, type KmaNow } from './lib/kmaNow'
 import { PARTNERS_NOTICE, partnerPicks, partnersActive } from './lib/partners'
 import RadarMap from './components/RadarMap'
@@ -30,7 +30,11 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 export default function App() {
   const [status, setStatus] = useState<Status>('loading')
   const [favorites, setFavorites] = useState<Place[]>(loadFavorites)
-  const [selectedId, setSelectedId] = useState<string>('current')
+  const [selectedId, setSelectedId] = useState<string>(() => {
+    const home = loadHome()
+    return home === 'current' || loadFavorites().some((f) => f.id === home) ? home : 'current'
+  })
+  const [homeId, setHomeId] = useState<string>(loadHome)
   /** 검색으로 보는 임시 장소 (즐겨찾기 아님) */
   const [tempPlace, setTempPlace] = useState<Place | null>(null)
   const [loc, setLoc] = useState<Located | null>(null)
@@ -114,6 +118,27 @@ export default function App() {
       return next
     })
     if (selectedId === id) setSelectedId('current')
+    if (homeId === id) {
+      saveHome('current')
+      setHomeId('current')
+    }
+  }
+
+  function moveFavorite(id: string, dir: -1 | 1) {
+    setFavorites((prev) => {
+      const i = prev.findIndex((f) => f.id === id)
+      const j = i + dir
+      if (i < 0 || j < 0 || j >= prev.length) return prev
+      const next = [...prev]
+      ;[next[i], next[j]] = [next[j], next[i]]
+      saveFavorites(next)
+      return next
+    })
+  }
+
+  function setHome(id: string) {
+    saveHome(id)
+    setHomeId(id)
   }
 
   // 배경 테마: 기상청 관측(PTY)이 강수를 잡으면 관측 기준으로 (비=61, 눈·진눈깨비=73)
@@ -171,7 +196,12 @@ export default function App() {
             {selectedId === 'current' ? '📍' : favorites.some((f) => f.id === selectedId) ? '⭐' : '🔍'}{' '}
             <span className="loc-name">{loc.label.replace(' (기본 위치)', '(기본)')}</span>
           </button>
-          <Settings loc={{ lat: loc.lat, lon: loc.lon, label: loc.label }} />
+          <Settings
+            loc={{ lat: loc.lat, lon: loc.lon, label: loc.label }}
+            favorites={favorites}
+            homeId={homeId}
+            onSetHome={setHome}
+          />
         </div>
       </header>
 
@@ -181,6 +211,7 @@ export default function App() {
         onSelect={selectPlace}
         onView={viewPlace}
         onRemove={removeFavorite}
+        onMove={moveFavorite}
       />
 
       {tempPlace?.id === selectedId && !favorites.some((f) => f.id === selectedId) && (

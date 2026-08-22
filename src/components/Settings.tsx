@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { disableNotify, enableNotify, getNotifyState, type NotifyState } from '../lib/push'
+import type { Place } from '../lib/places'
 
 const ACCENT_KEY = 'eojeboda:accent'
 const NIGHT_KEY = 'eojeboda:nighttime'
@@ -30,9 +31,13 @@ export function applySavedAccent(): void {
 
 interface Props {
   loc: { lat: number; lon: number; label: string }
+  favorites: Place[]
+  /** 처음 열 때 보여줄 지역 (current 또는 장소 id) */
+  homeId: string
+  onSetHome: (id: string) => void
 }
 
-export default function Settings({ loc }: Props) {
+export default function Settings({ loc, favorites, homeId, onSetHome }: Props) {
   const [open, setOpen] = useState(false)
   const [notify, setNotify] = useState<NotifyState | 'loading'>('loading')
   const [busy, setBusy] = useState(false)
@@ -179,6 +184,30 @@ export default function Settings({ loc }: Props) {
                     </button>
                   ))}
                 </div>
+              </div>
+            </div>
+
+            <div className="settings-sec">
+              <h3 className="settings-sec-title">🏠 처음 열 때 보여줄 지역</h3>
+              <p className="muted small notify-desc">앱을 켜면 이 지역 날씨부터 보여드려요.</p>
+              <div className="night-times">
+                <button
+                  type="button"
+                  className={`night-chip ${homeId === 'current' ? 'on' : ''}`}
+                  onClick={() => onSetHome('current')}
+                >
+                  📍 현재 위치
+                </button>
+                {favorites.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    className={`night-chip ${homeId === f.id ? 'on' : ''}`}
+                    onClick={() => onSetHome(f.id)}
+                  >
+                    ⭐ {f.name}
+                  </button>
+                ))}
               </div>
             </div>
 

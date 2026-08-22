@@ -410,6 +410,15 @@ export default function RadarMap({ lat, lon }: Props) {
   return (
     <div className="radar-wrap">
       <div ref={containerRef} className="radar-map" />
+      <button
+        type="button"
+        className="radar-locate"
+        aria-label="현재 위치로 이동"
+        title="현재 위치로 이동"
+        onClick={() => mapRef.current?.setView([lat, lon], 8)}
+      >
+        ◎
+      </button>
       <div className="radar-bar">
         {error ? (
           <span className="radar-time">레이더를 불러오지 못했어요</span>

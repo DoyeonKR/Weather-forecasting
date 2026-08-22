@@ -80,3 +80,22 @@ export async function searchPlaces(query: string): Promise<Place[]> {
       return true
     })
 }
+
+const HOME_KEY = 'eojeboda:home'
+
+/** 처음 열 때 보여줄 기본 지역 ('current' 또는 장소 id) */
+export function loadHome(): string {
+  try {
+    return localStorage.getItem(HOME_KEY) ?? 'current'
+  } catch {
+    return 'current'
+  }
+}
+
+export function saveHome(id: string): void {
+  try {
+    localStorage.setItem(HOME_KEY, id)
+  } catch {
+    // 무시
+  }
+}
