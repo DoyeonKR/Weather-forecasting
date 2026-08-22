@@ -242,7 +242,10 @@ export default function App() {
           <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
         </div>
         <div className="hero-subs">
-          <div className="hero-cond">{now.label}</div>
+          <div className="hero-cond">
+            <span className="hero-cond-tag">지금</span>
+            {now.emoji} {now.label}
+          </div>
           <div className="stat-chips">
             <div className="stat-chip">
               <span className="stat-chip-icon" aria-hidden>🌡️</span>

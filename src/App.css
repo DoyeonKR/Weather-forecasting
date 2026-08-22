@@ -82,7 +82,7 @@ body {
   transition: background 0.8s ease;
 }
 
-/* ── 날씨 배경 테마 (테마 색이 전체 분위기에 스며들도록 color-mix) ── */
+/* ── 날씨 배경 테마 (날씨별 기본색이 주인공, 테마색은 살짝만) ── */
 .bg-loading {
   background: color-mix(in srgb, var(--accent) 10%, var(--bg));
 }
@@ -90,72 +90,72 @@ body {
 .bg-clear-day {
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--accent) 42%, #16334f) 0%,
-    color-mix(in srgb, var(--accent) 18%, #16334f) 45%,
-    color-mix(in srgb, var(--accent) 8%, #0e131a) 100%
+    color-mix(in srgb, var(--accent) 14%, #2a6fd6) 0%,
+    color-mix(in srgb, var(--accent) 10%, #1b4a8a) 45%,
+    color-mix(in srgb, var(--accent) 6%, #0e131a) 100%
   );
 }
 
 .bg-partly-day {
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--accent) 34%, #223448) 0%,
-    color-mix(in srgb, var(--accent) 14%, #223448) 50%,
-    color-mix(in srgb, var(--accent) 7%, #0e131a) 100%
+    color-mix(in srgb, var(--accent) 12%, #4a7fb5) 0%,
+    color-mix(in srgb, var(--accent) 8%, #2b4766) 50%,
+    color-mix(in srgb, var(--accent) 5%, #0e131a) 100%
   );
 }
 
 .bg-clear-night {
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--accent) 22%, #0b0e1f) 0%,
-    color-mix(in srgb, var(--accent) 10%, #0b0e1f) 50%,
-    color-mix(in srgb, var(--accent) 4%, #08090f) 100%
+    color-mix(in srgb, var(--accent) 10%, #0d1440) 0%,
+    color-mix(in srgb, var(--accent) 6%, #0a0f2a) 50%,
+    color-mix(in srgb, var(--accent) 3%, #06080f) 100%
   );
 }
 
 .bg-cloudy {
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--accent) 20%, #3d4a5a) 0%,
-    color-mix(in srgb, var(--accent) 10%, #232c37) 50%,
-    color-mix(in srgb, var(--accent) 5%, #0e131a) 100%
+    color-mix(in srgb, var(--accent) 8%, #5b6770) 0%,
+    color-mix(in srgb, var(--accent) 6%, #2f3a44) 50%,
+    color-mix(in srgb, var(--accent) 4%, #0e131a) 100%
   );
 }
 
 .bg-rain {
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--accent) 22%, #14222e) 0%,
-    color-mix(in srgb, var(--accent) 10%, #14222e) 50%,
-    color-mix(in srgb, var(--accent) 4%, #0a0f14) 100%
+    color-mix(in srgb, var(--accent) 8%, #243a4d) 0%,
+    color-mix(in srgb, var(--accent) 5%, #15232e) 50%,
+    color-mix(in srgb, var(--accent) 3%, #090d12) 100%
   );
 }
 
 .bg-snow {
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--accent) 18%, #5a6b80) 0%,
-    color-mix(in srgb, var(--accent) 10%, #2b3644) 50%,
-    color-mix(in srgb, var(--accent) 5%, #10151c) 100%
+    color-mix(in srgb, var(--accent) 8%, #7c8ea3) 0%,
+    color-mix(in srgb, var(--accent) 6%, #3a4757) 50%,
+    color-mix(in srgb, var(--accent) 4%, #10151c) 100%
   );
 }
 
 .bg-fog {
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--accent) 16%, #46505a) 0%,
-    color-mix(in srgb, var(--accent) 8%, #262d34) 50%,
-    color-mix(in srgb, var(--accent) 4%, #101418) 100%
+    color-mix(in srgb, var(--accent) 6%, #5a636b) 0%,
+    color-mix(in srgb, var(--accent) 5%, #2d343b) 50%,
+    color-mix(in srgb, var(--accent) 3%, #101418) 100%
   );
 }
 
 .bg-thunder {
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--accent) 24%, #1d1735) 0%,
-    color-mix(in srgb, var(--accent) 12%, #1d1735) 50%,
-    color-mix(in srgb, var(--accent) 5%, #0b0e13) 100%
+    color-mix(in srgb, var(--accent) 10%, #3b2470) 0%,
+    color-mix(in srgb, var(--accent) 6%, #1f1640) 50%,
+    color-mix(in srgb, var(--accent) 3%, #0a0c14) 100%
   );
 }
 
@@ -1530,9 +1530,21 @@ body {
 }
 
 .hero-cond {
-  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.hero-cond-tag {
+  font-size: 11px;
   font-weight: 700;
-  margin-bottom: 8px;
+  color: var(--sub);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 6px;
 }
 
 .stat-chips {
