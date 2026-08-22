@@ -22,6 +22,9 @@ import { DeltaHero, PrecipCompare, TempRangeBars, WindCompare } from './componen
 import ComparePlaces from './components/ComparePlaces'
 import CoupangBanner from './components/CoupangBanner'
 import { fetchTodayVisitors } from './lib/track'
+import HourlyCard from './components/HourlyCard'
+import { loadOrder, saveOrder, type SectionKey } from './lib/sections'
+import { useLongPressReorder } from './lib/reorder'
 import './App.css'
 
 type Status = 'loading' | 'ready' | 'error'
@@ -51,7 +54,8 @@ export default function App() {
   const [wx, setWx] = useState<WeatherData | null>(null)
   const [kmaNow, setKmaNow] = useState<KmaNow | null>(null)
   const [visitors, setVisitors] = useState<number | null>(null)
-  const [tipsOpen, setTipsOpen] = useState(false)
+  const [tipsOpen, setTipsOpen] = useState(true)
+  const [sectionOrder, setSectionOrder] = useState<SectionKey[]>(loadOrder)
 
   useEffect(() => {
     fetchTodayVisitors().then(setVisitors)
@@ -151,6 +155,13 @@ export default function App() {
     setHomeId(id)
   }
 
+  function applyOrder(next: SectionKey[]) {
+    setSectionOrder(next)
+    saveOrder(next)
+  }
+
+  const reorder = useLongPressReorder<SectionKey>({ order: sectionOrder, onChange: applyOrder, axis: 'y' })
+
   // 배경 테마: 기상청 관측(PTY)이 강수를 잡으면 관측 기준으로 (비=61, 눈·진눈깨비=73)
   const effCode =
     kmaNow?.pty && kmaNow.pty > 0 ? (kmaNow.pty === 1 || kmaNow.pty === 5 ? 61 : 73) : wx?.nowCode
@@ -211,6 +222,8 @@ export default function App() {
             favorites={favorites}
             homeId={homeId}
             onSetHome={setHome}
+            sectionOrder={sectionOrder}
+            onSetOrder={applyOrder}
           />
         </div>
       </header>
@@ -222,6 +235,14 @@ export default function App() {
         onView={viewPlace}
         onRemove={removeFavorite}
         onMove={moveFavorite}
+        onReorder={(ids) => {
+          setFavorites((prev) => {
+            const map = new Map(prev.map((f) => [f.id, f]))
+            const next = ids.map((id) => map.get(id)!).filter(Boolean)
+            saveFavorites(next)
+            return next
+          })
+        }}
       />
 
       {tempPlace?.id === selectedId && !favorites.some((f) => f.id === selectedId) && (
@@ -230,178 +251,218 @@ export default function App() {
         </button>
       )}
 
-      <div key={selectedId} className="switch-enter">
-      <section className="hero card">
-        <div className="hero-main">
-          <span className="hero-emoji" aria-hidden>
-            {now.emoji}
-          </span>
-          <div className="hero-info">
-            <div className="hero-temp">{round1(wx.nowTemp)}°</div>
+      <div
+        key={selectedId}
+        className={`switch-enter ${reorder.active ? 'reorder-active' : ''}`}
+        {...reorder.handlers}
+      >
+        {reorder.active && (
+          <div className="reorder-bar">
+            <span>카드를 끌어서 순서를 바꾸세요</span>
+            <button type="button" onClick={reorder.exit}>완료</button>
           </div>
-          <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
-        </div>
-        <div className="hero-subs">
-          <div className="hero-cond">
-            <span className="hero-cond-tag">지금</span>
-            {now.emoji} {now.label}
-          </div>
-          <div className="stat-chips">
-            <div className="stat-chip">
-              <span className="stat-chip-icon" aria-hidden>🌡️</span>
-              <span className="stat-chip-label">체감</span>
-              <span className="stat-chip-value">{round1(wx.nowApparent)}°</span>
-            </div>
-            <div className="stat-chip">
-              <span className="stat-chip-icon" aria-hidden>💧</span>
-              <span className="stat-chip-label">습도</span>
-              <span className="stat-chip-value">{Math.round(kmaNow?.reh ?? wx.nowHumidity)}%</span>
-            </div>
-            <div className="stat-chip">
-              <span className="stat-chip-icon" aria-hidden>☔</span>
-              <span className="stat-chip-label">강수확률</span>
-              <span className="stat-chip-value">{wx.today.precipProbMax ?? '?'}%</span>
-            </div>
-            <div className="stat-chip">
-              <span className="stat-chip-icon" aria-hidden>🌧️</span>
-              <span className="stat-chip-label">{kmaNow !== null && (kmaNow.rn1 ?? 0) > 0 ? '시간당' : '오늘 강수'}</span>
-              <span className="stat-chip-value">
-                {kmaNow !== null && (kmaNow.rn1 ?? 0) > 0 ? `${kmaNow.rn1}mm` : `${round1(wx.today.precipSum)}mm`}
+        )}
+        {sectionOrder.map((key, i) => (
+          <div
+            key={key}
+            data-reorder-id={key}
+            className={`section-wrap ${reorder.dragId === key ? 'dragging' : ''}`}
+          >
+      {key === 'hero' && (
+        <>
+          <section className="hero card">
+            <div className="hero-main">
+              <span className="hero-emoji" aria-hidden>
+                {now.emoji}
               </span>
+              <div className="hero-info">
+                <div className="hero-temp">{round1(wx.nowTemp)}°</div>
+              </div>
+              <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
             </div>
-          </div>
-        </div>
-        {tips.length > 0 && (
-          <>
-            <ul className="tips tips-visual">
-              {tips.map((t) => (
-                <li key={t.title} className="tip">
-                  <span className={`tip-emoji ${tipAnim(t.emoji)}`} aria-hidden>
-                    {t.emoji}
+            <div className="hero-subs">
+              <div className="hero-cond">
+                <span className="hero-cond-tag">지금</span>
+                {now.emoji} {now.label}
+              </div>
+              <div className="stat-chips">
+                <div className="stat-chip">
+                  <span className="stat-chip-icon" aria-hidden>🌡️</span>
+                  <span className="stat-chip-label">체감</span>
+                  <span className="stat-chip-value">{round1(wx.nowApparent)}°</span>
+                </div>
+                <div className="stat-chip">
+                  <span className="stat-chip-icon" aria-hidden>💧</span>
+                  <span className="stat-chip-label">습도</span>
+                  <span className="stat-chip-value">{Math.round(kmaNow?.reh ?? wx.nowHumidity)}%</span>
+                </div>
+                <div className="stat-chip">
+                  <span className="stat-chip-icon" aria-hidden>☔</span>
+                  <span className="stat-chip-label">강수확률</span>
+                  <span className="stat-chip-value">{wx.today.precipProbMax ?? '?'}%</span>
+                </div>
+                <div className="stat-chip">
+                  <span className="stat-chip-icon" aria-hidden>🌧️</span>
+                  <span className="stat-chip-label">{kmaNow !== null && (kmaNow.rn1 ?? 0) > 0 ? '시간당' : '오늘 강수'}</span>
+                  <span className="stat-chip-value">
+                    {kmaNow !== null && (kmaNow.rn1 ?? 0) > 0 ? `${kmaNow.rn1}mm` : `${round1(wx.today.precipSum)}mm`}
                   </span>
-                  <div className="tip-text">
-                    <div className="tip-title">{t.title}</div>
-                    {tipsOpen && <div className="tip-body">{t.body}</div>}
-                  </div>
-                </li>
-              ))}
+                </div>
+              </div>
+            </div>
+            {tips.length > 0 && (
+              <>
+                <ul className="tips tips-visual">
+                  {tips.map((t) => (
+                    <li key={t.title} className="tip">
+                      <span className={`tip-emoji ${tipAnim(t.emoji)}`} aria-hidden>
+                        {t.emoji}
+                      </span>
+                      <div className="tip-text">
+                        <div className="tip-title">{t.title}</div>
+                        {tipsOpen && <div className="tip-body">{t.body}</div>}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <button type="button" className="tips-more" onClick={() => setTipsOpen((o) => !o)}>
+                  {tipsOpen ? '접기 ▲' : '자세히 보기 ▼'}
+                </button>
+              </>
+            )}
+            {picks.length > 0 && (
+              <div className="picks">
+                {picks.map((p) => (
+                  <a key={p.url} className="pick-btn" href={p.url} target="_blank" rel="noreferrer">
+                    {p.emoji} {p.label}
+                  </a>
+                ))}
+              </div>
+            )}
+          </section>
+    
+            </>
+      )}
+      {key === 'compare' && (
+        <>
+          <section className="card">
+            <h2 className="section-title">어제와 비교하면</h2>
+            <p className="cmp-summary">{compareSummary(wx.today, wx.yesterday)}</p>
+            <div className="cmp-sec">
+              <h3 className="cmp-title">🌡️ 기온</h3>
+              <TempRangeBars today={wx.today} yesterday={wx.yesterday} />
+            </div>
+            <div className="cmp-sec">
+              <h3 className="cmp-title">💧 강수</h3>
+              <PrecipCompare today={wx.today} yesterday={wx.yesterday} />
+            </div>
+            <div className="cmp-sec">
+              <h3 className="cmp-title">💨 바람</h3>
+              <WindCompare today={wx.today} yesterday={wx.yesterday} />
+            </div>
+          </section>
+    
+            </>
+      )}
+            {key === 'hourly' && <HourlyCard wx={wx} />}
+      {key === 'tomorrow' && (
+        <>
+          <section className="card">
+            <h2 className="section-title">내일은 오늘보다</h2>
+            <div className="tomorrow-row">
+              <span className="tomorrow-emoji" aria-hidden>
+                {tomorrowLabel.emoji}
+              </span>
+              <div className="tomorrow-info">
+                <div>
+                  {tomorrowLabel.label} · {round1(wx.tomorrow.tmin)}° ~ {round1(wx.tomorrow.tmax)}°
+                </div>
+                <div className="muted small">
+                  낮 기온 {deltaText(wx.tomorrow.tmax - wx.today.tmax)} · 아침 기온{' '}
+                  {deltaText(wx.tomorrow.tmin - wx.today.tmin)}
+                </div>
+              </div>
+            </div>
+            {alerts.length > 0 && (
+              <ul className="alerts">
+                {alerts.map((a) => (
+                  <li key={a}>⚠️ {a}</li>
+                ))}
+              </ul>
+            )}
+          </section>
+    
+            </>
+      )}
+      {key === 'week' && (
+        <>
+          <section className="card">
+            <h2 className="section-title">이번 주 날씨</h2>
+            <ul className="week">
+              <li className="week-head" aria-hidden>
+                <span>요일</span>
+                <span>날짜</span>
+                <span style={{ textAlign: 'center' }}>날씨</span>
+                <span style={{ textAlign: 'right', paddingRight: 8 }}>강수</span>
+                <span style={{ textAlign: 'right' }}>최저</span>
+                <span />
+                <span style={{ textAlign: 'right' }}>최고</span>
+              </li>
+              {(() => {
+                const lo = Math.floor(Math.min(...wx.week.map((d) => d.stats.tmin))) - 1
+                const hi = Math.ceil(Math.max(...wx.week.map((d) => d.stats.tmax))) + 1
+                const span = hi - lo
+                return wx.week.map((d, i) => {
+                  const dt = new Date(`${d.date}T00:00:00`)
+                  const lb = codeLabel(d.stats.code)
+                  const dayName = i === 0 ? '오늘' : WEEKDAYS[dt.getDay()]
+                  const left = ((d.stats.tmin - lo) / span) * 100
+                  const width = Math.max(((d.stats.tmax - d.stats.tmin) / span) * 100, 4)
+                  return (
+                    <li key={d.date} className={i === 0 ? 'week-today' : ''}>
+                      <span className={`week-day ${dt.getDay() === 0 ? 'sun' : dt.getDay() === 6 ? 'sat' : ''}`}>
+                        {dayName}
+                      </span>
+                      <span className="week-date">
+                        {dt.getMonth() + 1}.{dt.getDate()}
+                      </span>
+                      <span className="week-emoji" aria-hidden>
+                        {lb.emoji}
+                      </span>
+                      <span className="week-prob">
+                        {(d.stats.precipProbMax ?? 0) >= 20 ? `${d.stats.precipProbMax}%` : ''}
+                      </span>
+                      <span className="week-min">{Math.round(d.stats.tmin)}°</span>
+                      <div className="week-track">
+                        <div className="week-bar" style={{ left: `${left}%`, width: `${width}%` }} />
+                      </div>
+                      <span className="week-max">{Math.round(d.stats.tmax)}°</span>
+                    </li>
+                  )
+                })
+              })()}
             </ul>
-            <button type="button" className="tips-more" onClick={() => setTipsOpen((o) => !o)}>
-              {tipsOpen ? '접기 ▲' : '자세히 보기 ▼'}
-            </button>
-          </>
-        )}
-        {picks.length > 0 && (
-          <div className="picks">
-            {picks.map((p) => (
-              <a key={p.url} className="pick-btn" href={p.url} target="_blank" rel="noreferrer">
-                {p.emoji} {p.label}
-              </a>
-            ))}
+          </section>
+    
+            </>
+      )}
+      {key === 'radar' && (
+        <>
+          <section className="card radar-card">
+            <h2 className="section-title">비구름 레이더</h2>
+            <RadarMap lat={loc.lat} lon={loc.lon} />
+          </section>
+    
+            </>
+      )}
+            {key === 'places' && (
+              <ComparePlaces baseLabel={loc.label} baseWx={wx} favorites={favorites} />
+                    )}
+            {i === 3 && <CoupangBanner id={1020558} template="carousel" height={140} />}
           </div>
-        )}
-      </section>
-
-      <section className="card">
-        <h2 className="section-title">어제와 비교하면</h2>
-        <p className="cmp-summary">{compareSummary(wx.today, wx.yesterday)}</p>
-        <div className="cmp-sec">
-          <h3 className="cmp-title">🌡️ 기온</h3>
-          <TempRangeBars today={wx.today} yesterday={wx.yesterday} />
-        </div>
-        <div className="cmp-sec">
-          <h3 className="cmp-title">💧 강수</h3>
-          <PrecipCompare today={wx.today} yesterday={wx.yesterday} />
-        </div>
-        <div className="cmp-sec">
-          <h3 className="cmp-title">💨 바람</h3>
-          <WindCompare today={wx.today} yesterday={wx.yesterday} />
-        </div>
-      </section>
-
-      <section className="card">
-        <h2 className="section-title">내일은 오늘보다</h2>
-        <div className="tomorrow-row">
-          <span className="tomorrow-emoji" aria-hidden>
-            {tomorrowLabel.emoji}
-          </span>
-          <div className="tomorrow-info">
-            <div>
-              {tomorrowLabel.label} · {round1(wx.tomorrow.tmin)}° ~ {round1(wx.tomorrow.tmax)}°
-            </div>
-            <div className="muted small">
-              낮 기온 {deltaText(wx.tomorrow.tmax - wx.today.tmax)} · 아침 기온{' '}
-              {deltaText(wx.tomorrow.tmin - wx.today.tmin)}
-            </div>
-          </div>
-        </div>
-        {alerts.length > 0 && (
-          <ul className="alerts">
-            {alerts.map((a) => (
-              <li key={a}>⚠️ {a}</li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section className="card">
-        <h2 className="section-title">이번 주 날씨</h2>
-        <ul className="week">
-          <li className="week-head" aria-hidden>
-            <span>요일</span>
-            <span>날짜</span>
-            <span style={{ textAlign: 'center' }}>날씨</span>
-            <span style={{ textAlign: 'right', paddingRight: 8 }}>강수</span>
-            <span style={{ textAlign: 'right' }}>최저</span>
-            <span />
-            <span style={{ textAlign: 'right' }}>최고</span>
-          </li>
-          {(() => {
-            const lo = Math.floor(Math.min(...wx.week.map((d) => d.stats.tmin))) - 1
-            const hi = Math.ceil(Math.max(...wx.week.map((d) => d.stats.tmax))) + 1
-            const span = hi - lo
-            return wx.week.map((d, i) => {
-              const dt = new Date(`${d.date}T00:00:00`)
-              const lb = codeLabel(d.stats.code)
-              const dayName = i === 0 ? '오늘' : WEEKDAYS[dt.getDay()]
-              const left = ((d.stats.tmin - lo) / span) * 100
-              const width = Math.max(((d.stats.tmax - d.stats.tmin) / span) * 100, 4)
-              return (
-                <li key={d.date} className={i === 0 ? 'week-today' : ''}>
-                  <span className={`week-day ${dt.getDay() === 0 ? 'sun' : dt.getDay() === 6 ? 'sat' : ''}`}>
-                    {dayName}
-                  </span>
-                  <span className="week-date">
-                    {dt.getMonth() + 1}.{dt.getDate()}
-                  </span>
-                  <span className="week-emoji" aria-hidden>
-                    {lb.emoji}
-                  </span>
-                  <span className="week-prob">
-                    {(d.stats.precipProbMax ?? 0) >= 20 ? `${d.stats.precipProbMax}%` : ''}
-                  </span>
-                  <span className="week-min">{Math.round(d.stats.tmin)}°</span>
-                  <div className="week-track">
-                    <div className="week-bar" style={{ left: `${left}%`, width: `${width}%` }} />
-                  </div>
-                  <span className="week-max">{Math.round(d.stats.tmax)}°</span>
-                </li>
-              )
-            })
-          })()}
-        </ul>
-      </section>
-
-      <CoupangBanner id={1020558} template="carousel" height={140} />
-
-      <ComparePlaces baseLabel={loc.label} baseWx={wx} favorites={favorites} />
-
-      <section className="card radar-card">
-        <h2 className="section-title">비구름 레이더</h2>
-        <RadarMap lat={loc.lat} lon={loc.lon} />
-      </section>
-
-      <CoupangBanner id={1020557} template="banner" height={90} maxWidth={728} />
+        ))}
+        <CoupangBanner id={1020557} template="banner" height={90} maxWidth={728} />
+        <p className="muted small order-hint">카드를 길게 누르면 순서를 바꿀 수 있어요 · 설정(⚙️)에서도 변경 가능</p>
       </div>
 
       <footer className="foot">

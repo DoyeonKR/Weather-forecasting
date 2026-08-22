@@ -1664,3 +1664,207 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .tip-emoji, .switch-enter { animation: none !important; }
 }
+
+/* ── 섹션 순서 바꾸기 (롱탭 드래그) ───────────────── */
+.section-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.reorder-active {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.reorder-active .section-wrap > .card,
+.reorder-active .section-wrap > .hourly-card {
+  animation: wiggle 0.35s ease-in-out infinite;
+  outline: 2px dashed color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: 2px;
+}
+
+.reorder-active .section-wrap.dragging > .card,
+.reorder-active .section-wrap.dragging > .hourly-card {
+  animation: none;
+  transform: scale(1.02);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  outline-color: var(--accent);
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-0.4deg); }
+  50% { transform: rotate(0.4deg); }
+}
+
+.reorder-bar {
+  position: sticky;
+  top: 8px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.reorder-bar button {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chips.reorder-active .chip {
+  animation: wiggle 0.35s ease-in-out infinite;
+}
+
+.chips.reorder-active .chip.dragging {
+  animation: none;
+  transform: scale(1.06);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.order-hint {
+  text-align: center;
+  margin: 0;
+}
+
+/* 설정 > 화면 순서 */
+.order-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.order-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px 8px 12px;
+  font-size: 14px;
+}
+
+.order-btns button {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 8px;
+  width: 30px;
+  height: 28px;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+.order-btns button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.order-reset {
+  margin-top: 10px;
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--sub);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* ── 시간대별 카드 ───────────────────────────── */
+.hourly-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.hourly-legend {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--sub);
+  margin-bottom: 4px;
+}
+
+.hourly-legend .hl {
+  display: inline-block;
+  width: 14px;
+  height: 0;
+  border-top: 2px solid var(--accent);
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.hourly-legend .hl.yest {
+  border-top: 2px dashed rgba(255, 255, 255, 0.6);
+}
+
+.hourly-legend .hl.rain {
+  height: 8px;
+  border: none;
+  background: var(--cold);
+  border-radius: 2px;
+}
+
+.hourly-line {
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.hourly-line.today {
+  stroke: var(--accent);
+}
+
+.hourly-line.yest {
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-dasharray: 4 4;
+  stroke-width: 1.8;
+}
+
+.hourly-now {
+  fill: var(--accent);
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+
+.hourly-bar {
+  fill: var(--cold);
+  opacity: 0.85;
+}
+
+.hourly-temp-label {
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--text);
+}
+
+.hourly-temp-label.max {
+  fill: var(--warm);
+}
+
+.hourly-temp-label.min {
+  fill: var(--cold);
+}
+
+.hourly-hour {
+  font-size: 10px;
+  fill: var(--sub);
+}

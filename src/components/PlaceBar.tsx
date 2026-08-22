@@ -1,6 +1,7 @@
 // 위치 바 — 항상 보이는 동네 검색 + 현재 위치/즐겨찾기 칩
 import { useRef, useState } from 'react'
 import { searchPlaces, type Place } from '../lib/places'
+import { useLongPressReorder } from '../lib/reorder'
 
 interface Props {
   favorites: Place[]
@@ -12,9 +13,17 @@ interface Props {
   onRemove: (id: string) => void
   /** 즐겨찾기 순서 이동 */
   onMove: (id: string, dir: -1 | 1) => void
+  /** 전체 순서 교체 (드래그 정렬) */
+  onReorder: (ids: string[]) => void
 }
 
-export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRemove, onMove }: Props) {
+export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRemove, onMove, onReorder }: Props) {
+  const chipReorder = useLongPressReorder<string>({
+    order: favorites.map((f) => f.id),
+    onChange: onReorder,
+    axis: 'x',
+    attr: 'data-chip-id',
+  })
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Place[]>([])
   const [busy, setBusy] = useState(false)
@@ -41,7 +50,12 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
 
   return (
     <div className="placebar">
-      <div className="chips" role="tablist" aria-label="위치 선택">
+      <div
+        className={`chips ${chipReorder.active ? 'reorder-active' : ''}`}
+        role="tablist"
+        aria-label="위치 선택"
+        {...chipReorder.handlers}
+      >
         <button
           type="button"
           role="tab"
@@ -52,7 +66,11 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
           📍 현재 위치
         </button>
         {favorites.map((p) => (
-          <span key={p.id} className={`chip ${selectedId === p.id ? 'on' : ''}`}>
+          <span
+            key={p.id}
+            data-chip-id={p.id}
+            className={`chip ${selectedId === p.id ? 'on' : ''} ${chipReorder.dragId === p.id ? 'dragging' : ''}`}
+          >
             <button
               type="button"
               role="tab"
@@ -84,7 +102,12 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
             )}
           </span>
         ))}
-        {favorites.length > 0 && (
+        {chipReorder.active && (
+          <button type="button" className="chip ghost" onClick={chipReorder.exit}>
+            완료
+          </button>
+        )}
+        {favorites.length > 0 && !chipReorder.active && (
           <button type="button" className="chip ghost" onClick={() => setEditMode((e) => !e)}>
             {editMode ? '완료' : '편집'}
           </button>

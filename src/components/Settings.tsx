@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { disableNotify, enableNotify, getNotifyState, type NotifyState } from '../lib/push'
 import type { Place } from '../lib/places'
+import { DEFAULT_ORDER, SECTION_LABEL, moveItem, type SectionKey } from '../lib/sections'
 
 const ACCENT_KEY = 'eojeboda:accent'
 const NIGHT_KEY = 'eojeboda:nighttime'
@@ -35,9 +36,11 @@ interface Props {
   /** 처음 열 때 보여줄 지역 (current 또는 장소 id) */
   homeId: string
   onSetHome: (id: string) => void
+  sectionOrder: SectionKey[]
+  onSetOrder: (next: SectionKey[]) => void
 }
 
-export default function Settings({ loc, favorites, homeId, onSetHome }: Props) {
+export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrder, onSetOrder }: Props) {
   const [open, setOpen] = useState(false)
   const [notify, setNotify] = useState<NotifyState | 'loading'>('loading')
   const [busy, setBusy] = useState(false)
@@ -209,6 +212,25 @@ export default function Settings({ loc, favorites, homeId, onSetHome }: Props) {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="settings-sec">
+              <h3 className="settings-sec-title">🧩 화면 순서</h3>
+              <p className="muted small notify-desc">
+                메인 화면 카드 순서예요. 화면에서 카드를 길게 눌러 끌어도 바꿀 수 있어요.
+              </p>
+              <ul className="order-list">
+                {sectionOrder.map((k, i) => (
+                  <li key={k}>
+                    <span className="order-name">{SECTION_LABEL[k]}</span>
+                    <span className="order-btns">
+                      <button type="button" aria-label="위로" disabled={i === 0} onClick={() => onSetOrder(moveItem(sectionOrder, i, i - 1))}>▲</button>
+                      <button type="button" aria-label="아래로" disabled={i === sectionOrder.length - 1} onClick={() => onSetOrder(moveItem(sectionOrder, i, i + 1))}>▼</button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <button type="button" className="order-reset" onClick={() => onSetOrder([...DEFAULT_ORDER])}>기본 순서로</button>
             </div>
 
             <div className="settings-sec">
