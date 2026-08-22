@@ -1,5 +1,5 @@
 // 꾹 눌러(롱탭) 드래그로 순서 바꾸기 — 세로(섹션)·가로(칩) 공용 훅
-import { useCallback, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 
 interface Options<T extends string> {
   order: T[]
@@ -27,6 +27,37 @@ export function useLongPressReorder<T extends string>({ order, onChange, axis, h
   const startRef = useRef<{ x: number; y: number } | null>(null)
   const orderRef = useRef(order)
   orderRef.current = order
+  const containerRef = useRef<HTMLElement | null>(null)
+  const prevRects = useRef<Map<string, DOMRect>>(new Map())
+
+  // FLIP: 순서가 바뀌면 이전 위치에서 새 위치로 미끄러지는 애니메이션
+  useLayoutEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    const items = Array.from(container.querySelectorAll<HTMLElement>(`[${attr}]`))
+    const newRects = new Map<string, DOMRect>()
+    for (const el of items) {
+      const id = el.getAttribute(attr)!
+      newRects.set(id, el.getBoundingClientRect())
+    }
+    for (const el of items) {
+      const id = el.getAttribute(attr)!
+      const prev = prevRects.current.get(id)
+      const next = newRects.get(id)!
+      if (!prev) continue
+      const dx = prev.left - next.left
+      const dy = prev.top - next.top
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue
+      el.style.transition = 'none'
+      el.style.transform = `translate(${dx}px, ${dy}px)`
+      // 다음 프레임에 원위치로 트랜지션
+      requestAnimationFrame(() => {
+        el.style.transition = 'transform 0.32s cubic-bezier(0.2, 0, 0, 1)'
+        el.style.transform = ''
+      })
+    }
+    prevRects.current = newRects
+  }, [order, attr])
 
   const clearTimer = () => {
     if (timerRef.current) {
@@ -116,6 +147,10 @@ export function useLongPressReorder<T extends string>({ order, onChange, axis, h
     setDragId(null)
   }, [])
 
+  const setContainer = useCallback((el: HTMLElement | null) => {
+    containerRef.current = el
+  }, [])
+
   const handlers: Handlers = {
     onPointerDown,
     onPointerMove,
@@ -128,5 +163,5 @@ export function useLongPressReorder<T extends string>({ order, onChange, axis, h
     setActive(false)
   }, [end])
 
-  return { active, dragId, handlers, exit }
+  return { active, dragId, handlers, exit, setContainer }
 }

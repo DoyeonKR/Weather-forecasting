@@ -253,6 +253,7 @@ export default function App() {
 
       <div
         key={selectedId}
+        ref={reorder.setContainer}
         className={`switch-enter ${reorder.active ? 'reorder-active' : ''}`}
         {...reorder.handlers}
       >

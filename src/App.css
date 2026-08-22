@@ -1788,23 +1788,36 @@ body {
 }
 
 /* ── 시간대별 카드 ───────────────────────────── */
+.hourly-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hourly-head .section-title {
+  margin: 0;
+}
+
 .hourly-svg {
   width: 100%;
   height: auto;
   display: block;
+  margin-top: 6px;
+  overflow: visible;
 }
 
 .hourly-legend {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   font-size: 11px;
   color: var(--sub);
-  margin-bottom: 4px;
 }
 
 .hourly-legend .hl {
   display: inline-block;
-  width: 14px;
+  width: 13px;
   height: 0;
   border-top: 2px solid var(--accent);
   vertical-align: middle;
@@ -1812,7 +1825,7 @@ body {
 }
 
 .hourly-legend .hl.yest {
-  border-top: 2px dashed rgba(255, 255, 255, 0.6);
+  border-top: 2px dashed rgba(255, 255, 255, 0.55);
 }
 
 .hourly-legend .hl.rain {
@@ -1822,9 +1835,24 @@ body {
   border-radius: 2px;
 }
 
+.hourly-dayband {
+  fill: rgba(255, 220, 130, 0.06);
+}
+
+.hourly-grid {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+
+.hourly-grid-label {
+  font-size: 9px;
+  fill: var(--sub);
+  opacity: 0.7;
+}
+
 .hourly-line {
   fill: none;
-  stroke-width: 2.2;
+  stroke-width: 2.4;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
@@ -1834,25 +1862,32 @@ body {
 }
 
 .hourly-line.yest {
-  stroke: rgba(255, 255, 255, 0.55);
+  stroke: rgba(255, 255, 255, 0.5);
   stroke-dasharray: 4 4;
   stroke-width: 1.8;
+}
+
+.hourly-nowline {
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  opacity: 0.6;
 }
 
 .hourly-now {
   fill: var(--accent);
   stroke: #fff;
-  stroke-width: 1.5;
+  stroke-width: 1.6;
 }
 
 .hourly-bar {
   fill: var(--cold);
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 .hourly-temp-label {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   fill: var(--text);
 }
 
@@ -1867,4 +1902,14 @@ body {
 .hourly-hour {
   font-size: 10px;
   fill: var(--sub);
+}
+
+.hourly-foot {
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* 설정 순서 목록 이동 트랜지션 */
+.order-list li {
+  transition: background 0.2s;
 }

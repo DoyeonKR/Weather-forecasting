@@ -51,6 +51,7 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
   return (
     <div className="placebar">
       <div
+        ref={chipReorder.setContainer}
         className={`chips ${chipReorder.active ? 'reorder-active' : ''}`}
         role="tablist"
         aria-label="위치 선택"
