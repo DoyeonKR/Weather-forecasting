@@ -45,7 +45,7 @@ body {
   width: 100vw;
   height: 100vh;
   pointer-events: none;
-  z-index: 0;
+  z-index: 5;
 }
 
 .shell > .card,
@@ -206,7 +206,7 @@ body {
 }
 
 .card {
-  background: color-mix(in srgb, var(--accent) 7%, rgba(20, 27, 37, 0.78));
+  background: color-mix(in srgb, var(--accent) 7%, rgba(20, 27, 37, 0.66));
   border: 1px solid color-mix(in srgb, var(--accent) 18%, rgba(255, 255, 255, 0.08));
   border-radius: 16px;
   padding: 18px;

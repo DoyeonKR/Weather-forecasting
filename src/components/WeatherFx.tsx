@@ -60,7 +60,7 @@ export default function WeatherFx({ theme }: Props) {
     window.addEventListener('resize', resize)
 
     const R = (a: number, b: number) => a + Math.random() * (b - a)
-    const count = kind === 'rain' || kind === 'thunder' ? 70 : kind === 'snow' ? 60 : kind === 'clear-night' ? 70 : 6
+    const count = kind === 'rain' || kind === 'thunder' ? 130 : kind === 'snow' ? 110 : kind === 'clear-night' ? 110 : 7
     const ps: P[] = Array.from({ length: count }, () => ({
       x: R(0, 1),
       y: R(0, 1),
@@ -82,7 +82,7 @@ export default function WeatherFx({ theme }: Props) {
       ctx!.clearRect(0, 0, W, H)
 
       if (kind === 'rain' || kind === 'thunder') {
-        ctx!.strokeStyle = 'rgba(165, 200, 255, 0.4)'
+        ctx!.strokeStyle = 'rgba(175, 205, 255, 0.5)'
         ctx!.lineWidth = 1.2
         ctx!.beginPath()
         for (const q of ps) {
@@ -111,7 +111,7 @@ export default function WeatherFx({ theme }: Props) {
           }
         }
       } else if (kind === 'snow') {
-        ctx!.fillStyle = 'rgba(255, 255, 255, 0.75)'
+        ctx!.fillStyle = 'rgba(255, 255, 255, 0.85)'
         for (const q of ps) {
           q.p += 0.02 * dt
           const x = (q.x + Math.sin(q.p) * 0.012) * W
