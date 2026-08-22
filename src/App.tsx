@@ -28,6 +28,15 @@ type Status = 'loading' | 'ready' | 'error'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
+/** 멘트 이모지 → 애니메이션 종류 */
+function tipAnim(emoji: string): string {
+  if ('🌧️☔☂️🌂🌦️💧'.includes(emoji)) return 'anim-rain'
+  if ('🌨️☃️⛄🧊🥶❄️'.includes(emoji)) return 'anim-snow'
+  if ('☀️🔥🥵🧴🕶️🌡️🌅'.includes(emoji)) return 'anim-sun'
+  if ('💨🍃'.includes(emoji)) return 'anim-wind'
+  return 'anim-idle'
+}
+
 export default function App() {
   const [status, setStatus] = useState<Status>('loading')
   const [favorites, setFavorites] = useState<Place[]>(loadFavorites)
@@ -221,6 +230,7 @@ export default function App() {
         </button>
       )}
 
+      <div key={selectedId} className="switch-enter">
       <section className="hero card">
         <div className="hero-main">
           <span className="hero-emoji" aria-hidden>
@@ -260,16 +270,22 @@ export default function App() {
         </div>
         {tips.length > 0 && (
           <>
-            <ul className="tips">
-              {(tipsOpen ? tips : tips.slice(0, 1)).map((t) => (
-                <li key={t}>{t}</li>
+            <ul className="tips tips-visual">
+              {tips.map((t) => (
+                <li key={t.title} className="tip">
+                  <span className={`tip-emoji ${tipAnim(t.emoji)}`} aria-hidden>
+                    {t.emoji}
+                  </span>
+                  <div className="tip-text">
+                    <div className="tip-title">{t.title}</div>
+                    {tipsOpen && <div className="tip-body">{t.body}</div>}
+                  </div>
+                </li>
               ))}
             </ul>
-            {tips.length > 1 && (
-              <button type="button" className="tips-more" onClick={() => setTipsOpen((o) => !o)}>
-                {tipsOpen ? '접기 ▲' : `조언 ${tips.length - 1}개 더 보기 ▼`}
-              </button>
-            )}
+            <button type="button" className="tips-more" onClick={() => setTipsOpen((o) => !o)}>
+              {tipsOpen ? '접기 ▲' : '자세히 보기 ▼'}
+            </button>
           </>
         )}
         {picks.length > 0 && (
@@ -383,6 +399,7 @@ export default function App() {
       </section>
 
       <CoupangBanner id={1020557} template="banner" height={90} maxWidth={728} />
+      </div>
 
       <footer className="foot">
         <a
