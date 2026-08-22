@@ -244,3 +244,20 @@ export function themeClass(code: number, isDay: boolean): string {
   if (code === 2) return isDay ? 'bg-partly-day' : 'bg-clear-night'
   return isDay ? 'bg-clear-day' : 'bg-clear-night'
 }
+
+/** 오늘 vs 어제 한 줄 요약 (기온·강수·바람) */
+export function compareSummary(today: DayStats, yesterday: DayStats): string {
+  const dMax = today.tmax - yesterday.tmax
+  const temp = dMax >= 2 ? '더 덥고' : dMax <= -2 ? '더 선선하고' : '기온은 비슷하고'
+  const t = today.precipSum
+  const y = yesterday.precipSum
+  let rain: string
+  if (t < 0.5 && y < 0.5) rain = (today.precipProbMax ?? 0) >= 60 ? '비 소식은 있고' : '비 소식은 없고'
+  else if (t > y + 1) rain = '비는 더 오고'
+  else if (t < y - 1) rain = '비는 덜 오고'
+  else rain = '비는 비슷하고'
+  const tw = today.windMax ?? 0
+  const yw = yesterday.windMax ?? 0
+  const wind = tw > yw + 8 ? '바람은 더 불어요' : tw < yw - 8 ? '바람은 더 잔잔해요' : '바람은 비슷해요'
+  return `오늘은 어제보다 ${temp}, ${rain}, ${wind}.`
+}

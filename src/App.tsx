@@ -3,6 +3,7 @@ import { locate, type Located } from './lib/geo'
 import { fetchWeather, type WeatherData } from './lib/weather'
 import {
   codeLabel,
+  compareSummary,
   deltaText,
   funTips,
   round1,
@@ -231,14 +232,30 @@ export default function App() {
           <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
         </div>
         <div className="hero-subs">
-          <div className="hero-sub">
-          {now.label} · 체감 {round1(wx.nowApparent)}° · 습도{' '}
-          {Math.round(kmaNow?.reh ?? wx.nowHumidity)}%
-          </div>
-          <div className="hero-sub">
-          ☔ 확률 {wx.today.precipProbMax ?? '?'}%
-          {wx.today.precipSum >= 0.1 && ` · 오늘 ${round1(wx.today.precipSum)}mm`}
-          {kmaNow !== null && (kmaNow.rn1 ?? 0) > 0 && ` · 시간당 ${kmaNow.rn1}mm`}
+          <div className="hero-cond">{now.label}</div>
+          <div className="stat-chips">
+            <div className="stat-chip">
+              <span className="stat-chip-icon" aria-hidden>🌡️</span>
+              <span className="stat-chip-label">체감</span>
+              <span className="stat-chip-value">{round1(wx.nowApparent)}°</span>
+            </div>
+            <div className="stat-chip">
+              <span className="stat-chip-icon" aria-hidden>💧</span>
+              <span className="stat-chip-label">습도</span>
+              <span className="stat-chip-value">{Math.round(kmaNow?.reh ?? wx.nowHumidity)}%</span>
+            </div>
+            <div className="stat-chip">
+              <span className="stat-chip-icon" aria-hidden>☔</span>
+              <span className="stat-chip-label">강수확률</span>
+              <span className="stat-chip-value">{wx.today.precipProbMax ?? '?'}%</span>
+            </div>
+            <div className="stat-chip">
+              <span className="stat-chip-icon" aria-hidden>🌧️</span>
+              <span className="stat-chip-label">{kmaNow !== null && (kmaNow.rn1 ?? 0) > 0 ? '시간당' : '오늘 강수'}</span>
+              <span className="stat-chip-value">
+                {kmaNow !== null && (kmaNow.rn1 ?? 0) > 0 ? `${kmaNow.rn1}mm` : `${round1(wx.today.precipSum)}mm`}
+              </span>
+            </div>
           </div>
         </div>
         {tips.length > 0 && (
@@ -267,7 +284,8 @@ export default function App() {
       </section>
 
       <section className="card">
-        <h2 className="section-title">오늘 vs 어제</h2>
+        <h2 className="section-title">어제와 비교하면</h2>
+        <p className="cmp-summary">{compareSummary(wx.today, wx.yesterday)}</p>
         <div className="cmp-sec">
           <h3 className="cmp-title">🌡️ 기온</h3>
           <TempRangeBars today={wx.today} yesterday={wx.yesterday} />
