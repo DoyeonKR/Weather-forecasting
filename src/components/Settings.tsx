@@ -1,5 +1,5 @@
 // 설정 패널 — 알림 온오프 + 색상 테마(포인트 컬러)
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { disableNotify, enableNotify, getNotifyState, type NotifyState } from '../lib/push'
 import type { Place } from '../lib/places'
@@ -26,6 +26,8 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
   const [open, setOpen] = useState(false)
   const [notify, setNotify] = useState<NotifyState | 'loading'>('loading')
   const [busy, setBusy] = useState(false)
+  // alert 은 패널을 닫은 한참 뒤에 맥락 없이 뜬다. 패널 안에 남는 문구로 알린다.
+  const [notice, setNotice] = useState<string | null>(null)
   const [accent, setAccent] = useState<string>(() => {
     try {
       return localStorage.getItem(ACCENT_KEY) ?? 'blue'
@@ -52,6 +54,25 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
     getNotifyState().then(setNotify)
   }, [])
 
+  const panelRef = useRef<HTMLDivElement>(null)
+  const openerRef = useRef<HTMLButtonElement>(null)
+
+  // 열리면 패널로 포커스를 옮기고, Escape 로 닫는다. 닫으면 원래 버튼으로 복귀.
+  useEffect(() => {
+    if (!open) return
+    const opener = openerRef.current
+    panelRef.current?.focus()
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      setNotice(null)
+      opener?.focus()
+    }
+  }, [open])
+
   function pickAccent(id: string) {
     setAccent(id)
     try {
@@ -64,16 +85,31 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
   }
 
   async function toggleNotify() {
-    if (busy || notify === 'loading' || notify === 'unsupported' || notify === 'needs-install') return
+    if (
+      busy ||
+      notify === 'loading' ||
+      notify === 'unsupported' ||
+      notify === 'needs-install' ||
+      notify === 'blocked'
+    )
+      return
     setBusy(true)
+    setNotice(null)
     try {
       if (notify === 'on') {
-        await disableNotify()
-        setNotify('off')
+        const off = await disableNotify()
+        // 못 껐으면 껐다고 표시하면 안 된다. 다음 날 아침에 또 알림이 온다.
+        setNotify(off ? 'off' : await getNotifyState())
+        if (!off) setNotice('알림을 끄지 못했어요. 잠시 후 다시 시도해주세요.')
       } else {
-        const ok = await enableNotify(loc, nightTime, morningTime)
-        setNotify(ok ? 'on' : 'off')
-        if (!ok) alert('알림 권한이 필요해요. 브라우저 설정에서 알림을 허용해주세요.')
+        const r = await enableNotify(loc, nightTime, morningTime)
+        setNotify(r === 'ok' ? 'on' : await getNotifyState())
+        if (r === 'denied')
+          setNotice('알림 권한이 필요해요. 브라우저 설정에서 알림을 허용해주세요.')
+        else if (r === 'no-sw')
+          setNotice('앱 준비가 아직 끝나지 않았어요. 새로고침한 뒤 다시 시도해주세요.')
+        else if (r === 'save-failed')
+          setNotice('알림 설정을 저장하지 못했어요. 잠시 후 다시 시도해주세요.')
       }
     } finally {
       setBusy(false)
@@ -94,9 +130,10 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
     // 이미 켜져 있으면 새 시간으로 재등록. 실패하면 화면도 원래 시간으로 되돌린다.
     if (notify === 'on' && !busy) {
       setBusy(true)
+      setNotice(null)
       try {
-        const ok = await enableNotify(loc, nextNight, nextMorning)
-        if (!ok) {
+        const r = await enableNotify(loc, nextNight, nextMorning)
+        if (r !== 'ok') {
           if (kind === 'morning') setMorningTime(prev)
           else setNightTime(prev)
           try {
@@ -104,7 +141,9 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
           } catch {
             // 무시
           }
-          alert('알림 시간을 저장하지 못했어요. 잠시 후 다시 시도해주세요.')
+          // 저장이 실패하면서 구독까지 풀렸을 수 있다. 토글이 켜진 척하지 않도록 다시 읽는다.
+          setNotify(await getNotifyState())
+          setNotice('알림 시간을 저장하지 못했어요. 이전 시간으로 되돌렸습니다.')
         }
       } finally {
         setBusy(false)
@@ -114,16 +153,34 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
 
   return (
     <>
-      <button type="button" className="gear" aria-label="설정" onClick={() => setOpen(true)}>
+      <button ref={openerRef} type="button" className="gear" aria-label="설정" onClick={() => setOpen(true)}>
         ⚙️
       </button>
       {open &&
         createPortal(
-          <div className="settings-backdrop" role="dialog" aria-modal="true" aria-label="설정">
-          <div className="settings-panel">
+          <div
+            className="settings-backdrop"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setOpen(false)
+            }}
+          >
+          <div
+            ref={panelRef}
+            className="settings-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="설정"
+            tabIndex={-1}
+          >
             <div className="settings-head">
               <h2 className="settings-title">설정</h2>
-              <button type="button" className="promo-x" aria-label="닫기" onClick={() => setOpen(false)}>
+              <button
+                type="button"
+                className="promo-x"
+                aria-label="닫기"
+                disabled={busy}
+                onClick={() => setOpen(false)}
+              >
                 ✕
               </button>
             </div>
@@ -137,6 +194,9 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
                     알려드려요. 시간은 아래에서 선택하세요.
                     {notify === 'on' ? ` 지금은 ${loc.label} 기준으로 받는 중.` : ''}
                     {notify === 'unsupported' ? ' 이 브라우저에서는 지원되지 않아요.' : ''}
+                    {notify === 'blocked'
+                      ? ' 브라우저에서 이 사이트의 알림을 차단해 뒀어요. 주소창 옆 자물쇠에서 알림을 허용으로 바꿔주세요.'
+                      : ''}
                     {notify === 'needs-install'
                       ? ' 아이폰은 공유 버튼에서 홈 화면에 추가한 뒤 알림을 켤 수 있어요.'
                       : ''}
@@ -147,13 +207,22 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
                   className={`notify-toggle ${notify === 'on' ? 'on' : ''}`}
                   onClick={toggleNotify}
                   disabled={
-                    busy || notify === 'loading' || notify === 'unsupported' || notify === 'needs-install'
+                    busy ||
+                    notify === 'loading' ||
+                    notify === 'unsupported' ||
+                    notify === 'needs-install' ||
+                    notify === 'blocked'
                   }
                   aria-label={notify === 'on' ? '알림 끄기' : '알림 켜기'}
                 >
                   <span className="notify-knob" />
                 </button>
               </div>
+              {notice && (
+                <p className="muted small notify-desc notice" role="alert">
+                  {notice}
+                </p>
+              )}
               <div className="night-row">
                 <span className="muted small">☀️ 아침 브리핑 시간</span>
                 <div className="night-times">

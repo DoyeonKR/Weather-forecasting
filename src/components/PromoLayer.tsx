@@ -1,5 +1,5 @@
 // 접속 시 1회 노출되는 날씨 연동 추천 레이어 (쿠팡 파트너스)
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { PARTNERS_NOTICE, type PartnerItem } from '../lib/partners'
 
 const SEEN_KEY = 'eojeboda:promo-seen'
@@ -10,6 +10,7 @@ interface Props {
 
 export default function PromoLayer({ picks }: Props) {
   const [open, setOpen] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (picks.length === 0) return
@@ -31,12 +32,34 @@ export default function PromoLayer({ picks }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Escape 로 닫기
+  useEffect(() => {
+    if (!open) return
+    const onKey = (ev: KeyboardEvent) => {
+      if (ev.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+
   if (!open || picks.length === 0) return null
   const main = picks[0]
 
   return (
-    <div className="promo-backdrop" role="dialog" aria-modal="true" aria-label="오늘의 준비물 추천">
-      <div className="promo-card">
+    <div
+      className="promo-backdrop"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) setOpen(false)
+      }}
+    >
+      <div
+        ref={cardRef}
+        className="promo-card"
+        role="dialog"
+        aria-modal="true"
+        aria-label="오늘의 준비물 추천"
+        tabIndex={-1}
+      >
         <button type="button" className="promo-x" aria-label="닫기" onClick={() => setOpen(false)}>
           ✕
         </button>

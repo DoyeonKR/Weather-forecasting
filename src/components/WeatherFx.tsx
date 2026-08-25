@@ -52,9 +52,16 @@ export default function WeatherFx({ theme }: Props) {
 
     let W = 0
     let H = 0
+    // 고밀도 화면에서 흐릿하지 않게 DPR 을 적용하되, 비용이 커지지 않게 2배까지만.
+    const dpr = Math.min(window.devicePixelRatio || 1, 2)
     function resize() {
-      W = canvas!.width = window.innerWidth
-      H = canvas!.height = window.innerHeight
+      W = window.innerWidth
+      H = window.innerHeight
+      canvas!.width = Math.round(W * dpr)
+      canvas!.height = Math.round(H * dpr)
+      canvas!.style.width = W + 'px'
+      canvas!.style.height = H + 'px'
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0)
     }
     resize()
     window.addEventListener('resize', resize)
@@ -74,9 +81,14 @@ export default function WeatherFx({ theme }: Props) {
     let raf = 0
     let last = performance.now()
 
+    // 거의 정지된 연출(맑음·구름·안개)은 초당 12프레임이면 충분하다
+    const slowKinds = kind === 'clear-day' || kind === 'cloudy' || kind === 'fog'
+    const minFrameMs = slowKinds ? 80 : 0
+
     function frame(now: number) {
       raf = requestAnimationFrame(frame)
       if (document.hidden) return
+      if (now - last < minFrameMs) return
       const dt = Math.min(now - last, 50) / 16.7
       last = now
       ctx!.clearRect(0, 0, W, H)

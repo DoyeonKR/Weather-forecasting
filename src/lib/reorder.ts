@@ -24,6 +24,7 @@ interface Handlers {
   onPointerUp: (e: RPointerEvent<HTMLElement>) => void
   onPointerCancel: (e: RPointerEvent<HTMLElement>) => void
   onClickCapture: (e: RMouseEvent<HTMLElement>) => void
+  onLostPointerCapture: (e: RPointerEvent<HTMLElement>) => void
 }
 
 const INTERACTIVE = 'button, a, input, select, textarea, iframe, .radar-map, .leaflet-container, .range-track'
@@ -117,8 +118,9 @@ export function useLongPressReorder<T extends string>({ order, onChange, axis, h
       const target = e.target as HTMLElement
       const id = idOf(target)
       if (!id) return
-      // 정렬 모드가 아닐 때 버튼·입력·지도 위에서는 롱탭 시작 안 함
-      if (!active && target.closest(INTERACTIVE)) return
+      // 정렬 모드가 아닐 때 버튼·입력·지도 위에서는 롱탭 시작 안 함.
+      // 단 data-reorder-pass 가 붙은 요소(칩 라벨)는 통과시켜 어디를 눌러도 정렬에 들어가게 한다.
+      if (!active && target.closest(INTERACTIVE) && !target.closest('[data-reorder-pass]')) return
       startRef.current = { x: e.clientX, y: e.clientY }
       if (active) {
         setDragId(id)
@@ -126,9 +128,18 @@ export function useLongPressReorder<T extends string>({ order, onChange, axis, h
         return
       }
       clearTimer()
+      // React 는 디스패치 후 currentTarget 을 비우므로 지금 붙잡아 둔다
+      const container = e.currentTarget as HTMLElement
+      const pointerId = e.pointerId
       timerRef.current = window.setTimeout(() => {
         setActive(true)
         setDragId(id)
+        try {
+          // 마우스·펜은 암묵적 캡처가 없어 iframe 위에서 떼면 pointerup 을 놓친다
+          container.setPointerCapture?.(pointerId)
+        } catch {
+          // 포인터가 이미 끝났으면 무시
+        }
         try {
           navigator.vibrate?.(12)
         } catch {
@@ -209,6 +220,7 @@ export function useLongPressReorder<T extends string>({ order, onChange, axis, h
     onPointerMove,
     onPointerUp: end,
     onPointerCancel: end,
+    onLostPointerCapture: end,
     onClickCapture,
   }
 

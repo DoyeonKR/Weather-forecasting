@@ -92,7 +92,7 @@ function kmaBox(lat: number, lon: number): {
   const urlPart =
     `LU_LON=${nw.lon.toFixed(5)}&LU_LAT=${nw.lat.toFixed(5)}` +
     `&RL_LON=${rlLon.toFixed(5)}&RL_LAT=${rlLat.toFixed(5)}` +
-    `&IMG_XDIM=700&IMG_YDIM=700&X_DIST=${KMA_BOX_M}&Y_DIST=${KMA_BOX_M}` +
+    `&IMG_XDIM=420&IMG_YDIM=420&X_DIST=${KMA_BOX_M}&Y_DIST=${KMA_BOX_M}` +
     `&UNIT_BAR=0&ECHO_OPACITY=1`
   const bounds: L.LatLngBoundsExpression = [
     [(sw.lat + se.lat) / 2, (nw.lon + sw.lon) / 2],
@@ -304,7 +304,7 @@ export default function RadarMap({ lat, lon }: Props) {
 
           // ── 미래: 기상청 MAPLE 예측(+10분~+3시간)을 재투영해 오버레이
           const lastObs = items[items.length - 1].time
-          const maple = await mapleForecastOverlays(box.rectX0, box.rectY1, KMA_BOX_M, 512).catch(
+          const maple = await mapleForecastOverlays(box.rectX0, box.rectY1, KMA_BOX_M, 320).catch(
             () => [],
           )
           if (cancelled || !mapRef.current) return
@@ -327,6 +327,10 @@ export default function RadarMap({ lat, lon }: Props) {
             if (!r.ok) throw new Error()
             return r.json()
           })
+          // 응답이 바뀌어 임의 도메인으로 타일을 요청하지 않도록 확인
+          if (typeof api.host !== 'string' || !api.host.startsWith('https://tilecache.rainviewer.com')) {
+            throw new Error('unexpected radar host')
+          }
           if (cancelled || !mapRef.current) return
           const past = [...api.radar.past.slice(-12), ...api.radar.nowcast]
           radarLayersRef.current = past.map((f) =>

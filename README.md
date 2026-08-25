@@ -86,17 +86,33 @@ src/
 ├── lib/
 │   ├── compare.ts     # 어제 비교·실용 멘트 로직 (순수 함수)
 │   ├── weather.ts     # Open-Meteo 호출 및 정규화
+│   ├── kmaNow.ts      # 기상청 초단기실황 (관측값 우선 반영)
 │   ├── lcc.ts         # 람베르트 정각원추 투영 정·역변환
 │   ├── kmaMaple.ts    # 예측 GIF → 지도 오버레이 파이프라인
 │   ├── places.ts      # 즐겨찾기 저장 + Nominatim 검색
+│   ├── sections.ts    # 섹션 순서 저장·이동
+│   ├── reorder.ts     # 롱탭 드래그 정렬 (FLIP 애니메이션)
+│   ├── accent.ts      # 색상 테마 토큰
+│   ├── partners.ts    # 날씨에 맞는 준비물 추천
+│   ├── push.ts        # 웹푸시 구독 (RPC 두 개로만 저장·해제)
+│   ├── track.ts       # 익명 방문 집계
 │   └── geo.ts         # geolocation + 역지오코딩
 ├── components/
-│   ├── RadarMap.tsx   # Leaflet 지도 + 실황/예측 타임라인
-│   ├── KmaNowcast.tsx # 기상청 전국 예측 애니메이션 카드
-│   └── PlaceBar.tsx   # 위치 칩 + 장소 검색
-└── App.tsx            # 화면 구성
-supabase/ (별도 배포)
-└── kma-proxy          # 기상청 GIF CORS 프록시 (Edge Function)
+│   ├── RadarMap.tsx      # Leaflet 지도 + 실황/예측 타임라인 (지연 로드)
+│   ├── HourlyCard.tsx    # 24시간 기온·강수 그래프
+│   ├── CompareGraphic.tsx# 어제 대비 변화를 막대로
+│   ├── ComparePlaces.tsx # 다른 지역과 나란히 비교
+│   ├── WeatherFx.tsx     # 현재 날씨에 맞춘 배경 애니메이션
+│   ├── Settings.tsx      # 알림·기본지역·섹션순서·색상테마
+│   ├── PromoLayer.tsx    # 오늘 준비물 추천 레이어
+│   ├── CoupangBanner.tsx # 제휴 배너
+│   └── PlaceBar.tsx      # 위치 칩 + 장소 검색
+├── App.tsx            # 화면 구성
+public/sw.js           # 서비스워커 (캐시 + 푸시 수신 + 구독 갱신)
+supabase/
+├── sql/
+│   └── weather_push_subs.sql  # 구독 테이블 스키마와 접근 함수
+└── (별도 배포) kma-proxy · kma-ncst · weather-push  # Edge Function
 ```
 
 ## 개발
@@ -115,9 +131,10 @@ npx tsc --noEmit # 타입 체크
 
 ## 로드맵
 
-- [ ] 자기 전 푸시 알림: 내일이 오늘보다 크게 춥거나 덥거나, 비·눈이 올 때
-      (판단 로직 `tomorrowAlerts`는 구현 완료, 발송 스케줄러만 남음)
-- [ ] 시간별 기온 그래프: 어제 곡선과 겹쳐 보기
+- [x] 자기 전 푸시 알림: 내일이 오늘보다 크게 춥거나 덥거나, 비·눈이 올 때
+      (`weather-push` Edge Function + pg_cron, 시간대는 사용자가 선택)
+- [x] 시간별 기온·강수 그래프 (`HourlyCard`)
+- [ ] 시간별 그래프에 어제 곡선 겹쳐 보기
 - [ ] `compare.ts`, `lcc.ts` 유닛 테스트
 
 ## 데이터 출처

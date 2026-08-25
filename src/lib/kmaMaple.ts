@@ -5,7 +5,6 @@
 // 좌표 보정(2026-08-17, 울릉도·제주 랜드마크 실측, 호미곶 검증 오차 ~2px):
 // gif 픽셀 (px,py) ↔ LCC(EPSG:9802) 미터 (x,y):
 //   x = X0 + px * S,  y = Y1 - py * S
-import { parseGIF, decompressFrames } from 'gifuct-js'
 
 const PROXY = 'https://tqegatiuembcvphxmujl.supabase.co/functions/v1/kma-proxy'
 const S = 1266.1 // m / px
@@ -66,6 +65,8 @@ export async function mapleForecastOverlays(
   }
   if (!buf) return []
 
+  // 첫 화면에 필요 없는 해석기라 이 시점에 불러온다
+  const { parseGIF, decompressFrames } = await import('gifuct-js')
   const gif = parseGIF(buf)
   const frames = decompressFrames(gif, true)
   const W = gif.lsd.width

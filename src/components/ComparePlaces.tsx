@@ -23,9 +23,11 @@ export default function ComparePlaces({ baseLabel, baseWx, favorites }: Props) {
   const [other, setOther] = useState<Place | null>(null)
   const [otherWx, setOtherWx] = useState<WeatherData | null>(null)
   const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Place[]>([])
   const [busy, setBusy] = useState(false)
+  const [searchError, setSearchError] = useState(false)
 
   async function pick(p: Place) {
     setQuery('')
@@ -34,8 +36,10 @@ export default function ComparePlaces({ baseLabel, baseWx, favorites }: Props) {
     setLoading(true)
     try {
       setOtherWx(await fetchWeather(p.lat, p.lon))
+      setLoadError(false)
     } catch {
       setOtherWx(null)
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -45,8 +49,14 @@ export default function ComparePlaces({ baseLabel, baseWx, favorites }: Props) {
     const q = query.trim()
     if (!q) return
     setBusy(true)
+    setSearchError(false)
     try {
-      setResults(await searchPlaces(q))
+      const found = await searchPlaces(q)
+      setResults(found)
+      setSearchError(found.length === 0)
+    } catch {
+      setResults([])
+      setSearchError(true)
     } finally {
       setBusy(false)
     }
@@ -90,6 +100,9 @@ export default function ComparePlaces({ baseLabel, baseWx, favorites }: Props) {
           {busy ? '…' : '검색'}
         </button>
       </div>
+      {searchError && !busy && (
+        <p className="muted small search-error">검색 결과를 가져오지 못했어요.</p>
+      )}
       {results.length > 0 && (
         <ul className="search-results">
           {results.map((r) => (
@@ -103,6 +116,9 @@ export default function ComparePlaces({ baseLabel, baseWx, favorites }: Props) {
       )}
 
       {loading && <p className="muted small">비교 데이터를 불러오는 중…</p>}
+      {loadError && !loading && (
+        <p className="muted small">그 지역 날씨를 불러오지 못했어요. 다시 선택해주세요.</p>
+      )}
 
       {other && otherWx && !loading && (
         <>

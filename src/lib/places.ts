@@ -63,6 +63,8 @@ function shortLabel(displayName: string): string {
   return picked.reverse().join(' ')
 }
 
+export class SearchFailed extends Error {}
+
 export async function searchPlaces(query: string): Promise<Place[]> {
   // Nominatim(OSM) — 한국 지명 정확도가 높음. 저빈도 사용(수동 검색)이라 정책 내 사용
   const url = new URL('https://nominatim.openstreetmap.org/search')
@@ -70,9 +72,19 @@ export async function searchPlaces(query: string): Promise<Place[]> {
   url.searchParams.set('format', 'jsonv2')
   url.searchParams.set('accept-language', 'ko')
   url.searchParams.set('limit', '6')
-  const res = await fetch(url)
-  if (!res.ok) return []
-  const results: NominatimResult[] = await res.json()
+  let results: NominatimResult[]
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new SearchFailed(String(res.status))
+    const body = await res.json()
+    if (!Array.isArray(body)) throw new SearchFailed('bad shape')
+    results = body.filter(
+      (r): r is NominatimResult => r && typeof r.display_name === 'string' && r.lat != null && r.lon != null,
+    )
+  } catch (e) {
+    if (e instanceof SearchFailed) throw e
+    throw new SearchFailed('network')
+  }
   const seen = new Set<string>()
   return results
     .map((r) => {

@@ -52,8 +52,11 @@ export async function locate(requestIfNeeded: boolean): Promise<Located> {
       return { ...FALLBACK, isFallback: true }
     }
   }
-  const pos = await getPosition()
-  if (!pos) return { ...FALLBACK, isFallback: true }
+  const raw = await getPosition()
+  if (!raw) return { ...FALLBACK, isFallback: true }
+  // 소비하는 격자가 1~11km 단위라 소수 3자리(약 100m)면 충분하다.
+  // 외부 서비스 로그에 GPS 원본 정밀도를 남기지 않는다.
+  const pos = { lat: Math.round(raw.lat * 1000) / 1000, lon: Math.round(raw.lon * 1000) / 1000 }
   const label = await reverseGeocode(pos.lat, pos.lon)
   return {
     lat: pos.lat,

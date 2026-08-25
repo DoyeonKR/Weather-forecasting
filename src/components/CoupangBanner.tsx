@@ -58,6 +58,7 @@ export default function CoupangBanner({ id, template, height, maxWidth = 680 }: 
           loading="lazy"
           scrolling="no"
           referrerPolicy="unsafe-url"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms"
           style={{ border: 0, display: 'block', borderRadius: 12 }}
         />
       )}

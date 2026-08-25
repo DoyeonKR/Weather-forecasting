@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { locate, type Located } from './lib/geo'
 import { fetchWeather, type WeatherData } from './lib/weather'
 import {
@@ -13,7 +13,9 @@ import {
 import { loadFavorites, loadHome, saveFavorites, saveHome, type Place } from './lib/places'
 import { fetchKmaNow, inKoreaBounds, ptyLabel, type KmaNow } from './lib/kmaNow'
 import { PARTNERS_NOTICE, partnerPicks, partnersActive } from './lib/partners'
-import RadarMap from './components/RadarMap'
+import WhenVisible from './components/WhenVisible'
+// 지도·GIF 해석기는 첫 화면에 필요 없으므로 화면에 나올 때 불러온다
+const RadarMap = lazy(() => import('./components/RadarMap'))
 import PlaceBar from './components/PlaceBar'
 import PromoLayer from './components/PromoLayer'
 import Settings from './components/Settings'
@@ -65,6 +67,8 @@ export default function App() {
   const promptRef = useRef(false)
   // 지역을 빠르게 바꿀 때 먼저 시작한 요청이 나중 결과를 덮어쓰지 않도록
   const loadSeq = useRef(0)
+  // 지금 화면에 그려진 날씨가 어느 지역 것인지 (실패했을 때 선택을 되돌리는 기준)
+  const loadedId = useRef('')
 
   const load = useCallback(
     async (id: string) => {
@@ -80,6 +84,8 @@ export default function App() {
           const wantPrompt = promptRef.current
           promptRef.current = false
           where = await locate(wantPrompt)
+          // GPS 를 기다리는 동안 사용자가 다른 지역을 골랐으면 이 결과는 버린다
+          if (seq !== loadSeq.current) return
           // 권한이 없고 사용자가 요청한 것도 아니면, 즐겨찾기가 있을 때 그쪽을 우선
           if (where.isFallback && !wantPrompt && favorites.length > 0) {
             setSelectedId(favorites[0].id)
@@ -87,18 +93,24 @@ export default function App() {
           }
         }
         if (seq !== loadSeq.current) return
-        setLoc(where)
         const [weather, obs] = await Promise.all([
           fetchWeather(where.lat, where.lon),
           inKoreaBounds(where.lat, where.lon) ? fetchKmaNow(where.lat, where.lon) : Promise.resolve(null),
         ])
         if (seq !== loadSeq.current) return
+        // 지역 이름과 날씨는 같이 바뀌어야 한다. 먼저 바꾸면 갱신이 실패했을 때
+        // 헤더는 부산, 기온은 서울 값인 화면이 그대로 남는다.
+        setLoc(where)
         setWx(weather)
         setKmaNow(obs)
+        loadedId.current = id
         setStatus('ready')
       } catch {
         if (seq !== loadSeq.current) return
         setStatus('error')
+        // 화면에 이전 지역 날씨가 남아 있으면 선택 칩도 그 지역으로 되돌린다.
+        // 칩은 부산인데 기온은 서울이면 사용자는 그것을 부산 날씨로 읽는다.
+        if (loadedId.current && loadedId.current !== id) setSelectedId(loadedId.current)
       }
     },
     [favorites, tempPlace],
@@ -178,8 +190,10 @@ export default function App() {
     return (
       <div className={`shell center ${theme}`}>
         <div className="neon-frame" aria-hidden />
-        <div className="spinner" aria-label="불러오는 중" />
-        <p className="muted">위치와 날씨를 확인하고 있어요…</p>
+        <div className="spinner" aria-hidden />
+        <p className="muted" role="status">
+          위치와 날씨를 확인하고 있어요…
+        </p>
       </div>
     )
   }
@@ -189,19 +203,11 @@ export default function App() {
       <div className="shell center bg-loading">
         <div className="neon-frame" aria-hidden />
         <p>날씨를 불러오지 못했어요.</p>
-        <button type="button" className="retry" onClick={() => load(selectedId)}>
+        <button type="button" className="retry" onClick={() => selectPlace(selectedId)}>
           다시 시도
         </button>
         {selectedId !== 'current' && (
-          <button
-            type="button"
-            className="retry ghost"
-            onClick={() => {
-              saveHome('current')
-              setHomeId('current')
-              setSelectedId('current')
-            }}
-          >
+          <button type="button" className="retry ghost" onClick={() => selectPlace('current')}>
             현재 위치로 보기
           </button>
         )}
@@ -226,9 +232,13 @@ export default function App() {
         <div>
           <h1 className="brand">무능한 날씨예측기</h1>
           {status === 'loading' ? (
-            <span className="visitors">날씨 갱신 중…</span>
+            <span className="visitors" role="status">
+              날씨 갱신 중…
+            </span>
           ) : status === 'error' ? (
-            <span className="visitors err">갱신 실패, 이전 정보예요</span>
+            <button type="button" className="visitors err" onClick={() => selectPlace(selectedId)}>
+              갱신 실패, 눌러서 다시 시도
+            </button>
           ) : (
             visitors !== null && <span className="visitors">👀 오늘 {visitors}명</span>
           )}
@@ -455,7 +465,7 @@ export default function App() {
                       <span className="week-date">
                         {dt.getMonth() + 1}.{dt.getDate()}
                       </span>
-                      <span className="week-emoji" aria-hidden>
+                      <span className="week-emoji" role="img" aria-label={lb.label}>
                         {lb.emoji}
                       </span>
                       <span className="week-prob">
@@ -479,10 +489,19 @@ export default function App() {
         <>
           <section className="card radar-card">
             <h2 className="section-title">비구름 레이더</h2>
-            <RadarMap lat={loc.lat} lon={loc.lon} />
+            <WhenVisible minHeight={320}>
+              <Suspense
+                fallback={
+                  <div className="radar-map radar-loading" role="status">
+                    지도 불러오는 중…
+                  </div>
+                }
+              >
+                <RadarMap lat={loc.lat} lon={loc.lon} />
+              </Suspense>
+            </WhenVisible>
           </section>
-    
-            </>
+        </>
       )}
             {key === 'places' && (
               <ComparePlaces baseLabel={loc.label} baseWx={wx} favorites={favorites} />
@@ -491,7 +510,7 @@ export default function App() {
           </div>
         ))}
         <CoupangBanner id={1020557} template="banner" height={90} maxWidth={728} />
-        <p className="muted small order-hint">카드를 길게 누르면 순서를 바꿀 수 있어요 · 설정(⚙️)에서도 변경 가능</p>
+        <p className="muted small order-hint">카드나 즐겨찾기 칩을 길게 누르면 순서를 바꿀 수 있어요 · 설정(⚙️)에서도 변경 가능</p>
       </div>
 
       <footer className="foot">
@@ -518,6 +537,10 @@ export default function App() {
           </a>
         </p>
         {partnersActive() && <p className="muted small">{PARTNERS_NOTICE}</p>}
+        <p className="muted small">
+            위치는 날씨를 물어볼 때만 쓰고 기기 안에 둡니다. 알림을 켜면 알림 보낼 지역과 시간만
+            저장하고, 알림을 끄면 지웁니다. 방문 수는 이름 없이 숫자만 셉니다.
+        </p>
         <p className="muted small">데이터: 기상청 · Open-Meteo · RainViewer · © OpenStreetMap</p>
         <p className="muted small">
           <a

@@ -15,16 +15,25 @@ function visitorId(): string {
     }
     return id
   } catch {
-    return 'no-storage'
+    // 저장이 막힌 환경에서도 방문자끼리 겹치지 않게 임시 고유값을 쓴다
+    return 'anon-' + Math.random().toString(36).slice(2, 12)
   }
+}
+
+/** KST 기준 오늘 날짜 (집계 단위) */
+function kstDay(): string {
+  return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10)
 }
 
 /** 앱 로드 시 1회 호출. 같은 브라우저 세션에서는 중복 기록하지 않음 */
 export function trackVisit(): void {
   try {
     if (!import.meta.env.PROD) return // 개발 중에는 기록 안 함
-    if (sessionStorage.getItem('eojeboda:tracked')) return
-    sessionStorage.setItem('eojeboda:tracked', '1')
+    // 세션이 아니라 KST 날짜 기준. 홈 화면 앱을 계속 열어두는 사용자가 집계에서 빠지지 않게.
+    const day = kstDay()
+    const KEY = 'eojeboda:tracked'
+    if (localStorage.getItem(KEY) === day) return
+    localStorage.setItem(KEY, day)
     const isPwa =
       window.matchMedia('(display-mode: standalone)').matches ||
       ('standalone' in navigator && (navigator as { standalone?: boolean }).standalone === true)
@@ -44,7 +53,18 @@ export function trackVisit(): void {
         ua: navigator.userAgent.slice(0, 200),
       }),
       keepalive: true,
-    }).catch(() => {})
+    })
+      .then((res) => {
+        // 저장에 실패했으면 다음 방문에 다시 시도할 수 있게 표시를 되돌린다
+        if (!res.ok) localStorage.removeItem(KEY)
+      })
+      .catch(() => {
+        try {
+          localStorage.removeItem(KEY)
+        } catch {
+          // 무시
+        }
+      })
   } catch {
     // 집계 실패는 앱 동작에 영향 없음
   }

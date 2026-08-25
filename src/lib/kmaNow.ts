@@ -18,8 +18,15 @@ export async function fetchKmaNow(lat: number, lon: number): Promise<KmaNow | nu
     const res = await fetch(`${PROXY}?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`)
     if (!res.ok) return null
     const d = await res.json()
-    if (d.error || typeof d.t1h !== 'number') return null
-    return { t1h: d.t1h, rn1: d.rn1, pty: d.pty, wsd: d.wsd, reh: d.reh }
+    if (d.error) return null
+    // 값이 문자열로 와도 비교가 어긋나지 않게 일괄 숫자화한다
+    const num = (v: unknown): number | null => {
+      const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN
+      return Number.isFinite(n) ? n : null
+    }
+    const t1h = num(d.t1h)
+    if (t1h === null) return null
+    return { t1h, rn1: num(d.rn1), pty: num(d.pty), wsd: num(d.wsd), reh: num(d.reh) }
   } catch {
     return null
   }

@@ -1920,11 +1920,114 @@ body {
 }
 
 /* 갱신 중에는 기존 화면을 유지하되 살짝 흐리게 */
-.shell.refreshing .switch-enter {
+.shell.refreshing .section-wrap {
   opacity: 0.72;
   transition: opacity 0.2s;
 }
 
 .visitors.err {
   color: var(--warm);
+}
+
+/* ── 접근성·조작성 보강 ───────────────────────────── */
+.loc {
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.loc-name {
+  max-width: min(120px, 26vw);
+}
+
+/* 작은 버튼들의 실제 터치 영역을 넓힌다 (보이는 크기는 유지) */
+.chip-x,
+.radar-btn,
+.radar-locate,
+.order-btns button,
+.promo-x,
+.gear,
+.night-chip,
+.tips-more {
+  position: relative;
+}
+
+.chip-x::after,
+.radar-btn::after,
+.radar-locate::after,
+.order-btns button::after,
+.promo-x::after,
+.gear::after,
+.night-chip::after,
+.tips-more::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
+/* 갱신 실패 표시는 버튼이지만 문구처럼 보이게 */
+button.visitors {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+/* 가로 슬라이더가 세로 스크롤까지 막지 않도록 */
+.radar-slider {
+  touch-action: pan-y;
+}
+
+/* 좁은 화면에서 주간 온도 막대가 사라지지 않게 */
+@media (max-width: 380px) {
+  .week li {
+    grid-template-columns: 34px 30px 26px 34px 28px 1fr 28px;
+    gap: 3px;
+    font-size: 13px;
+  }
+
+  .week-track {
+    min-width: 44px;
+  }
+}
+
+/* 동작 줄이기 설정을 켠 사용자는 흔들림·미끄러짐 없이 */
+@media (prefers-reduced-motion: reduce) {
+  .tip-emoji,
+  .switch-enter,
+  .reorder-active .section-wrap > .card,
+  .reorder-active .section-wrap > .hourly-card,
+  .chips.reorder-active .chip,
+  .promo-card,
+  .settings-panel,
+  .promo-backdrop,
+  .settings-backdrop {
+    animation: none !important;
+  }
+
+  .shell {
+    transition: none;
+  }
+}
+
+.search-error {
+  margin: 8px 2px 0;
+}
+
+.radar-loading {
+  display: grid;
+  place-items: center;
+  color: var(--sub);
+  font-size: 13px;
+}
+
+/* 설정 패널 안에 남는 안내 (alert 대신) */
+.notify-desc.notice {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--text);
 }

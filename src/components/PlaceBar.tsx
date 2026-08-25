@@ -27,6 +27,7 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Place[]>([])
   const [busy, setBusy] = useState(false)
+  const [searchError, setSearchError] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -34,8 +35,14 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
     const q = query.trim()
     if (!q) return
     setBusy(true)
+    setSearchError(false)
     try {
-      setResults(await searchPlaces(q))
+      const found = await searchPlaces(q)
+      setResults(found)
+      setSearchError(found.length === 0)
+    } catch {
+      setResults([])
+      setSearchError(true)
     } finally {
       setBusy(false)
     }
@@ -53,14 +60,13 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
       <div
         ref={chipReorder.setContainer}
         className={`chips ${chipReorder.active ? 'reorder-active' : ''}`}
-        role="tablist"
+        role="group"
         aria-label="위치 선택"
         {...chipReorder.handlers}
       >
         <button
           type="button"
-          role="tab"
-          aria-selected={selectedId === 'current'}
+          aria-pressed={selectedId === 'current'}
           className={`chip ${selectedId === 'current' ? 'on' : ''}`}
           onClick={() => onSelect('current')}
         >
@@ -74,9 +80,9 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
           >
             <button
               type="button"
-              role="tab"
-              aria-selected={selectedId === p.id}
+              aria-pressed={selectedId === p.id}
               className="chip-name"
+              data-reorder-pass
               onClick={() => onSelect(p.id)}
             >
               ⭐ {p.name}
@@ -96,7 +102,9 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
                 type="button"
                 className="chip-x"
                 aria-label={`${p.name} 즐겨찾기 삭제`}
-                onClick={() => onRemove(p.id)}
+                onClick={() => {
+                  if (confirm(`'${p.name}' 을(를) 즐겨찾기에서 지울까요?`)) onRemove(p.id)
+                }}
               >
                 ✕
               </button>
@@ -131,6 +139,9 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
           {busy ? '…' : '검색'}
         </button>
       </div>
+      {searchError && !busy && (
+        <p className="muted small search-error">검색 결과를 가져오지 못했어요. 잠시 후 다시 시도해주세요.</p>
+      )}
       {results.length > 0 && (
         <ul className="search-results">
           {results.map((r) => (
