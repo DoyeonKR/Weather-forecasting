@@ -104,7 +104,7 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
           </span>
         ))}
         {chipReorder.active && (
-          <button type="button" className="chip ghost" onClick={chipReorder.exit}>
+          <button type="button" className="chip ghost" data-reorder-exit onClick={chipReorder.exit}>
             완료
           </button>
         )}

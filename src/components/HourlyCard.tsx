@@ -17,7 +17,8 @@ const RAIN_H = 18
 
 export default function HourlyCard({ wx }: Props) {
   const { time, temp, precip } = wx.hourly
-  const nowHour = new Date().getHours()
+  // 기기 시간이 아니라 해당 지역 현지 시각 기준 (다른 시간대 즐겨찾기 대응)
+  const nowHour = wx.nowHourLocal
   const start = 24 + nowHour
   const N = 24
   const idx = Array.from({ length: N }, (_, i) => start + i).filter((i) => i < temp.length)

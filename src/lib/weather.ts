@@ -8,6 +8,8 @@ export interface WeatherData {
   nowApparent: number
   /** 현재 습도 % */
   nowHumidity: number
+  /** 해당 지역 현지 기준 현재 시(0-23) */
+  nowHourLocal: number
   /** 현재 날씨 코드 */
   nowCode: number
   /** 현재 낮 여부 */
@@ -93,6 +95,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     nowTemp: data.current.temperature_2m,
     nowApparent: data.current.apparent_temperature,
     nowHumidity: data.current.relative_humidity_2m,
+    nowHourLocal: nowHour,
     nowCode: data.current.weather_code,
     nowIsDay: data.current.is_day === 1,
     yesterdaySameHour,

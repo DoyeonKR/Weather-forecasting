@@ -17,8 +17,14 @@ export function loadFavorites(): Place[] {
     if (!Array.isArray(list)) return []
     return list.filter(
       (p): p is Place =>
-        p && typeof p.id === 'string' && typeof p.name === 'string' &&
-        typeof p.lat === 'number' && typeof p.lon === 'number',
+        p &&
+        typeof p.id === 'string' &&
+        typeof p.name === 'string' &&
+        // NaN 도 typeof 는 number 라 유한값·범위까지 확인한다
+        Number.isFinite(p.lat) &&
+        Number.isFinite(p.lon) &&
+        Math.abs(p.lat) <= 90 &&
+        Math.abs(p.lon) <= 180,
     )
   } catch {
     return []
@@ -76,6 +82,8 @@ export async function searchPlaces(query: string): Promise<Place[]> {
     })
     .filter((p) => {
       if (seen.has(p.id) || !p.name) return false
+      if (!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) return false
+      if (Math.abs(p.lat) > 90 || Math.abs(p.lon) > 180) return false
       seen.add(p.id)
       return true
     })

@@ -1,5 +1,5 @@
 // 무능한 날씨예측기 서비스워커 — 네트워크 우선 캐시 + 푸시 알림 수신
-const CACHE = 'eojeboda-v2'
+const CACHE = 'eojeboda-v3'
 
 self.addEventListener('push', (e) => {
   let data = { title: '무능한 날씨예측기', body: '' }
@@ -44,8 +44,11 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     fetch(request)
       .then((res) => {
-        const copy = res.clone()
-        caches.open(CACHE).then((c) => c.put(request, copy))
+        // 성공한 동일 출처 응답만 캐시에 넣는다 (404·리디렉션·공용 와이파이 로그인 페이지 방지)
+        if (res.ok && res.type === 'basic' && !res.redirected) {
+          const copy = res.clone()
+          caches.open(CACHE).then((c) => c.put(request, copy))
+        }
         return res
       })
       .catch(() => caches.match(request).then((hit) => hit || Response.error())),

@@ -1,5 +1,12 @@
 // 꾹 눌러(롱탭) 드래그로 순서 바꾸기 — 세로(섹션)·가로(칩) 공용 훅
-import { useCallback, useLayoutEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent as RMouseEvent,
+  type PointerEvent as RPointerEvent,
+} from 'react'
 
 interface Options<T extends string> {
   order: T[]
@@ -16,6 +23,7 @@ interface Handlers {
   onPointerMove: (e: RPointerEvent<HTMLElement>) => void
   onPointerUp: (e: RPointerEvent<HTMLElement>) => void
   onPointerCancel: (e: RPointerEvent<HTMLElement>) => void
+  onClickCapture: (e: RMouseEvent<HTMLElement>) => void
 }
 
 const INTERACTIVE = 'button, a, input, select, textarea, iframe, .radar-map, .leaflet-container, .range-track'
@@ -28,36 +36,69 @@ export function useLongPressReorder<T extends string>({ order, onChange, axis, h
   const orderRef = useRef(order)
   orderRef.current = order
   const containerRef = useRef<HTMLElement | null>(null)
-  const prevRects = useRef<Map<string, DOMRect>>(new Map())
+  const prevPos = useRef<Map<string, { left: number; top: number }>>(new Map())
+  const rafRef = useRef<number | null>(null)
+  const flipTimerRef = useRef<number | null>(null)
 
   // FLIP: 순서가 바뀌면 이전 위치에서 새 위치로 미끄러지는 애니메이션
+  // 측정은 offsetLeft/Top 으로 한다. getBoundingClientRect 는 진행 중인 transform 과
+  // 페이지 스크롤이 섞여, 연속 재정렬 때 카드가 반대로 튀는 원인이 된다.
   useLayoutEffect(() => {
     const container = containerRef.current
     if (!container) return
     const items = Array.from(container.querySelectorAll<HTMLElement>(`[${attr}]`))
-    const newRects = new Map<string, DOMRect>()
+    const newPos = new Map<string, { left: number; top: number }>()
     for (const el of items) {
-      const id = el.getAttribute(attr)!
-      newRects.set(id, el.getBoundingClientRect())
+      newPos.set(el.getAttribute(attr)!, { left: el.offsetLeft, top: el.offsetTop })
     }
+    const moved: HTMLElement[] = []
     for (const el of items) {
       const id = el.getAttribute(attr)!
-      const prev = prevRects.current.get(id)
-      const next = newRects.get(id)!
+      const prev = prevPos.current.get(id)
+      const next = newPos.get(id)!
       if (!prev) continue
       const dx = prev.left - next.left
       const dy = prev.top - next.top
       if (Math.abs(dx) < 1 && Math.abs(dy) < 1) continue
       el.style.transition = 'none'
       el.style.transform = `translate(${dx}px, ${dy}px)`
-      // 다음 프레임에 원위치로 트랜지션
-      requestAnimationFrame(() => {
-        el.style.transition = 'transform 0.32s cubic-bezier(0.2, 0, 0, 1)'
-        el.style.transform = ''
-      })
+      moved.push(el)
     }
-    prevRects.current = newRects
+    prevPos.current = newPos
+    if (moved.length === 0) return
+
+    let done = false
+    const release = (animate: boolean) => {
+      if (done) return
+      done = true
+      for (const el of moved) {
+        el.style.transition = animate ? 'transform 0.32s cubic-bezier(0.2, 0, 0, 1)' : 'none'
+        el.style.transform = ''
+      }
+    }
+
+    // 앞선 런의 콜백이 뒤늦게 새 transform 을 지우지 않도록 한 번만 예약한다
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+    if (flipTimerRef.current !== null) window.clearTimeout(flipTimerRef.current)
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null
+      release(true)
+    })
+    // 탭이 숨겨져 rAF 가 오지 않으면 카드가 어긋난 채 굳으므로 안전장치를 둔다
+    flipTimerRef.current = window.setTimeout(() => {
+      flipTimerRef.current = null
+      release(false)
+    }, 400)
   }, [order, attr])
+
+  // 언마운트 시 예약된 프레임·타이머 정리
+  useLayoutEffect(
+    () => () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+      if (flipTimerRef.current !== null) window.clearTimeout(flipTimerRef.current)
+    },
+    [],
+  )
 
   const clearTimer = () => {
     if (timerRef.current) {
@@ -147,6 +188,18 @@ export function useLongPressReorder<T extends string>({ order, onChange, axis, h
     setDragId(null)
   }, [])
 
+  // 정렬 모드에서 탭이 그대로 onClick 을 실행해 지역이 바뀌는 것을 막는다
+  const onClickCapture = useCallback(
+    (e: RMouseEvent<HTMLElement>) => {
+      if (!active) return
+      const t = e.target as HTMLElement
+      if (t.closest('[data-reorder-exit]')) return
+      e.preventDefault()
+      e.stopPropagation()
+    },
+    [active],
+  )
+
   const setContainer = useCallback((el: HTMLElement | null) => {
     containerRef.current = el
   }, [])
@@ -156,6 +209,7 @@ export function useLongPressReorder<T extends string>({ order, onChange, axis, h
     onPointerMove,
     onPointerUp: end,
     onPointerCancel: end,
+    onClickCapture,
   }
 
   const exit = useCallback(() => {

@@ -1724,6 +1724,11 @@ body {
   cursor: pointer;
 }
 
+/* 칩 정렬은 가로 드래그만 쓰므로 세로 스크롤은 브라우저에 넘긴다 */
+.chips.reorder-active {
+  touch-action: pan-y;
+}
+
 .chips.reorder-active .chip {
   animation: wiggle 0.35s ease-in-out infinite;
 }
@@ -1912,4 +1917,14 @@ body {
 /* 설정 순서 목록 이동 트랜지션 */
 .order-list li {
   transition: background 0.2s;
+}
+
+/* 갱신 중에는 기존 화면을 유지하되 살짝 흐리게 */
+.shell.refreshing .switch-enter {
+  opacity: 0.72;
+  transition: opacity 0.2s;
+}
+
+.visitors.err {
+  color: var(--warm);
 }

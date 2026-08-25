@@ -63,9 +63,12 @@ export default function App() {
 
   // 위치 권한 팝업은 사용자가 "현재 위치"를 직접 눌렀을 때만
   const promptRef = useRef(false)
+  // 지역을 빠르게 바꿀 때 먼저 시작한 요청이 나중 결과를 덮어쓰지 않도록
+  const loadSeq = useRef(0)
 
   const load = useCallback(
     async (id: string) => {
+      const seq = ++loadSeq.current
       setStatus('loading')
       try {
         let where: Located
@@ -83,15 +86,18 @@ export default function App() {
             return
           }
         }
+        if (seq !== loadSeq.current) return
         setLoc(where)
         const [weather, obs] = await Promise.all([
           fetchWeather(where.lat, where.lon),
           inKoreaBounds(where.lat, where.lon) ? fetchKmaNow(where.lat, where.lon) : Promise.resolve(null),
         ])
+        if (seq !== loadSeq.current) return
         setWx(weather)
         setKmaNow(obs)
         setStatus('ready')
       } catch {
+        if (seq !== loadSeq.current) return
         setStatus('error')
       }
     },
@@ -167,7 +173,8 @@ export default function App() {
     kmaNow?.pty && kmaNow.pty > 0 ? (kmaNow.pty === 1 || kmaNow.pty === 5 ? 61 : 73) : wx?.nowCode
   const theme = wx ? themeClass(effCode ?? wx.nowCode, wx.nowIsDay) : 'bg-loading'
 
-  if (status === 'loading') {
+  // 첫 로딩에만 전체 화면 스피너. 지역 전환 등 갱신 중에는 기존 화면을 유지한다.
+  if (status === 'loading' && (!wx || !loc)) {
     return (
       <div className={`shell center ${theme}`}>
         <div className="neon-frame" aria-hidden />
@@ -177,7 +184,7 @@ export default function App() {
     )
   }
 
-  if (status === 'error' || !wx || !loc) {
+  if (!wx || !loc) {
     return (
       <div className="shell center bg-loading">
         <div className="neon-frame" aria-hidden />
@@ -185,6 +192,19 @@ export default function App() {
         <button type="button" className="retry" onClick={() => load(selectedId)}>
           다시 시도
         </button>
+        {selectedId !== 'current' && (
+          <button
+            type="button"
+            className="retry ghost"
+            onClick={() => {
+              saveHome('current')
+              setHomeId('current')
+              setSelectedId('current')
+            }}
+          >
+            현재 위치로 보기
+          </button>
+        )}
       </div>
     )
   }
@@ -198,14 +218,20 @@ export default function App() {
   const tomorrowLabel = codeLabel(wx.tomorrow.code)
 
   return (
-    <div className={`shell ${theme}`}>
+    <div className={`shell ${theme} ${status === 'loading' ? 'refreshing' : ''}`}>
       <WeatherFx theme={theme} />
       <div className="neon-frame" aria-hidden />
       <PromoLayer picks={picks} />
       <header className="top">
         <div>
           <h1 className="brand">무능한 날씨예측기</h1>
-          {visitors !== null && <span className="visitors">👀 오늘 {visitors}명</span>}
+          {status === 'loading' ? (
+            <span className="visitors">날씨 갱신 중…</span>
+          ) : status === 'error' ? (
+            <span className="visitors err">갱신 실패, 이전 정보예요</span>
+          ) : (
+            visitors !== null && <span className="visitors">👀 오늘 {visitors}명</span>
+          )}
         </div>
         <div className="top-right">
           <button
@@ -260,7 +286,9 @@ export default function App() {
         {reorder.active && (
           <div className="reorder-bar">
             <span>카드를 끌어서 순서를 바꾸세요</span>
-            <button type="button" onClick={reorder.exit}>완료</button>
+            <button type="button" data-reorder-exit onClick={reorder.exit}>
+              완료
+            </button>
           </div>
         )}
         {sectionOrder.map((key, i) => (

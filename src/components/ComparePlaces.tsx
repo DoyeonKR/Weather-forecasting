@@ -156,9 +156,11 @@ export default function ComparePlaces({ baseLabel, baseWx, favorites }: Props) {
               const hi = Math.ceil(Math.max(...all.map((d) => d.stats.tmax))) + 1
               const span = hi - lo
               const x = (t: number) => ((t - lo) / span) * 100
+              const otherByDate = new Map(otherWx.week.map((d) => [d.date, d.stats]))
               return baseWx.week.map((d, i) => {
-                const o = otherWx.week[i]
-                if (!o) return null
+                // 시간대가 다른 지역도 같은 날짜끼리 비교 (인덱스 정렬 금지)
+                const oStats = otherByDate.get(d.date)
+                if (!oStats) return null
                 const dt = new Date(`${d.date}T00:00:00`)
                 const dayName = i === 0 ? '오늘' : WEEKDAYS[dt.getDay()]
                 const bar = (s: { tmin: number; tmax: number }, cls: string) => (
@@ -181,7 +183,7 @@ export default function ComparePlaces({ baseLabel, baseWx, favorites }: Props) {
                     <span className="vs-day">{dayName}</span>
                     <div className="vs-bars">
                       {bar(d.stats, 'today')}
-                      {bar(o.stats, 'other')}
+                      {bar(oStats, 'other')}
                     </div>
                   </li>
                 )

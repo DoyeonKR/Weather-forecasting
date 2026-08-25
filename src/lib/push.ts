@@ -13,9 +13,23 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
   return arr
 }
 
-export type NotifyState = 'on' | 'off' | 'unsupported'
+export type NotifyState = 'on' | 'off' | 'unsupported' | 'needs-install'
+
+/** 홈 화면에 설치된 상태(PWA)로 실행 중인지 */
+function isStandalone(): boolean {
+  try {
+    return (
+      window.matchMedia?.('(display-mode: standalone)').matches === true ||
+      (navigator as { standalone?: boolean }).standalone === true
+    )
+  } catch {
+    return false
+  }
+}
 
 export async function getNotifyState(): Promise<NotifyState> {
+  // iOS 는 홈 화면에 추가한 웹앱 안에서만 알림을 지원한다 (영구 미지원처럼 안내하지 않는다)
+  if (/iP(hone|od|ad)/.test(navigator.userAgent) && !isStandalone()) return 'needs-install'
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window))
     return 'unsupported'
   try {
@@ -28,6 +42,18 @@ export async function getNotifyState(): Promise<NotifyState> {
   }
 }
 
+/** serviceWorker.ready 는 워커가 없으면 영원히 대기하므로 시간 제한을 둔다 */
+async function readyWithTimeout(ms = 8000): Promise<ServiceWorkerRegistration | null> {
+  try {
+    return await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<null>((resolve) => window.setTimeout(() => resolve(null), ms)),
+    ])
+  } catch {
+    return null
+  }
+}
+
 /** 알림 켜기 — 권한 요청 후 구독을 서버에 저장. 슬롯 형식 'HHmm' (예 '0730', '2130') */
 export async function enableNotify(
   loc: { lat: number; lon: number; label: string },
@@ -37,7 +63,10 @@ export async function enableNotify(
   try {
     const perm = await Notification.requestPermission()
     if (perm !== 'granted') return false
-    const reg = await navigator.serviceWorker.ready
+    const reg = await readyWithTimeout()
+    if (!reg) return false
+    // 이미 등록돼 있던 구독인지 기억해 둔다 (저장 실패 시 되돌릴지 판단)
+    const hadSubscription = (await reg.pushManager.getSubscription()) !== null
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC).buffer as ArrayBuffer,
@@ -49,14 +78,11 @@ export async function enableNotify(
       Authorization: `Bearer ${SB_ANON}`,
       'Content-Type': 'application/json',
     }
-    // 같은 endpoint 재구독 대비: 삭제 후 저장
-    await fetch(`${SB_URL}/rest/v1/weather_push_subs?endpoint=eq.${encodeURIComponent(j.endpoint)}`, {
-      method: 'DELETE',
-      headers,
-    }).catch(() => {})
+    // endpoint 는 유니크 제약이 있으므로 upsert 로 저장한다.
+    // 예전처럼 삭제 후 삽입하면 그 사이에 실패했을 때 구독이 통째로 사라진다.
     const res = await fetch(`${SB_URL}/rest/v1/weather_push_subs`, {
       method: 'POST',
-      headers: { ...headers, Prefer: 'return=minimal' },
+      headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=minimal' },
       body: JSON.stringify({
         endpoint: j.endpoint,
         p256dh: j.keys.p256dh,
@@ -68,7 +94,13 @@ export async function enableNotify(
         morning_time: morningTime,
       }),
     })
-    return res.ok
+    if (!res.ok) {
+      // 서버에 저장하지 못했는데 브라우저 구독만 남으면 상태가 어긋난다.
+      // 이번에 새로 만든 경우에만 되돌린다 (시간 변경 등 기존 구독은 유지).
+      if (!hadSubscription) await sub.unsubscribe().catch(() => {})
+      return false
+    }
+    return true
   } catch {
     return false
   }

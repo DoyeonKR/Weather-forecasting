@@ -20,7 +20,8 @@ export function loadOrder(): SectionKey[] {
     const raw = localStorage.getItem(KEY)
     if (!raw) return [...DEFAULT_ORDER]
     const list = JSON.parse(raw) as string[]
-    const valid = list.filter((k): k is SectionKey => (DEFAULT_ORDER as string[]).includes(k))
+    // 중복 키가 있으면 같은 카드가 두 번 그려지고 정렬 indexOf 가 어긋난다
+    const valid = [...new Set(list)].filter((k): k is SectionKey => (DEFAULT_ORDER as string[]).includes(k))
     // 새로 생긴 섹션은 기본 위치 근처(끝)에 추가
     for (const k of DEFAULT_ORDER) if (!valid.includes(k)) valid.push(k)
     return valid

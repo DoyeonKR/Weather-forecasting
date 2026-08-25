@@ -267,9 +267,12 @@ export default function RadarMap({ lat, lon }: Props) {
   // 프레임 로드: 레이더(과거) + 예보 격자(미래)
   useEffect(() => {
     let cancelled = false
+    let retryTimer: number | null = null
     async function loadAll() {
       const map = mapRef.current
       if (!map) return
+      // 이전 지역에서 실패했더라도 다시 시도하므로 상태를 초기화한다
+      setError(false)
       try {
         const useKma = inKorea(lat, lon)
         // 한국: 미래는 아래 기상청 공식 예측 카드가 담당 (연한 모델 예보 오버레이 제거)
@@ -279,7 +282,10 @@ export default function RadarMap({ lat, lon }: Props) {
               () =>
                 // 일시 실패(레이트리밋 등) 시 1회 재시도
                 new Promise<Awaited<ReturnType<typeof fetchForecastGrid>> | null>((resolve) => {
-                  setTimeout(() => fetchForecastGrid(lat, lon).then(resolve).catch(() => resolve(null)), 2500)
+                  retryTimer = window.setTimeout(
+                    () => fetchForecastGrid(lat, lon).then(resolve).catch(() => resolve(null)),
+                    2500,
+                  )
                 }),
             )
 
@@ -375,10 +381,16 @@ export default function RadarMap({ lat, lon }: Props) {
     loadAll()
     return () => {
       cancelled = true
+      if (retryTimer !== null) window.clearTimeout(retryTimer)
       radarLayersRef.current.forEach((l) => l.remove())
       forecastLayersRef.current.forEach((g) => g.remove())
       radarLayersRef.current = []
       forecastLayersRef.current = []
+      // 이전 지역 타임라인이 남아 슬라이더가 헛돌지 않도록 비운다
+      setTimeline([])
+      setIdx(0)
+      setNowIdx(0)
+      setPlaying(false)
     }
     // 위치가 바뀌면 예보 격자도 다시 (레이더는 전역이지만 함께 재구성)
   }, [lat, lon])

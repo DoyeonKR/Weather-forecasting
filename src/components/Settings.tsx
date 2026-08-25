@@ -3,32 +3,14 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { disableNotify, enableNotify, getNotifyState, type NotifyState } from '../lib/push'
 import type { Place } from '../lib/places'
+import { ACCENTS, ACCENT_KEY } from '../lib/accent'
 import { DEFAULT_ORDER, SECTION_LABEL, moveItem, type SectionKey } from '../lib/sections'
 
-const ACCENT_KEY = 'eojeboda:accent'
 const NIGHT_KEY = 'eojeboda:nighttime'
 const MORNING_KEY = 'eojeboda:morningtime'
-
 const fmt = (v: string) => `${v.slice(0, 2)}:${v.slice(2)}`
 const MORNING_TIMES = ['0600', '0630', '0700', '0730', '0800', '0830', '0900']
 const NIGHT_TIMES = ['2100', '2130', '2200', '2230', '2300']
-
-export const ACCENTS = [
-  { id: 'blue', name: '파랑', color: '#2f81f7' },
-  { id: 'mint', name: '민트', color: '#10b981' },
-  { id: 'purple', name: '퍼플', color: '#8b5cf6' },
-  { id: 'orange', name: '오렌지', color: '#f97316' },
-  { id: 'pink', name: '핑크', color: '#ec4899' },
-] as const
-
-export function applySavedAccent(): void {
-  try {
-    const saved = localStorage.getItem(ACCENT_KEY)
-    if (saved && saved !== 'blue') document.documentElement.dataset.accent = saved
-  } catch {
-    // 무시
-  }
-}
 
 interface Props {
   loc: { lat: number; lon: number; label: string }
@@ -82,7 +64,7 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
   }
 
   async function toggleNotify() {
-    if (busy || notify === 'loading' || notify === 'unsupported') return
+    if (busy || notify === 'loading' || notify === 'unsupported' || notify === 'needs-install') return
     setBusy(true)
     try {
       if (notify === 'on') {
@@ -99,6 +81,7 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
   }
 
   async function pickTime(kind: 'morning' | 'night', v: string) {
+    const prev = kind === 'morning' ? morningTime : nightTime
     const nextMorning = kind === 'morning' ? v : morningTime
     const nextNight = kind === 'night' ? v : nightTime
     if (kind === 'morning') setMorningTime(v)
@@ -108,11 +91,21 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
     } catch {
       // 무시
     }
-    // 이미 켜져 있으면 새 시간으로 재등록
+    // 이미 켜져 있으면 새 시간으로 재등록. 실패하면 화면도 원래 시간으로 되돌린다.
     if (notify === 'on' && !busy) {
       setBusy(true)
       try {
-        await enableNotify(loc, nextNight, nextMorning)
+        const ok = await enableNotify(loc, nextNight, nextMorning)
+        if (!ok) {
+          if (kind === 'morning') setMorningTime(prev)
+          else setNightTime(prev)
+          try {
+            localStorage.setItem(kind === 'morning' ? MORNING_KEY : NIGHT_KEY, prev)
+          } catch {
+            // 무시
+          }
+          alert('알림 시간을 저장하지 못했어요. 잠시 후 다시 시도해주세요.')
+        }
       } finally {
         setBusy(false)
       }
@@ -144,13 +137,18 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
                     알려드려요. 시간은 아래에서 선택하세요.
                     {notify === 'on' ? ` 지금은 ${loc.label} 기준으로 받는 중.` : ''}
                     {notify === 'unsupported' ? ' 이 브라우저에서는 지원되지 않아요.' : ''}
+                    {notify === 'needs-install'
+                      ? ' 아이폰은 공유 버튼에서 홈 화면에 추가한 뒤 알림을 켤 수 있어요.'
+                      : ''}
                   </p>
                 </div>
                 <button
                   type="button"
                   className={`notify-toggle ${notify === 'on' ? 'on' : ''}`}
                   onClick={toggleNotify}
-                  disabled={busy || notify === 'loading' || notify === 'unsupported'}
+                  disabled={
+                    busy || notify === 'loading' || notify === 'unsupported' || notify === 'needs-install'
+                  }
                   aria-label={notify === 'on' ? '알림 끄기' : '알림 켜기'}
                 >
                   <span className="notify-knob" />
