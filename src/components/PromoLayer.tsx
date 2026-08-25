@@ -32,9 +32,10 @@ export default function PromoLayer({ picks }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Escape 로 닫기
+  // 열리면 레이어로 포커스를 옮기고 Escape 로 닫는다
   useEffect(() => {
     if (!open) return
+    cardRef.current?.focus()
     const onKey = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape') setOpen(false)
     }

@@ -85,7 +85,14 @@ revoke all on function public.weather_push_remove(text) from public;
 grant execute on function public.weather_push_save(text, text, text, double precision, double precision, text, text, text) to anon;
 grant execute on function public.weather_push_remove(text) to anon;
 
--- 앱이 새 함수로 넘어간 뒤 실행할 것 (배포 확인 후)
---   drop policy if exists wps_insert on public.weather_push_subs;
---   drop policy if exists wps_delete on public.weather_push_subs;
---   revoke all on public.weather_push_subs from anon, authenticated;
+-- 테이블 직접 접근 차단 (v1.0.54 배포 확인 후 적용 완료)
+-- 특히 wps_delete 는 using (true) 라 endpoint 없이 조건만 주면
+-- 전체 구독을 지울 수 있었다. 이제 위 두 함수로만 들어온다.
+drop policy if exists wps_insert on public.weather_push_subs;
+drop policy if exists wps_delete on public.weather_push_subs;
+revoke all on public.weather_push_subs from anon, authenticated;
+
+-- 방문 집계도 같은 기준으로. 기록만 허용하고 조회는 집계 함수로만.
+revoke all on public.weather_page_views from anon, authenticated;
+grant insert on public.weather_page_views to anon;
+-- 조회는 weather_today_visitors() (security definer) 로만
