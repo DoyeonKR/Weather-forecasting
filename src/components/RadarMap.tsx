@@ -36,16 +36,74 @@ const GRID_CACHE_TTL = 20 * 60 * 1000 // 20분 캐시로 호출량 절약
 const FORECAST_HOURS = 6
 const FORECAST_STEPS = FORECAST_HOURS * 4 // 15분 단위
 
-/** mm/h → RGBA — 기상청 레이더 색상표 계열(하늘색→초록→노랑→주황→빨강→보라) */
+/** 기상청 레이더 색상표 계열(하늘색→초록→노랑→주황→빨강→보라)의 기준점 */
+// 기준점을 구간 경계가 아니라 구간 중앙(기하평균)에 둔다.
+// 경계에 두면 1mm/h 부슬비가 이미 초록으로 보여서 실제보다 강해 보인다.
+const RADAR_STOPS: { v: number; c: [number, number, number] }[] = [
+  { v: 0.32, c: [0, 190, 255] }, // 0.1~1 약한 비
+  { v: 1.73, c: [0, 210, 60] }, // 1~3
+  { v: 4.24, c: [250, 218, 0] }, // 3~6
+  { v: 8.49, c: [255, 144, 0] }, // 6~12
+  { v: 17.3, c: [255, 40, 40] }, // 12~25
+  { v: 30, c: [180, 14, 220] }, // 25 이상 매우 강함
+]
+
+const RAIN_FLOOR = 0.1
+
+/**
+ * mm/h → RGBA.
+ * 단계마다 색을 딱딱 끊으면 28km 격자를 확대했을 때 계단이 그대로 보인다.
+ * 기준점 사이를 이어 칠하고, 약한 비는 알파를 낮춰 가장자리가 번지게 한다.
+ */
 function rgbaFor(mmPerHour: number): [number, number, number, number] {
-  if (mmPerHour < 0.1) return [0, 0, 0, 0]
-  if (mmPerHour < 1) return [0, 190, 255, 255]
-  if (mmPerHour < 3) return [0, 210, 60, 255]
-  if (mmPerHour < 6) return [250, 218, 0, 255]
-  if (mmPerHour < 12) return [255, 144, 0, 255]
-  if (mmPerHour < 25) return [255, 40, 40, 255]
-  return [180, 14, 220, 255]
+  if (mmPerHour < RAIN_FLOOR) return [0, 0, 0, 0]
+  // 0.1 에서 알파를 0에서 255로 튕기면 구름 경계가 칼로 자른 것처럼 보인다
+  const alpha = Math.round(Math.min(1, (mmPerHour - RAIN_FLOOR) / 0.45) * 255)
+  const first = RADAR_STOPS[0]
+  if (mmPerHour <= first.v) return [first.c[0], first.c[1], first.c[2], alpha]
+  const last = RADAR_STOPS[RADAR_STOPS.length - 1]
+  if (mmPerHour >= last.v) return [last.c[0], last.c[1], last.c[2], alpha]
+  for (let i = 0; i < RADAR_STOPS.length - 1; i++) {
+    const a = RADAR_STOPS[i]
+    const b = RADAR_STOPS[i + 1]
+    if (mmPerHour >= b.v) continue
+    // 강수량은 로그에 가깝게 퍼져 있어서 로그로 섞어야 색이 고르게 변한다
+    const t = (Math.log(mmPerHour) - Math.log(a.v)) / (Math.log(b.v) - Math.log(a.v))
+    const u = Math.min(1, Math.max(0, t))
+    return [
+      Math.round(a.c[0] + (b.c[0] - a.c[0]) * u),
+      Math.round(a.c[1] + (b.c[1] - a.c[1]) * u),
+      Math.round(a.c[2] + (b.c[2] - a.c[2]) * u),
+      alpha,
+    ]
+  }
+  return [last.c[0], last.c[1], last.c[2], alpha]
 }
+
+/** Catmull-Rom 보간. 선형보다 둥글게 이어져서 격자 자국이 덜 남는다 */
+function catmull(p0: number, p1: number, p2: number, p3: number, t: number): number {
+  const a = 2 * p1
+  const b = p2 - p0
+  const c = 2 * p0 - 5 * p1 + 4 * p2 - p3
+  const d = -p0 + 3 * p1 - 3 * p2 + p3
+  return 0.5 * (a + b * t + c * t * t + d * t * t * t)
+}
+
+/** 1차원 재샘플. 가로·세로를 따로 돌리면 픽셀마다 16번 뜨는 것보다 훨씬 싸다 */
+function resample(src: number[], out: number): number[] {
+  const n = src.length
+  const at = (i: number) => src[Math.min(n - 1, Math.max(0, i))]
+  const res = new Array<number>(out)
+  for (let k = 0; k < out; k++) {
+    const f = (k / (out - 1)) * (n - 1)
+    const i = Math.floor(f)
+    res[k] = catmull(at(i - 1), at(i), at(i + 1), at(i + 2), f - i)
+  }
+  return res
+}
+
+/** 보간 해상도. 13에서 여기까지 값으로 늘린 뒤 색을 입힌다 */
+const FIELD_N = 192
 
 // ── 기상청(KMA) 실황 레이더 GIS 오버레이 ──────────────────
 // radar.kma.go.kr GIS 뷰어의 com_gis CGI 를 재현: 임의 bbox 의 투명 레이더 PNG (인증 불필요)
@@ -183,35 +241,59 @@ async function fetchForecastGrid(
   return result
 }
 
-/** 격자값(GRID_N×GRID_N)을 보간·블러로 레이더 느낌의 이미지로 렌더 */
+/**
+ * 격자값(GRID_N×GRID_N)을 레이더 느낌의 이미지로 렌더.
+ * 순서가 중요하다. 색을 먼저 입히고 늘리면 28km 셀 경계가 그대로 드러나고
+ * 색 단계가 다른 이웃끼리 RGB 가 섞여 탁해진다. 값으로 먼저 잇고 색을 나중에 입힌다.
+ */
 function renderFrameImage(values: number[]): string | null {
   if (!values.some((v) => v >= 0.025)) return null // 비 없는 프레임은 오버레이 생략
+
+  // 1) 가로로 늘린다. 격자는 (위도 -half→+half) 순서라 북쪽이 위로 오게 뒤집어 읽는다
+  const rows: number[][] = []
+  for (let r = 0; r < GRID_N; r++) {
+    const src = new Array<number>(GRID_N)
+    for (let c = 0; c < GRID_N; c++) src[c] = values[(GRID_N - 1 - r) * GRID_N + c] ?? 0
+    rows.push(resample(src, FIELD_N))
+  }
+
+  // 2) 세로로 늘린다
+  const field = new Float32Array(FIELD_N * FIELD_N)
+  const colBuf = new Array<number>(GRID_N)
+  for (let c = 0; c < FIELD_N; c++) {
+    for (let r = 0; r < GRID_N; r++) colBuf[r] = rows[r][c]
+    const col = resample(colBuf, FIELD_N)
+    for (let y = 0; y < FIELD_N; y++) field[y * FIELD_N + c] = col[y]
+  }
+
+  // 3) 색을 입힌다. Catmull-Rom 은 넘칠 수 있으므로 실측 최대치로 잘라
+  //    관측되지 않은 강한 비가 생기지 않게 한다
+  let peak = 0
+  for (const v of values) if (v > peak) peak = v
   const small = document.createElement('canvas')
-  small.width = GRID_N
-  small.height = GRID_N
+  small.width = FIELD_N
+  small.height = FIELD_N
   const sctx = small.getContext('2d')!
-  const img = sctx.createImageData(GRID_N, GRID_N)
-  for (let i = 0; i < values.length; i++) {
-    // 격자는 (위도 -half→+half, 경도 -half→+half) 순서 → 캔버스 y는 북쪽이 위
-    const row = Math.floor(i / GRID_N)
-    const col = i % GRID_N
-    const y = GRID_N - 1 - row
-    const [r, g, b, a] = rgbaFor((values[i] ?? 0) * 4) // mm/15분 → mm/h
-    const o = (y * GRID_N + col) * 4
+  const img = sctx.createImageData(FIELD_N, FIELD_N)
+  for (let i = 0; i < field.length; i++) {
+    const v = Math.min(peak, Math.max(0, field[i]))
+    const [r, g, b, a] = rgbaFor(v * 4) // mm/15분 → mm/h
+    const o = i * 4
     img.data[o] = r
     img.data[o + 1] = g
     img.data[o + 2] = b
     img.data[o + 3] = a
   }
   sctx.putImageData(img, 0, 0)
+
   const big = document.createElement('canvas')
   big.width = 512
   big.height = 512
   const bctx = big.getContext('2d')!
   bctx.imageSmoothingEnabled = true
   bctx.imageSmoothingQuality = 'high'
-  bctx.filter = 'blur(2px)'
-  bctx.drawImage(small, 0, 0, 512, 512) // 가장자리는 블러로 자연스럽게 페이드
+  bctx.filter = 'blur(3px)'
+  bctx.drawImage(small, 0, 0, 512, 512)
   return big.toDataURL('image/png')
 }
 
