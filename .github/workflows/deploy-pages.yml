@@ -24,7 +24,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npx tsc --noEmit
+      # tsc --noEmit 은 이 저장소에서 0개를 검사한다.
+      # 루트 tsconfig 가 files: [] + references 라 -b 로 돌려야 실제로 본다.
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

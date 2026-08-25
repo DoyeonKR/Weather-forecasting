@@ -106,7 +106,8 @@ src/
 │   ├── Settings.tsx      # 알림·기본지역·섹션순서·색상테마
 │   ├── PromoLayer.tsx    # 오늘 준비물 추천 레이어
 │   ├── CoupangBanner.tsx # 제휴 배너
-│   └── PlaceBar.tsx      # 위치 칩 + 장소 검색
+│   ├── PlaceBar.tsx      # 위치 칩 + 장소 검색
+│   └── WhenVisible.tsx   # 화면에 들어올 때만 무거운 자식 마운트
 ├── App.tsx            # 화면 구성
 public/sw.js           # 서비스워커 (캐시 + 푸시 수신 + 구독 갱신)
 supabase/
@@ -121,7 +122,8 @@ supabase/
 npm install
 npm run dev      # http://localhost:5173/Weather-forecasting/
 npm run build    # 프로덕션 빌드 (dist/)
-npx tsc --noEmit # 타입 체크
+npm run typecheck # 타입 체크 (tsc -b, 루트 tsconfig 는 files:[] 라 --noEmit 만으로는 0개를 본다)
+npm test         # 판단 로직 테스트
 ```
 
 ## 배포
@@ -134,8 +136,9 @@ npx tsc --noEmit # 타입 체크
 - [x] 자기 전 푸시 알림: 내일이 오늘보다 크게 춥거나 덥거나, 비·눈이 올 때
       (`weather-push` Edge Function + pg_cron, 시간대는 사용자가 선택)
 - [x] 시간별 기온·강수 그래프 (`HourlyCard`)
-- [ ] 시간별 그래프에 어제 곡선 겹쳐 보기
-- [ ] `compare.ts`, `lcc.ts` 유닛 테스트
+- [x] 시간별 그래프에 어제 곡선 겹쳐 보기 (`HourlyCard` 점선)
+- [x] `compare.ts` 판단 로직 테스트 (`npm test`)
+- [ ] `lcc.ts` 투영 변환 테스트
 
 ## 데이터 출처
 

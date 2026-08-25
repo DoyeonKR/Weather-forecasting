@@ -25,7 +25,9 @@ export function partnerPicks(opts: {
   const { today, uvMax } = opts
   const picks: PartnerItem[] = []
   const rains = today.precipSum >= 0.5 || (today.precipProbMax ?? 0) >= 60
-  if (rains && LINKS.umbrella)
+  // 강풍이면 팁에서 '우산 대신 우비' 라고 안내한다. 같은 화면에서 장우산을 권하면 앞뒤가 안 맞는다
+  const strongWind = (today.gustMax ?? 0) >= 60 || (today.windMax ?? 0) >= 40
+  if (rains && !strongWind && LINKS.umbrella)
     picks.push({ emoji: '☂️', label: '튼튼한 장우산 보러가기', url: LINKS.umbrella })
   if ((uvMax ?? 0) >= 6 && LINKS.sunscreen)
     picks.push({ emoji: '🧴', label: '선크림 보러가기', url: LINKS.sunscreen })
@@ -33,7 +35,8 @@ export function partnerPicks(opts: {
     picks.push({ emoji: '🌀', label: '휴대용 선풍기 보러가기', url: LINKS.fan })
   if (today.tmin <= 3 && LINKS.hotpack)
     picks.push({ emoji: '🔥', label: '핫팩 보러가기', url: LINKS.hotpack })
-  if (today.tmin <= 8 && LINKS.outer)
+  // 하한이 없으면 아침 영하 10도에도 '가벼운 겉옷' 을 권하게 된다. 그 온도는 핫팩 담당
+  if (today.tmin <= 8 && today.tmin >= -3 && LINKS.outer)
     picks.push({ emoji: '🧥', label: '가벼운 겉옷 보러가기', url: LINKS.outer })
   return picks.slice(0, 2)
 }

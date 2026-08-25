@@ -6,6 +6,9 @@
     <meta name="theme-color" content="#0e131a" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192" />
+    <!-- iOS 홈 화면은 SVG 를 쓰지 않는다. 이게 없으면 아이콘 자리가 비어 보인다 -->
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -15,6 +18,26 @@
       content="어제와 비교해서 알려주는 날씨. 어제보다 몇 도 높은지, 비구름 레이더까지."
     />
     <title>무능한 날씨예측기</title>
+    <!-- 카카오톡·트위터 등에 링크를 붙였을 때 보이는 미리보기 -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="무능한 날씨예측기" />
+    <meta property="og:title" content="무능한 날씨예측기" />
+    <meta
+      property="og:description"
+      content="어제와 비교해서 알려주는 날씨. 어제보다 몇 도 높은지, 비구름 레이더까지."
+    />
+    <meta property="og:url" content="https://doyeonkr.github.io/Weather-forecasting/" />
+    <meta property="og:image" content="https://doyeonkr.github.io/Weather-forecasting/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="무능한 날씨예측기" />
+    <meta
+      name="twitter:description"
+      content="어제와 비교해서 알려주는 날씨. 어제보다 몇 도 높은지, 비구름 레이더까지."
+    />
+    <meta name="twitter:image" content="https://doyeonkr.github.io/Weather-forecasting/og-image.png" />
   </head>
   <body>
     <div id="root"></div>
