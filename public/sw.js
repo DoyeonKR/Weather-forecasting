@@ -74,7 +74,10 @@ async function resubscribe(oldSub) {
     applicationServerKey: key,
   })
   const j = sub.toJSON()
-  if (!j.endpoint || !j.keys) return
+  if (!j.endpoint || !j.keys) {
+    await sub.unsubscribe().catch(() => {})
+    return
+  }
   const headers = {
     apikey: SB_ANON,
     Authorization: 'Bearer ' + SB_ANON,
@@ -85,12 +88,22 @@ async function resubscribe(oldSub) {
     p_p256dh: j.keys.p256dh,
     p_auth: j.keys.auth,
   })
-  const res = await fetch(SB_URL + '/rest/v1/rpc/weather_push_save', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(next),
-  })
-  if (!res.ok) return
+  let res = null
+  try {
+    res = await fetch(SB_URL + '/rest/v1/rpc/weather_push_save', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(next),
+    })
+  } catch {
+    res = null
+  }
+  if (!res || !res.ok) {
+    // 저장 못 한 구독을 남기면 앱은 켜짐으로 보이는데 서버는 옛 endpoint 로만 보낸다.
+    // 걷어내면 설정에서 꺼진 것으로 보이고, 사용자가 다시 켤 수 있다.
+    await sub.unsubscribe().catch(() => {})
+    return
+  }
   // 옛 endpoint 로 남은 행은 지운다 (그대로 두면 하루에 두 번 온다)
   if (oldSub && oldSub.endpoint && oldSub.endpoint !== j.endpoint) {
     await fetch(SB_URL + '/rest/v1/rpc/weather_push_remove', {

@@ -23,7 +23,7 @@ function urlBase64ToUint8Array(base64: string): Uint8Array {
 export type NotifyState = 'on' | 'off' | 'blocked' | 'unsupported' | 'needs-install'
 
 /** 알림 켜기 결과. 실패 사유가 다르면 안내 문구도 달라야 한다 */
-export type EnableResult = 'ok' | 'denied' | 'no-sw' | 'save-failed'
+export type EnableResult = 'ok' | 'denied' | 'no-sw' | 'save-failed' | 'save-unknown'
 
 /** 홈 화면에 설치된 상태(PWA)로 실행 중인지 */
 function isStandalone(): boolean {
@@ -115,6 +115,43 @@ async function savePrefs(prefs: Record<string, unknown>): Promise<void> {
   }
 }
 
+/** 서비스워커가 남겨둔 마지막 구독 정보 */
+async function readPrefs(): Promise<{ p_endpoint?: string } | null> {
+  try {
+    const c = await caches.open(PREFS_CACHE)
+    const hit = await c.match(PREFS_URL)
+    return hit ? await hit.json() : null
+  } catch {
+    return null
+  }
+}
+
+async function removeOnServer(endpoint: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/rpc/weather_push_remove`, {
+      method: 'POST',
+      headers: {
+        apikey: SB_ANON,
+        Authorization: `Bearer ${SB_ANON}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_endpoint: endpoint }),
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+async function clearPrefs(): Promise<void> {
+  try {
+    const c = await caches.open(PREFS_CACHE)
+    await c.delete(PREFS_URL)
+  } catch {
+    // 무시
+  }
+}
+
 /** 알림 켜기 — 권한 요청 후 구독을 서버에 저장. 슬롯 형식 'HHmm' (예 '0730', '2130') */
 export async function enableNotify(
   loc: { lat: number; lon: number; label: string },
@@ -127,12 +164,18 @@ export async function enableNotify(
     if (perm !== 'granted') return 'denied'
     const reg = await readyWithTimeout()
     if (!reg) return 'no-sw'
-    // 이미 등록돼 있던 구독인지 기억해 둔다 (저장 실패 시 되돌릴지 판단)
-    const hadSubscription = (await reg.pushManager.getSubscription()) !== null
+    // 저장에 실패했을 때 무엇을 되돌릴지 판단하는 기준.
+    // "구독이 있었나" 가 아니라 "이번에 endpoint 가 새로 생겼나" 로 본다.
+    // subscribeWithRetry 가 낡은 구독을 정리하고 다시 만든 경우도 여기서 잡힌다.
+    const before = await reg.pushManager.getSubscription()
+    const prevEndpoint = before ? before.endpoint : null
     const sub = await subscribeWithRetry(reg)
-    if (!hadSubscription) created = sub
+    if (sub.endpoint !== prevEndpoint) created = sub
     const j = sub.toJSON()
-    if (!j.endpoint || !j.keys) return 'save-failed'
+    if (!j.endpoint || !j.keys) {
+      if (created) await created.unsubscribe().catch(() => {})
+      return 'save-failed'
+    }
     const body = {
       p_endpoint: j.endpoint,
       p_p256dh: j.keys.p256dh,
@@ -145,15 +188,22 @@ export async function enableNotify(
     }
     // 함수 안에서 endpoint 기준으로 업서트한다. 예전처럼 삭제 후 삽입하면
     // 그 사이에 실패했을 때 구독이 통째로 사라진다.
-    const res = await fetch(`${SB_URL}/rest/v1/rpc/weather_push_save`, {
-      method: 'POST',
-      headers: {
-        apikey: SB_ANON,
-        Authorization: `Bearer ${SB_ANON}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    })
+    let res: Response
+    try {
+      res = await fetch(`${SB_URL}/rest/v1/rpc/weather_push_save`, {
+        method: 'POST',
+        headers: {
+          apikey: SB_ANON,
+          Authorization: `Bearer ${SB_ANON}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      })
+    } catch {
+      // 요청이 서버에 닿았는지 알 수 없다. 화면을 되돌리면 서버와 반대로 어긋날 수 있다.
+      if (created) await created.unsubscribe().catch(() => {})
+      return 'save-unknown'
+    }
     if (!res.ok) {
       if (import.meta.env.DEV) {
         const detail = await res.text().catch(() => '')
@@ -180,25 +230,19 @@ export async function disableNotify(): Promise<boolean> {
     const reg = await readyWithTimeout()
     if (!reg) return false
     const sub = await reg.pushManager.getSubscription()
-    if (!sub) return true
-    const res = await fetch(`${SB_URL}/rest/v1/rpc/weather_push_remove`, {
-      method: 'POST',
-      headers: {
-        apikey: SB_ANON,
-        Authorization: `Bearer ${SB_ANON}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ p_endpoint: sub.endpoint }),
-    })
-    // 서버 행이 남았는데 브라우저 구독만 지우면 내일 아침에도 알림이 온다
-    if (!res.ok) return false
-    await sub.unsubscribe()
-    try {
-      const c = await caches.open(PREFS_CACHE)
-      await c.delete(PREFS_URL)
-    } catch {
-      // 무시
+    if (!sub) {
+      // 브라우저 구독만 사라지고 서버 행은 남아 있을 수 있다. 그대로 두면 내일 아침에도 온다.
+      const prefs = await readPrefs()
+      const stale = prefs?.p_endpoint
+      if (!stale) return true
+      if (!(await removeOnServer(stale))) return false
+      await clearPrefs()
+      return true
     }
+    // 서버 행이 남았는데 브라우저 구독만 지우면 내일 아침에도 알림이 온다
+    if (!(await removeOnServer(sub.endpoint))) return false
+    await sub.unsubscribe()
+    await clearPrefs()
     return true
   } catch {
     return false

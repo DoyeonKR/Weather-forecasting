@@ -1380,6 +1380,14 @@ body {
   cursor: pointer;
 }
 
+/* 보조 동작. 주 버튼과 무게가 같으면 어느 쪽이 기본인지 알 수 없다 */
+.retry.ghost {
+  background: none;
+  color: var(--text);
+  border: 1px solid var(--line);
+  font-weight: 600;
+}
+
 /* ── 접속 1회 추천 레이어 ───────────────────────────── */
 .promo-backdrop {
   position: fixed;
@@ -1678,6 +1686,13 @@ body {
   -webkit-user-select: none;
 }
 
+/* 정렬 중에는 광고 iframe 도 손이 닿지 않게.
+   클릭 차단은 자바스크립트라 교차 출처 iframe 안쪽까지 못 막는다 */
+.reorder-active .cp-banner,
+.reorder-active iframe {
+  pointer-events: none;
+}
+
 .reorder-active .section-wrap > .card,
 .reorder-active .section-wrap > .hourly-card {
   animation: wiggle 0.35s ease-in-out infinite;
@@ -1947,7 +1962,8 @@ body {
 .promo-x,
 .gear,
 .night-chip,
-.tips-more {
+.tips-more,
+button.visitors {
   position: relative;
 }
 
@@ -1958,7 +1974,8 @@ body {
 .promo-x::after,
 .gear::after,
 .night-chip::after,
-.tips-more::after {
+.tips-more::after,
+button.visitors::after {
   content: '';
   position: absolute;
   inset: -8px;

@@ -56,6 +56,9 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
 
   const panelRef = useRef<HTMLDivElement>(null)
   const openerRef = useRef<HTMLButtonElement>(null)
+  // 진행 중에는 어떤 경로로도 닫지 않는다. 닫히면 결과 안내가 버려진다.
+  const busyRef = useRef(false)
+  busyRef.current = busy
 
   // 열리면 패널로 포커스를 옮기고, Escape 로 닫는다. 닫으면 원래 버튼으로 복귀.
   useEffect(() => {
@@ -63,7 +66,7 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
     const opener = openerRef.current
     panelRef.current?.focus()
     const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') setOpen(false)
+      if (ev.key === 'Escape' && !busyRef.current) setOpen(false)
     }
     window.addEventListener('keydown', onKey)
     return () => {
@@ -110,6 +113,8 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
           setNotice('앱 준비가 아직 끝나지 않았어요. 새로고침한 뒤 다시 시도해주세요.')
         else if (r === 'save-failed')
           setNotice('알림 설정을 저장하지 못했어요. 잠시 후 다시 시도해주세요.')
+        else if (r === 'save-unknown')
+          setNotice('연결이 끊겨 저장 결과를 확인하지 못했어요. 연결된 뒤 한 번 더 확인해주세요.')
       }
     } finally {
       setBusy(false)
@@ -133,7 +138,11 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
       setNotice(null)
       try {
         const r = await enableNotify(loc, nextNight, nextMorning)
-        if (r !== 'ok') {
+        if (r === 'save-unknown') {
+          // 서버에 닿았는지 모르는 상태다. 되돌리면 서버와 반대로 어긋날 수 있으니 그대로 둔다.
+          setNotify(await getNotifyState())
+          setNotice('연결이 끊겨 저장 결과를 확인하지 못했어요. 연결된 뒤 시간을 한 번 더 확인해주세요.')
+        } else if (r !== 'ok') {
           if (kind === 'morning') setMorningTime(prev)
           else setNightTime(prev)
           try {
@@ -161,7 +170,7 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
           <div
             className="settings-backdrop"
             onClick={(e) => {
-              if (e.target === e.currentTarget) setOpen(false)
+              if (e.target === e.currentTarget && !busy) setOpen(false)
             }}
           >
           <div

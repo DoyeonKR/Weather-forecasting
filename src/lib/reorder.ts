@@ -40,6 +40,8 @@ export function useLongPressReorder<T extends string>({ order, onChange, axis, h
   const prevPos = useRef<Map<string, { left: number; top: number }>>(new Map())
   const rafRef = useRef<number | null>(null)
   const flipTimerRef = useRef<number | null>(null)
+  // 취소된 런이 남긴 transform 을 걷어낼 수 있게 해제 함수를 들고 있는다
+  const pendingRelease = useRef<((animate: boolean) => void) | null>(null)
 
   // FLIP: 순서가 바뀌면 이전 위치에서 새 위치로 미끄러지는 애니메이션
   // 측정은 offsetLeft/Top 으로 한다. getBoundingClientRect 는 진행 중인 transform 과
@@ -47,6 +49,17 @@ export function useLongPressReorder<T extends string>({ order, onChange, axis, h
   useLayoutEffect(() => {
     const container = containerRef.current
     if (!container) return
+    // 앞선 런을 먼저 끝낸다. 취소만 하면 그 런이 씌운 transform 이 영영 안 벗겨진다.
+    // offsetLeft/Top 은 transform 의 영향을 받지 않으므로 측정 전에 해제해도 값은 같다.
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current)
+      rafRef.current = null
+    }
+    if (flipTimerRef.current !== null) {
+      window.clearTimeout(flipTimerRef.current)
+      flipTimerRef.current = null
+    }
+    pendingRelease.current?.(false)
     const items = Array.from(container.querySelectorAll<HTMLElement>(`[${attr}]`))
     const newPos = new Map<string, { left: number; top: number }>()
     for (const el of items) {
@@ -72,15 +85,29 @@ export function useLongPressReorder<T extends string>({ order, onChange, axis, h
     const release = (animate: boolean) => {
       if (done) return
       done = true
+      pendingRelease.current = null
       for (const el of moved) {
-        el.style.transition = animate ? 'transform 0.32s cubic-bezier(0.2, 0, 0, 1)' : 'none'
+        if (!animate) {
+          // 'none' 을 남기면 인라인 선언이 스타일시트를 이겨서
+          // 이 카드만 갱신 중 페이드 같은 다른 transition 을 잃는다
+          el.style.transition = ''
+          el.style.transform = ''
+          continue
+        }
+        el.style.transition = 'transform 0.32s cubic-bezier(0.2, 0, 0, 1)'
         el.style.transform = ''
+        const clear = (ev: TransitionEvent) => {
+          if (ev.propertyName !== 'transform') return
+          el.removeEventListener('transitionend', clear)
+          el.removeEventListener('transitioncancel', clear)
+          el.style.transition = ''
+        }
+        el.addEventListener('transitionend', clear)
+        el.addEventListener('transitioncancel', clear)
       }
     }
 
-    // 앞선 런의 콜백이 뒤늦게 새 transform 을 지우지 않도록 한 번만 예약한다
-    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-    if (flipTimerRef.current !== null) window.clearTimeout(flipTimerRef.current)
+    pendingRelease.current = release
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null
       release(true)
@@ -97,6 +124,7 @@ export function useLongPressReorder<T extends string>({ order, onChange, axis, h
     () => () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
       if (flipTimerRef.current !== null) window.clearTimeout(flipTimerRef.current)
+      pendingRelease.current?.(false)
     },
     [],
   )

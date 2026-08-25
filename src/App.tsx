@@ -231,17 +231,18 @@ export default function App() {
       <header className="top">
         <div>
           <h1 className="brand">무능한 날씨예측기</h1>
-          {status === 'loading' ? (
-            <span className="visitors" role="status">
-              날씨 갱신 중…
-            </span>
-          ) : status === 'error' ? (
-            <button type="button" className="visitors err" onClick={() => selectPlace(selectedId)}>
-              갱신 실패, 눌러서 다시 시도
-            </button>
-          ) : (
-            visitors !== null && <span className="visitors">👀 오늘 {visitors}명</span>
-          )}
+          {/* 감싸는 요소를 고정으로 둬야 안쪽이 버튼과 문구로 교체돼도 읽어준다 */}
+          <span aria-live="polite">
+            {status === 'loading' ? (
+              <span className="visitors">날씨 갱신 중…</span>
+            ) : status === 'error' ? (
+              <button type="button" className="visitors err" onClick={() => selectPlace(selectedId)}>
+                갱신 실패, 눌러서 다시 시도
+              </button>
+            ) : (
+              visitors !== null && <span className="visitors">👀 오늘 {visitors}명</span>
+            )}
+          </span>
         </div>
         <div className="top-right">
           <button
