@@ -1,5 +1,6 @@
 // 위치 바 — 항상 보이는 동네 검색 + 현재 위치/즐겨찾기 칩
 import { useRef, useState } from 'react'
+import { Crosshair, MagnifyingGlass, MapPin, Star } from '@phosphor-icons/react'
 import { searchPlaces, type Place } from '../lib/places'
 import { useLongPressReorder } from '../lib/reorder'
 
@@ -29,6 +30,7 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
   const [busy, setBusy] = useState(false)
   const [searchError, setSearchError] = useState(false)
   const [editMode, setEditMode] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   async function runSearch() {
@@ -70,7 +72,7 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
           className={`chip ${selectedId === 'current' ? 'on' : ''}`}
           onClick={() => onSelect('current')}
         >
-          📍 현재 위치
+          <Crosshair size={17} weight="bold" aria-hidden /> 현재 위치
         </button>
         {favorites.map((p) => (
           <span
@@ -85,7 +87,7 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
               data-reorder-pass
               onClick={() => onSelect(p.id)}
             >
-              ⭐ {p.name}
+              <Star size={15} weight="fill" aria-hidden /> {p.name}
             </button>
             {editMode && (
               <>
@@ -121,9 +123,12 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
             {editMode ? '완료' : '편집'}
           </button>
         )}
+        <button type="button" className="chip ghost search-toggle" aria-expanded={searchOpen} onClick={() => setSearchOpen((o) => !o)}>
+          <MagnifyingGlass size={16} weight="bold" aria-hidden /> {searchOpen ? '검색 닫기' : '지역 검색'}
+        </button>
       </div>
 
-      <div className="search-row">
+      {searchOpen && <div className="search-row">
         <input
           ref={inputRef}
           value={query}
@@ -131,14 +136,14 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
           onKeyDown={(e) => {
             if (e.key === 'Enter') runSearch()
           }}
-          placeholder="🔍 동네 검색 (예: 판교, 부산 해운대)"
+          placeholder="동네 검색 (예: 판교, 부산 해운대)"
           className="search-input"
           enterKeyHint="search"
         />
         <button type="button" className="search-btn" onClick={runSearch} disabled={busy}>
           {busy ? '…' : '검색'}
         </button>
-      </div>
+      </div>}
       {searchError && !busy && (
         <p className="muted small search-error">검색 결과를 가져오지 못했어요. 잠시 후 다시 시도해주세요.</p>
       )}
@@ -147,7 +152,7 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
           {results.map((r) => (
             <li key={r.id}>
               <button type="button" onClick={() => pick(r)}>
-                📍 {r.name}
+                <MapPin size={16} weight="fill" aria-hidden /> {r.name}
               </button>
             </li>
           ))}

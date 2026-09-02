@@ -1,4 +1,21 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState, type ComponentType } from 'react'
+import {
+  Cloud,
+  CloudFog,
+  CloudLightning,
+  CloudRain,
+  CloudSun,
+  Drop,
+  MapPin,
+  MoonStars,
+  Snowflake,
+  Sun,
+  Sunglasses,
+  ThermometerSimple,
+  TShirt,
+  Umbrella,
+  Wind,
+} from '@phosphor-icons/react'
 import { locate, type Located } from './lib/geo'
 import { fetchWeather, type WeatherData } from './lib/weather'
 import {
@@ -17,7 +34,6 @@ import WhenVisible from './components/WhenVisible'
 // 지도·GIF 해석기는 첫 화면에 필요 없으므로 화면에 나올 때 불러온다
 const RadarMap = lazy(() => import('./components/RadarMap'))
 import PlaceBar from './components/PlaceBar'
-import PromoLayer from './components/PromoLayer'
 import Settings from './components/Settings'
 import WeatherFx from './components/WeatherFx'
 import { DeltaHero, PrecipCompare, TempRangeBars, WindCompare } from './components/CompareGraphic'
@@ -33,13 +49,28 @@ type Status = 'loading' | 'ready' | 'error'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
-/** 멘트 이모지 → 애니메이션 종류 */
-function tipAnim(emoji: string): string {
-  if ('🌧️☔☂️🌂🌦️💧'.includes(emoji)) return 'anim-rain'
-  if ('🌨️☃️⛄🧊🥶❄️'.includes(emoji)) return 'anim-snow'
-  if ('☀️🔥🥵🧴🕶️🌡️🌅'.includes(emoji)) return 'anim-sun'
-  if ('💨🍃'.includes(emoji)) return 'anim-wind'
-  return 'anim-idle'
+type UiIcon = ComponentType<{
+  size?: number
+  weight?: 'regular' | 'bold' | 'duotone'
+  className?: string
+  'aria-hidden'?: boolean
+}>
+
+function weatherIcon(label: string, isDay: boolean): UiIcon {
+  if (label.includes('뇌우')) return CloudLightning
+  if (label.includes('눈')) return Snowflake
+  if (label.includes('안개')) return CloudFog
+  if (label.includes('비') || label.includes('소나기')) return CloudRain
+  if (label.includes('구름') || label.includes('흐림')) return label.includes('조금') ? CloudSun : Cloud
+  return isDay ? Sun : MoonStars
+}
+
+function tipIcon(emoji: string): UiIcon {
+  if ('🌧️☔☂️🌂🌦️💧'.includes(emoji)) return Umbrella
+  if ('☀️🔥🥵🧴🕶️🌡️🌅'.includes(emoji)) return emoji.includes('🕶️') ? Sunglasses : Sun
+  if ('💨🍃'.includes(emoji)) return Wind
+  if ('👕🧥👚'.includes(emoji)) return TShirt
+  return CloudSun
 }
 
 export default function App() {
@@ -227,7 +258,6 @@ export default function App() {
     <div className={`shell ${theme} ${status === 'loading' ? 'refreshing' : ''}`}>
       <WeatherFx theme={theme} />
       <div className="neon-frame" aria-hidden />
-      <PromoLayer picks={picks} />
       <header className="top">
         <div>
           <h1 className="brand">무능한 날씨예측기</h1>
@@ -251,7 +281,7 @@ export default function App() {
             onClick={() => selectPlace(selectedId)}
             title={loc.isFallback && selectedId === 'current' ? '눌러서 내 위치 사용' : `${loc.label} 새로고침`}
           >
-            {selectedId === 'current' ? '📍' : favorites.some((f) => f.id === selectedId) ? '⭐' : '🔍'}{' '}
+            <MapPin size={17} weight="fill" aria-hidden />
             <span className="loc-name">{loc.label.replace(' (기본 위치)', '(기본)')}</span>
           </button>
           <Settings
@@ -311,59 +341,63 @@ export default function App() {
       {key === 'hero' && (
         <>
           <section className="hero card">
+            <div className="hero-date">
+              {new Intl.DateTimeFormat('ko-KR', { month: '2-digit', day: '2-digit', weekday: 'long' }).format(new Date())}
+            </div>
             <div className="hero-main">
-              <span className="hero-emoji" aria-hidden>
-                {now.emoji}
-              </span>
+              {(() => {
+                const HeroIcon = weatherIcon(now.label, wx.nowIsDay)
+                return <HeroIcon size={112} weight="duotone" aria-hidden />
+              })()}
               <div className="hero-info">
                 <div className="hero-temp">{round1(wx.nowTemp)}°</div>
+                <div className="hero-condition">{now.label}</div>
               </div>
               <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
             </div>
             <div className="hero-subs">
-              <div className="hero-cond">
-                <span className="hero-cond-tag">지금</span>
-                {now.emoji} {now.label}
-              </div>
               <div className="stat-chips">
                 <div className="stat-chip">
-                  <span className="stat-chip-icon" aria-hidden>🌡️</span>
+                  <ThermometerSimple className="stat-chip-icon warm-icon" size={25} weight="duotone" aria-hidden />
                   <span className="stat-chip-label">체감</span>
                   <span className="stat-chip-value">{round1(wx.nowApparent)}°</span>
                 </div>
                 <div className="stat-chip">
-                  <span className="stat-chip-icon" aria-hidden>💧</span>
+                  <Drop className="stat-chip-icon cold-icon" size={25} weight="duotone" aria-hidden />
                   <span className="stat-chip-label">습도</span>
                   <span className="stat-chip-value">{Math.round(kmaNow?.reh ?? wx.nowHumidity)}%</span>
                 </div>
                 <div className="stat-chip">
-                  <span className="stat-chip-icon" aria-hidden>☔</span>
+                  <Umbrella className="stat-chip-icon rain-icon" size={25} weight="duotone" aria-hidden />
                   <span className="stat-chip-label">강수확률</span>
                   <span className="stat-chip-value">{wx.today.precipProbMax ?? '?'}%</span>
                 </div>
                 <div className="stat-chip">
-                  <span className="stat-chip-icon" aria-hidden>🌧️</span>
-                  <span className="stat-chip-label">{kmaNow !== null && (kmaNow.rn1 ?? 0) > 0 ? '시간당' : '오늘 강수'}</span>
+                  <Wind className="stat-chip-icon wind-icon" size={25} weight="duotone" aria-hidden />
+                  <span className="stat-chip-label">바람</span>
                   <span className="stat-chip-value">
-                    {kmaNow !== null && (kmaNow.rn1 ?? 0) > 0 ? `${kmaNow.rn1}mm` : `${round1(wx.today.precipSum)}mm`}
+                    {Math.round(wx.today.windMax ?? 0)}km/h
                   </span>
                 </div>
               </div>
             </div>
+            <HourlyCard wx={wx} embedded />
             {tips.length > 0 && (
               <>
+                <h2 className="hero-section-title">오늘의 준비</h2>
                 <ul className="tips tips-visual">
-                  {tips.map((t) => (
+                  {tips.map((t) => {
+                    const TipIcon = tipIcon(t.emoji)
+                    return (
                     <li key={t.title} className="tip">
-                      <span className={`tip-emoji ${tipAnim(t.emoji)}`} aria-hidden>
-                        {t.emoji}
-                      </span>
+                      <span className="tip-icon" aria-hidden><TipIcon size={38} weight="duotone" /></span>
                       <div className="tip-text">
                         <div className="tip-title">{t.title}</div>
                         {tipsOpen && <div className="tip-body">{t.body}</div>}
                       </div>
-                    </li>
-                  ))}
+                      <span className="tip-chevron" aria-hidden>›</span>
+                    </li>)
+                  })}
                 </ul>
                 <button type="button" className="tips-more" onClick={() => setTipsOpen((o) => !o)}>
                   {tipsOpen ? '접기 ▲' : '자세히 보기 ▼'}
@@ -404,7 +438,6 @@ export default function App() {
     
             </>
       )}
-            {key === 'hourly' && <HourlyCard wx={wx} />}
       {key === 'tomorrow' && (
         <>
           <section className="card">

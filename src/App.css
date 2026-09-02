@@ -2048,3 +2048,528 @@ button.visitors {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--text);
 }
+
+/* ── v1.0.59 디자인 리프레시 ─────────────────────── */
+:root {
+  --bg: #050b1d;
+  --card: #0c1934;
+  --line: rgba(151, 178, 221, 0.18);
+  --text: #f7f8fc;
+  --sub: #a9b6cc;
+  --warm: #ff7166;
+  --cold: #39b8ff;
+}
+
+body {
+  background: #050a17;
+}
+
+.weather-fx {
+  z-index: 0;
+  opacity: 0.48;
+}
+
+.neon-frame {
+  opacity: 0.32;
+}
+
+.shell {
+  max-width: none;
+  width: 100%;
+  padding: 24px max(18px, calc((100vw - 1080px) / 2)) 48px;
+  gap: 18px;
+  overflow: hidden;
+}
+
+.shell > .top,
+.shell > .placebar,
+.shell > .star-add,
+.shell > .switch-enter,
+.shell > .foot {
+  width: min(100%, 1080px);
+  margin-inline: auto;
+}
+
+.top {
+  padding: 4px 0;
+}
+
+.brand {
+  font-size: clamp(20px, 2vw, 28px);
+  letter-spacing: -0.04em;
+}
+
+.visitors {
+  opacity: 0.66;
+  font-size: 11px;
+}
+
+.top-right,
+.loc {
+  display: flex;
+  align-items: center;
+}
+
+.loc {
+  gap: 6px;
+  border-color: rgba(255, 255, 255, 0.13);
+  background: rgba(4, 12, 32, 0.38);
+  color: #dce6f7;
+  min-height: 40px;
+}
+
+.placebar {
+  gap: 10px;
+}
+
+.chips {
+  order: 1;
+}
+
+.search-row {
+  order: 2;
+}
+
+.chip svg,
+.search-results button svg {
+  vertical-align: middle;
+  flex: 0 0 auto;
+}
+
+.search-toggle {
+  margin-left: auto;
+}
+
+.search-input {
+  min-height: 46px;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(15, 29, 61, 0.82);
+}
+
+.search-btn {
+  min-width: 62px;
+  border-radius: 12px;
+  font-weight: 800;
+}
+
+.chip {
+  background: rgba(9, 23, 53, 0.78);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.switch-enter {
+  gap: 18px;
+}
+
+.card {
+  padding: 22px;
+  border-radius: 20px;
+  border-color: var(--line);
+  background: rgba(10, 25, 55, 0.76);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 18px 48px rgba(0, 5, 18, 0.16);
+}
+
+.hero {
+  background: rgba(7, 21, 52, 0.6);
+  padding: 28px;
+}
+
+.hero-date {
+  margin-bottom: 20px;
+  color: var(--sub);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-main {
+  min-height: 170px;
+  gap: 24px;
+}
+
+.hero-main > svg {
+  flex: 0 0 auto;
+  color: #ffcb29;
+  filter: drop-shadow(0 10px 28px rgba(255, 190, 22, 0.18));
+}
+
+.hero-temp {
+  color: var(--warm);
+  font-size: clamp(72px, 9vw, 104px);
+  font-weight: 800;
+  letter-spacing: -0.065em;
+}
+
+.hero-condition {
+  margin-top: 2px;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.delta-hero {
+  align-self: flex-start;
+  margin-top: 18px;
+  background: transparent;
+  border: 0;
+  padding: 8px 0;
+}
+
+.delta-hero-num {
+  font-size: 26px;
+}
+
+.hero-subs {
+  margin-top: 8px;
+}
+
+.stat-chips {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 10px;
+  border-block: 1px solid var(--line);
+  padding-block: 18px;
+}
+
+.stat-chip {
+  min-height: 84px;
+  justify-content: center;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.stat-chip + .stat-chip {
+  border-left: 1px solid var(--line);
+}
+
+.stat-chip-icon {
+  margin-bottom: 5px;
+}
+
+.warm-icon { color: var(--warm); }
+.cold-icon { color: var(--cold); }
+.rain-icon { color: #a891ff; }
+.wind-icon { color: #62c9ff; }
+
+.stat-chip-label {
+  font-size: 12px;
+  color: var(--sub);
+}
+
+.stat-chip-value {
+  margin-top: 2px;
+  font-size: 21px;
+}
+
+.hourly-embedded {
+  margin-top: 20px;
+  padding: 18px 0 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.hourly-embedded .hourly-head {
+  margin-bottom: 8px;
+}
+
+.hourly-points {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 2px;
+  margin-top: 16px;
+}
+
+.hourly-point {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  color: var(--sub);
+  font-variant-numeric: tabular-nums;
+}
+
+.hourly-point span {
+  font-size: 11px;
+}
+
+.hourly-point svg {
+  color: #ffcb29;
+}
+
+.hourly-point strong {
+  color: var(--warm);
+  font-size: 15px;
+}
+
+.hourly-point small {
+  color: var(--cold);
+  font-size: 9px;
+}
+
+.hourly-embedded .hourly-svg {
+  margin-top: -24px;
+}
+
+.hourly-embedded .hourly-hour {
+  opacity: 0;
+}
+
+.hourly-embedded .section-title {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.hourly-embedded .hourly-line.today {
+  stroke: var(--warm);
+}
+
+.hourly-embedded .hourly-now,
+.hourly-embedded .hourly-bar {
+  fill: var(--cold);
+}
+
+.hourly-embedded .hourly-dayband,
+.hourly-embedded .hourly-grid {
+  opacity: 0.45;
+}
+
+.hero-section-title {
+  margin: 22px 0 4px;
+  font-size: 22px;
+  letter-spacing: -0.03em;
+}
+
+.tips {
+  gap: 0;
+  margin-top: 8px;
+}
+
+.tips-visual .tip,
+.tips li {
+  min-height: 104px;
+  padding: 16px 4px;
+  gap: 18px;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+}
+
+.tip-icon {
+  width: 66px;
+  height: 66px;
+  flex: 0 0 66px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #86baff;
+  background: rgba(41, 92, 180, 0.13);
+  border: 1px solid rgba(120, 174, 255, 0.16);
+}
+
+.tip-title {
+  font-size: 18px;
+}
+
+.tip-body {
+  max-width: 58ch;
+  color: #b6c2d6;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.tip-chevron {
+  margin-left: auto;
+  color: #9fb6d9;
+  font-size: 34px;
+  font-weight: 300;
+}
+
+.tips-more {
+  margin-top: 12px;
+  color: #b9c7dc;
+}
+
+.picks {
+  margin-top: 14px;
+}
+
+.section-title {
+  color: #d8e2f1;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.cmp-summary {
+  color: var(--text);
+  font-size: 16px;
+}
+
+.cp-banner {
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(9, 22, 49, 0.72);
+}
+
+.foot {
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (min-width: 860px) {
+  .switch-enter {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(340px, 0.75fr);
+    align-items: start;
+  }
+
+  .section-wrap[data-reorder-id='hero'] {
+    grid-row: span 2;
+  }
+
+  .section-wrap[data-reorder-id='week'],
+  .section-wrap[data-reorder-id='radar'],
+  .section-wrap[data-reorder-id='places'] {
+    grid-column: 1 / -1;
+  }
+
+  .section-wrap[data-reorder-id='week'] .week {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 30px;
+  }
+
+  .section-wrap[data-reorder-id='week'] .week-head {
+    display: none;
+  }
+
+  .radar-map {
+    height: 440px;
+  }
+}
+
+@media (max-width: 859px) {
+  .shell {
+    padding: calc(18px + env(safe-area-inset-top)) 16px 36px;
+  }
+
+  .hero {
+    padding: 20px 18px;
+  }
+
+  .hero-main {
+    min-height: 146px;
+    gap: 16px;
+  }
+
+  .hero-main > svg {
+    width: 84px;
+    height: 84px;
+  }
+
+  .hero-temp {
+    font-size: 68px;
+  }
+
+  .hero-condition {
+    font-size: 21px;
+  }
+
+  .delta-hero {
+    display: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .brand {
+    font-size: 20px;
+  }
+
+  .visitors {
+    display: none;
+  }
+
+  .top-right {
+    gap: 3px;
+  }
+
+  .loc {
+    max-width: 142px;
+    padding: 7px 9px;
+  }
+
+  .chips {
+    margin-inline: -2px;
+  }
+
+  .hero-date {
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+
+  .hero-main {
+    min-height: 124px;
+  }
+
+  .hero-main > svg {
+    width: 72px;
+    height: 72px;
+  }
+
+  .hero-temp {
+    font-size: 58px;
+  }
+
+  .hero-condition {
+    font-size: 18px;
+  }
+
+  .stat-chips {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding-block: 14px;
+  }
+
+  .stat-chip {
+    min-height: 78px;
+    padding-inline: 2px;
+  }
+
+  .stat-chip-value {
+    font-size: 17px;
+  }
+
+  .stat-chip-label {
+    font-size: 10px;
+  }
+
+  .hourly-legend {
+    display: none;
+  }
+
+  .hourly-svg {
+    margin-inline: -5px;
+    width: calc(100% + 10px);
+  }
+
+  .tips-visual .tip {
+    min-height: 94px;
+    gap: 12px;
+  }
+
+  .tip-icon {
+    width: 54px;
+    height: 54px;
+    flex-basis: 54px;
+  }
+
+  .tip-title {
+    font-size: 16px;
+  }
+
+  .tip-body {
+    font-size: 13px;
+  }
+}

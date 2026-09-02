@@ -1,9 +1,11 @@
 // 시간대별 기온·강수 — 앞으로 24시간 기온 곡선(어제 같은 시간대 점선 겹침) + 강수량 막대
 import { codeLabel } from '../lib/compare'
 import type { WeatherData } from '../lib/weather'
+import { Cloud, CloudFog, CloudLightning, CloudRain, CloudSun, MoonStars, Snowflake, Sun } from '@phosphor-icons/react'
 
 interface Props {
   wx: WeatherData
+  embedded?: boolean
 }
 
 const W = 340
@@ -15,13 +17,21 @@ const CHART_H = 92
 const RAIN_TOP = TOP + CHART_H + 8
 const RAIN_H = 18
 
-export default function HourlyCard({ wx }: Props) {
-  const { time, temp, precip } = wx.hourly
+function iconFor(label: string, hour: number) {
+  if (label.includes('뇌우')) return CloudLightning
+  if (label.includes('눈')) return Snowflake
+  if (label.includes('안개')) return CloudFog
+  if (label.includes('비') || label.includes('소나기')) return CloudRain
+  if (label.includes('구름') || label.includes('흐림')) return label.includes('조금') ? CloudSun : Cloud
+  return hour >= 6 && hour < 19 ? Sun : MoonStars
+}
+
+export default function HourlyCard({ wx, embedded = false }: Props) {
+  const { time, temp, precip, code } = wx.hourly
   // 기기 시간이 아니라 해당 지역 현지 시각 기준 (다른 시간대 즐겨찾기 대응)
   const nowHour = wx.nowHourLocal
   const start = 24 + nowHour
-  const N = 24
-  const idx = Array.from({ length: N }, (_, i) => start + i).filter((i) => i < temp.length)
+  const idx = Array.from({ length: 6 }, (_, i) => start + i * 3).filter((i) => i < temp.length)
   if (idx.length < 6) return null
   const tToday = idx.map((i) => temp[i])
   const tYest = idx.map((i) => temp[i - 24])
@@ -64,7 +74,7 @@ export default function HourlyCard({ wx }: Props) {
   for (let t = Math.ceil(lo / 5) * 5; t < hi; t += 5) gridTemps.push(t)
 
   return (
-    <section className="card hourly-card">
+    <section className={`${embedded ? 'hourly-embedded' : 'card'} hourly-card`}>
       <div className="hourly-head">
         <h2 className="section-title">시간대별 기온·강수</h2>
         <div className="hourly-legend">
@@ -78,6 +88,20 @@ export default function HourlyCard({ wx }: Props) {
             <i className="hl rain" /> 강수
           </span>
         </div>
+      </div>
+      <div className="hourly-points" aria-hidden>
+        {idx.map((sourceIndex, k) => {
+          const label = codeLabel(code?.[sourceIndex] ?? wx.nowCode)
+          const Icon = iconFor(label.label, hours[k])
+          return (
+            <div className="hourly-point" key={sourceIndex}>
+              <span>{k === 0 ? '지금' : `${hours[k]}시`}</span>
+              <Icon size={23} weight="duotone" />
+              <strong>{Math.round(tToday[k])}°</strong>
+              <small>{pr[k] > 0 ? `${pr[k].toFixed(1)}mm` : '0mm'}</small>
+            </div>
+          )
+        })}
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="hourly-svg" role="img" aria-label="앞으로 24시간 기온과 강수량">
         <defs>
@@ -141,9 +165,8 @@ export default function HourlyCard({ wx }: Props) {
           ▼{Math.round(tMin)}°
         </text>
 
-        {/* 시간 라벨 (3시간 간격) + 날씨 이모지 */}
+        {/* 시간 라벨 (3시간 간격으로 추린 6개 지점) */}
         {idx.map((_i, k) => {
-          if (k % 3 !== 0) return null
           return (
             <text key={`h${k}`} x={x(k)} y={H - 4} className="hourly-hour" textAnchor="middle">
               {k === 0 ? '지금' : `${hours[k]}시`}
