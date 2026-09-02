@@ -1955,9 +1955,9 @@ body {
 }
 
 /* 작은 버튼들의 실제 터치 영역을 넓힌다 (보이는 크기는 유지) */
+/* .radar-locate 는 지도 위에 absolute 로 띄우므로 position 을 덮지 않는다 */
 .chip-x,
 .radar-btn,
-.radar-locate,
 .order-btns button,
 .promo-x,
 .gear,
