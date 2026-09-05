@@ -2461,6 +2461,8 @@ body {
   }
 
   .hero-main {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     min-height: 146px;
     gap: 16px;
   }
@@ -2471,7 +2473,7 @@ body {
   }
 
   .hero-temp {
-    font-size: 68px;
+    font-size: clamp(48px, 14vw, 68px);
   }
 
   .hero-condition {
@@ -2479,7 +2481,27 @@ body {
   }
 
   .delta-hero {
-    display: none;
+    display: flex;
+    min-width: 68px;
+    margin-top: 10px;
+    padding: 4px 0;
+  }
+
+  .delta-hero-main {
+    gap: 2px;
+  }
+
+  .delta-hero-arrow {
+    font-size: 15px;
+  }
+
+  .delta-hero-num {
+    font-size: 21px;
+  }
+
+  .delta-hero-cap {
+    max-width: 72px;
+    font-size: 9px;
   }
 }
 
@@ -2527,6 +2549,19 @@ body {
     font-size: 18px;
   }
 
+  .delta-hero {
+    min-width: 62px;
+  }
+
+  .delta-hero-num {
+    font-size: 19px;
+  }
+
+  .delta-hero-cap {
+    max-width: 64px;
+    font-size: 8px;
+  }
+
   .stat-chips {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     padding-block: 14px;
@@ -2571,5 +2606,25 @@ body {
 
   .tip-body {
     font-size: 13px;
+  }
+}
+
+@media (max-width: 340px) {
+  .hero-main {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .delta-hero {
+    grid-column: 2;
+    width: 100%;
+    margin: -8px 0 0;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .delta-hero-cap {
+    max-width: none;
+    text-align: left;
   }
 }
