@@ -137,6 +137,7 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
             if (e.key === 'Enter') runSearch()
           }}
           placeholder="동네 검색 (예: 판교, 부산 해운대)"
+          aria-label="동네 검색"
           className="search-input"
           enterKeyHint="search"
         />

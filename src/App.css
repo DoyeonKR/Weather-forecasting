@@ -1963,7 +1963,10 @@ body {
 .gear,
 .night-chip,
 .tips-more,
-button.visitors {
+button.visitors,
+.loc,
+.feedback-btn,
+.family-link {
   position: relative;
 }
 
@@ -1980,6 +1983,53 @@ button.visitors::after {
   position: absolute;
   inset: -8px;
 }
+
+/* ── 탭 타겟 보강 (2026-09-03) ─────────────────────────────────
+   배포본을 브라우저에서 elementFromPoint 로 **실측**해 나온 미달분만 손댄다.
+   (getBoundingClientRect 로 재면 위 ::after 확장을 못 봐서 멀쩡한 것도 미달로 잡는다 —
+    설정 버튼은 34x34 박스지만 실제로는 47x47 이다.)
+   기준 44x44 · WCAG 2.5.5 / iOS HIG.
+
+   ⚠ **음수 마진으로 자리를 만들지 마라.** 처음에 .chips/.picks 에 margin-block:-6px 을
+     줬다가 플렉스 형제 위로 끌려 올라가 헤더의 위치 버튼이 제목을 덮고 추천 버튼이
+     그래프 위로 올라갔다. 확장은 ::after 로만, 자리가 모자라면 min-height 로 키운다. */
+
+/* 40 -> 46. 부모(.top-right)가 overflow:visible 이라 확장이 안 잘린다. */
+.loc::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+}
+
+/* 41 -> 47. */
+.feedback-btn::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+}
+
+/* 16px 줄글 링크 — 확장폭이 크지만 앞뒤가 안내 문구라 오탭이 안 생긴다. */
+.family-link::after {
+  content: '';
+  position: absolute;
+  inset: -16px -10px;
+}
+
+/* 공용 -8px 로는 27+16=43 이라 1px 모자란다. */
+.tips-more::after {
+  inset: -10px;
+}
+
+/* ⚠ 아래 둘은 ::after 로 못 넓힌다.
+   · .chip — 부모 .chips 가 가로 스크롤용 overflow:auto 라 확장분이 **세로로도 잘린다**
+     (실측: 35 -> 36, 기대 47).
+   · .pick-btn — 뒤에 그려지는 그래프가 그 위를 덮어 실제 탭이 그래프로 간다.
+   보이는 높이를 정직하게 키운다. 헤더가 9px, 추천 줄이 10px 두꺼워진다. */
+.chip,
+.pick-btn {
+  min-height: 46px;
+}
+
 
 /* 갱신 실패 표시는 버튼이지만 문구처럼 보이게 */
 button.visitors {
@@ -2630,4 +2680,50 @@ body {
     max-width: none;
     text-align: left;
   }
+}
+
+
+/* ── 대비 · 포커스 · 광고 자리 (2026-09-03) ────────────────────
+   스크린샷 감사(2026-09-02)가 "계산된 색상값 측정이 필요하다"고 남긴 자리를 실측으로 채운다. */
+
+/* 흰 글씨를 얹는 accent 배경이 3.75:1 이었다(기준 4.5:1). --accent 는 테마마다 5색
+   (파랑·초록·보라·주황·분홍)이라 한 색을 고를 수 없어 color-mix 로 일괄로 어둡게 한다.
+   72% 는 다섯 중 가장 밝은 초록(#10b981)이 4.5 를 넘는 지점이다. */
+.chip.on,
+.search-btn,
+.radar-btn,
+.vs-base-chip,
+.night-chip.on,
+.retry,
+.promo-cta,
+.reorder-bar {
+  background: color-mix(in srgb, var(--accent) 72%, #000);
+}
+
+.chip.on,
+.night-chip.on {
+  border-color: color-mix(in srgb, var(--accent) 72%, #000);
+}
+
+/* 스타일시트에 :focus 규칙이 하나도 없어 브라우저 기본 링(어두운 남색 위 얇은 주황 1px)에
+   의존했다. 동작은 했지만 앱 톤과 안 맞는다.
+   ⚠ :focus 가 아니라 :focus-visible 이다 — :focus 면 마우스 클릭에도 링이 남는다. */
+:where(button, a[href], input, select, textarea, [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* 광고 자리 — 로드 전까지 예약 높이가 그대로 비어 "콘텐츠가 끝난 것처럼" 보였다.
+   (레이아웃 이동은 없다 — 실측 CLS 0. 순수하게 시각적인 문제다.) */
+.cp-banner:not(:has(iframe)) {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+}
+
+.cp-banner:not(:has(iframe))::before {
+  content: '추천 상품 불러오는 중…';
+  color: var(--sub);
+  font-size: 12px;
 }
