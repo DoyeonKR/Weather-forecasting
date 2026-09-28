@@ -3317,3 +3317,115 @@ body {
   padding-top: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
+
+/* ── v1.0.64 다듬기 ───────────────────────────────────────── */
+
+/* 오늘의 준비를 따로 뺐으니 날씨 카드 끝의 구분선·여백은 걷는다 */
+.hero .hourly-embedded:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.prep-card .tips {
+  margin-top: 4px;
+}
+
+/* 설정 — 접었다 펴는 묶음 */
+.settings-group > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0;
+  list-style: none;
+  cursor: pointer;
+}
+
+.settings-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-group > summary::after {
+  content: '▾';
+  color: var(--sub);
+  font-size: 14px;
+  transition: transform 0.2s;
+}
+
+.settings-group[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.settings-group > summary small {
+  margin-left: auto;
+  color: var(--sub);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.settings-group[open] > summary {
+  margin-bottom: 6px;
+}
+
+.test-push {
+  margin-top: 10px;
+}
+
+.settings-foot {
+  margin: 14px 0 0;
+  text-align: center;
+}
+
+.air-src {
+  color: var(--sub);
+  font-size: 11px;
+}
+
+/* 이용 통계 (#stats) */
+.stats-panel {
+  max-width: 560px;
+}
+
+.stats-scroll {
+  margin-top: 10px;
+  overflow-x: auto;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: right;
+}
+
+.stats-table th:first-child {
+  text-align: left;
+}
+
+.stats-table thead th {
+  color: var(--sub);
+  font-weight: 700;
+}
+
+.stats-table small {
+  color: var(--sub);
+}
+
+/* 넓은 표가 들어가도 패널이 화면 밖으로 밀려나지 않게 (그리드 항목 min-width:auto 문제) */
+.settings-backdrop {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.settings-panel {
+  min-width: 0;
+  justify-self: center;
+}

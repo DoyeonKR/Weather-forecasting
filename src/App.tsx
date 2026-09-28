@@ -40,6 +40,8 @@ import { PARTNERS_NOTICE, partnerPicks, partnersActive } from './lib/partners'
 import WhenVisible from './components/WhenVisible'
 // 지도·GIF 해석기는 첫 화면에 필요 없으므로 화면에 나올 때 불러온다
 const RadarMap = lazy(() => import('./components/RadarMap'))
+// 운영자용 — 주소 끝 #stats 로만 연다
+const StatsPanel = lazy(() => import('./components/StatsPanel'))
 import PlaceBar from './components/PlaceBar'
 import Settings from './components/Settings'
 import WeatherFx from './components/WeatherFx'
@@ -100,6 +102,12 @@ export default function App() {
   const [warnItems, setWarnItems] = useState<WarnItem[] | null>(null)
   /** 공유·복사 결과를 잠깐 보여주는 한 줄 */
   const [toast, setToast] = useState<string | null>(null)
+  const [statsOpen, setStatsOpen] = useState(() => location.hash === '#stats')
+  useEffect(() => {
+    const onHash = () => setStatsOpen(location.hash === '#stats')
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [])
 
   useEffect(() => {
     fetchTodayVisitors().then(setVisitors)
@@ -404,6 +412,7 @@ export default function App() {
             onSetCommute={onSetCommute}
             feelOffset={feel.offset}
             onResetFeel={() => setFeel(resetFeel())}
+            visitors={visitors}
           />
         </div>
       </header>
@@ -487,7 +496,7 @@ export default function App() {
                 return <HeroIcon size={112} weight="duotone" aria-hidden />
               })()}
               <div className="hero-info">
-                <div className="hero-temp">{round1(wx.nowTemp)}°</div>
+                <div className="hero-temp">{round1(wx.nowTemp).toFixed(1)}°</div>
                 <div className="hero-condition">{now.label}</div>
               </div>
               <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
@@ -497,7 +506,7 @@ export default function App() {
                 <div className="stat-chip">
                   <ThermometerSimple className="stat-chip-icon warm-icon" size={25} weight="duotone" aria-hidden />
                   <span className="stat-chip-label">체감</span>
-                  <span className="stat-chip-value">{round1(wx.nowApparent)}°</span>
+                  <span className="stat-chip-value">{round1(wx.nowApparent).toFixed(1)}°</span>
                 </div>
                 <div className="stat-chip">
                   <Drop className="stat-chip-icon cold-icon" size={25} weight="duotone" aria-hidden />
@@ -520,9 +529,16 @@ export default function App() {
               {air && <AirRow air={air} />}
             </div>
             <HourlyCard wx={wx} embedded />
+          </section>
+            </>
+      )}
+      {key === 'prep' && (tips.length > 0 || picks.length > 0) && (
+        <>
+          {/* 날씨 카드 하나에 다 넣었더니 모바일에서 첫 카드만 1,500px 가 넘었다. 준비물은 따로 */}
+          <section className="card prep-card">
             {tips.length > 0 && (
               <>
-                <h2 className="hero-section-title">오늘의 준비</h2>
+                <h2 className="section-title">오늘의 준비</h2>
                 <ul className="tips tips-visual">
                   {tips.map((t) => {
                     const TipIcon = tipIcon(t.emoji)
@@ -544,7 +560,12 @@ export default function App() {
                 >
                   {tipsOpen ? '접기 ▲' : '자세히 보기 ▼'}
                 </button>
-                <FeelAsk answered={answeredToday(feel)} offset={feel.offset} onVote={onFeelVote} />
+                <FeelAsk
+                  answered={answeredToday(feel)}
+                  offset={feel.offset}
+                  onVote={onFeelVote}
+                  todayClothes={tips.find((t) => t.kind === 'clothes')?.title ?? null}
+                />
               </>
             )}
             {picks.length > 0 && (
@@ -602,7 +623,7 @@ export default function App() {
               </span>
               <div className="tomorrow-info">
                 <div>
-                  {tomorrowLabel.label} · {round1(wx.tomorrow.tmin)}° ~ {round1(wx.tomorrow.tmax)}°
+                  {tomorrowLabel.label} · {round1(wx.tomorrow.tmin).toFixed(1)}° ~ {round1(wx.tomorrow.tmax).toFixed(1)}°
                 </div>
                 <div className="muted small">
                   낮 기온 {deltaText(wx.tomorrow.tmax - wx.today.tmax)} · 아침 기온{' '}
@@ -697,7 +718,8 @@ export default function App() {
             {key === 'places' && (
               <ComparePlaces baseLabel={loc.label} baseWx={wx} favorites={favorites} />
                     )}
-            {i === 3 && <CoupangBanner id={1020558} template="carousel" height={140} />}
+            {/* 카드가 하나 늘어서 3 → 4 (여전히 '이번 주' 아래) */}
+            {i === 4 && <CoupangBanner id={1020558} template="carousel" height={140} />}
           </div>
         ))}
         <CoupangBanner id={1020557} template="banner" height={90} maxWidth={728} />
@@ -732,8 +754,8 @@ export default function App() {
             저장하고, 알림을 끄면 지웁니다. 방문 수와 어떤 버튼이 쓰이는지는 이름 없이 숫자만 셉니다.
         </p>
         <p className="muted small">
-          데이터: 기상청 · Open-Meteo · RainViewer · © OpenStreetMap · 미세먼지는 CAMS 예측 모델 값이라
-          측정소 값과 다를 수 있어요
+          데이터: 기상청 · 에어코리아 · Open-Meteo · RainViewer · © OpenStreetMap · 미세먼지에 '예측 모델'이
+          붙은 값은 CAMS 모델이라 측정소 값과 다를 수 있어요
         </p>
         <p className="muted small">
           <a
@@ -750,6 +772,16 @@ export default function App() {
         <div className="toast" role="status">
           {toast}
         </div>
+      )}
+      {statsOpen && (
+        <Suspense fallback={null}>
+          <StatsPanel
+            onClose={() => {
+              history.replaceState(null, '', location.pathname + location.search)
+              setStatsOpen(false)
+            }}
+          />
+        </Suspense>
       )}
     </div>
   )

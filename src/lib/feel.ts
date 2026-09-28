@@ -71,3 +71,36 @@ export function feelLabel(offset: number): string | null {
   const deg = Math.abs(offset).toFixed(1)
   return offset < 0 ? `추위를 타는 편 (옷차림 ${deg}° 따뜻하게)` : `더위를 타는 편 (옷차림 ${deg}° 가볍게)`
 }
+
+// ── 어제 옷차림 추천 기억 ─────────────────────────────
+// "어제 어땠어요?"만 물으면 무엇과 비교해 추웠는지 모른다. 어제 보여준 옷차림을 남겨 두고
+// 질문에 넣어서, 답이 "우리 추천 대비"가 되게 한다.
+const CLOTHES_KEY = 'eojeboda.clothes.v1'
+
+function dayOffset(days: number): string {
+  return new Date(Date.now() + 9 * 3600_000 + days * 86_400_000).toISOString().slice(0, 10)
+}
+
+export function rememberClothes(title: string) {
+  try {
+    const cur = JSON.parse(localStorage.getItem(CLOTHES_KEY) ?? '{}') as Record<string, string>
+    const today = dayOffset(0)
+    if (cur[today] === title) return
+    // 오늘·어제 것만 남긴다
+    const next: Record<string, string> = { [today]: title }
+    const y = dayOffset(-1)
+    if (cur[y]) next[y] = cur[y]
+    localStorage.setItem(CLOTHES_KEY, JSON.stringify(next))
+  } catch {
+    // 무시
+  }
+}
+
+export function yesterdayClothes(): string | null {
+  try {
+    const cur = JSON.parse(localStorage.getItem(CLOTHES_KEY) ?? '{}') as Record<string, string>
+    return cur[dayOffset(-1)] ?? null
+  } catch {
+    return null
+  }
+}

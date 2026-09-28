@@ -40,6 +40,24 @@ const PROVINCES: string[][] = [
   ['제주'],
 ]
 
+/** 기상청 서울 특보구역(4개 권역)과 자치구 — 권역만 발표되는 서울을 구 단위로 가른다 */
+const SEOUL_ZONE: Record<string, string> = {
+  강남: '서울동남권', 서초: '서울동남권', 송파: '서울동남권', 강동: '서울동남권',
+  성동: '서울동북권', 광진: '서울동북권', 동대문: '서울동북권', 중랑: '서울동북권',
+  성북: '서울동북권', 강북: '서울동북권', 도봉: '서울동북권', 노원: '서울동북권',
+  양천: '서울서남권', 강서: '서울서남권', 구로: '서울서남권', 금천: '서울서남권',
+  영등포: '서울서남권', 동작: '서울서남권', 관악: '서울서남권',
+  종로: '서울서북권', 중: '서울서북권', 용산: '서울서북권', 은평: '서울서북권',
+  서대문: '서울서북권', 마포: '서울서북권',
+}
+
+/** 라벨에서 서울 자치구의 권역 (서울이 아니거나 구를 모르면 null) */
+export function seoulZone(label: string): string | null {
+  if (!/서울/.test(label)) return null
+  const gu = label.match(/([가-힣]+)구(?![가-힣])/)?.[1]
+  return gu ? (SEOUL_ZONE[gu] ?? null) : null
+}
+
 /** "서울특별시 마포구" → ['서울','마포'] 처럼 행정 접미사를 뗀 이름들 */
 export function coreNames(label: string): string[] {
   return label
@@ -63,6 +81,11 @@ export function areaMatches(area: WarnArea, label: string): boolean {
       const s = stripArea(sub)
       return cores.some((c) => s === c || s.startsWith(c) || (s.length >= 2 && c.startsWith(s)))
     })
+  }
+  // 서울 권역은 구를 알면 정확히 가른다 (모르면 아래에서 서울 전체로 본다)
+  if (/^서울.+권$/.test(area.name)) {
+    const zone = seoulZone(label)
+    if (zone) return zone === area.name
   }
   // "서울동남권", "제주도남부", "울릉도.독도" 처럼 목록 없이 권역 이름만 있는 경우
   if (cores.some((c) => area.name.startsWith(c))) return true

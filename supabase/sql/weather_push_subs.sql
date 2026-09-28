@@ -127,3 +127,7 @@ grant execute on function public.weather_push_set_rain(text, boolean) to anon;
 --   (select replace(command, 'mode=night', 'mode=rain') from cron.job where jobname = 'weather-night'));
 --
 -- 점검: weather-push?key=…&probe=위도,경도 → 보내지 않고 판단(실황·예보 두 칸)만 돌려준다.
+
+-- ── 테스트 알림 (v1.0.64) ─────────────────────────────────
+-- weather-push-test 함수가 같은 구독에 1분에 한 번만 보내도록 기록한다.
+alter table public.weather_push_subs add column if not exists last_test_sent timestamptz;

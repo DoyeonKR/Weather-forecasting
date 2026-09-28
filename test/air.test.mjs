@@ -40,3 +40,15 @@ test('지금·어제 같은 시각·앞으로 나빠지는 시각', () => {
 test('값이 없으면 null', () => {
   assert.equal(summarizeAir([null], [null], 0, () => 0), null)
 })
+
+test('실측이 있으면 지금·어제는 실측, 나빠지는 시각은 실측보다 나쁠 때만', () => {
+  const { mergeAir } = mod.exports
+  const model = { pm10: 20, pm25: 10, grade: 0, pm10Yest: 20, pm25Yest: 10, gradeYest: 0, worse: { hour: 14, grade: 2 } }
+  const m = mergeAir(model, { station: '중구', pm10: 90, pm25: 40, pm10Yest: 30, pm25Yest: 12 })
+  assert.equal(m.grade, 2)
+  assert.equal(m.gradeYest, 0)
+  assert.equal(m.worse, null) // 이미 나쁨이라 "14시쯤 나쁨 예상"은 뺀다
+  assert.deepEqual(m.source, { kind: 'airkorea', station: '중구' })
+  assert.deepEqual(mergeAir(model, null).source, { kind: 'cams' })
+  assert.equal(mergeAir(null, null), null)
+})

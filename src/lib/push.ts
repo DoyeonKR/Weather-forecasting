@@ -308,3 +308,23 @@ export async function disableNotify(): Promise<boolean> {
     return false
   }
 }
+
+/** 이 기기로 테스트 알림 한 통 (1분에 한 번). 실제로 도착하는지 사용자가 바로 확인할 수 있게 */
+export async function sendTestPush(): Promise<'ok' | 'no-sub' | 'too-soon' | 'failed'> {
+  try {
+    const reg = await readyWithTimeout()
+    const sub = reg ? await reg.pushManager.getSubscription() : null
+    if (!sub) return 'no-sub'
+    const res = await fetch(`${SB_URL}/functions/v1/weather-push-test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: sub.endpoint }),
+    })
+    if (res.ok) return 'ok'
+    if (res.status === 429) return 'too-soon'
+    if (res.status === 404) return 'no-sub'
+    return 'failed'
+  } catch {
+    return 'failed'
+  }
+}

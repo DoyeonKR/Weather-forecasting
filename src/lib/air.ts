@@ -1,6 +1,7 @@
 // 미세먼지·초미세먼지 — Open-Meteo 대기질 API (CAMS 예측 모델, 키 불필요)
 // past_days=1 로 어제 같은 시각 값을 같이 받아 "어제보다" 로 말한다.
-// ⚠ 측정소 실측(에어코리아)이 아니라 모델 값이다. 화면에 출처와 함께 밝힌다.
+// 국내는 에어코리아 측정소 실측을 먼저 쓰고(서버 프록시 air-korea), 안 되면 모델 값으로.
+// 모델 값일 때는 화면에 출처를 함께 밝힌다.
 
 /** 환경부 예보 등급: 0 좋음 · 1 보통 · 2 나쁨 · 3 매우 나쁨 */
 export type AirGrade = 0 | 1 | 2 | 3
@@ -34,6 +35,52 @@ export interface AirNow {
   gradeYest: AirGrade | null
   /** 앞으로 12시간 안에 지금보다 나빠지는 첫 시각 (없으면 null) */
   worse: { hour: number; grade: AirGrade } | null
+  /** 값의 출처 — 에어코리아 측정소 실측이면 측정소 이름 */
+  source?: { kind: 'airkorea'; station: string } | { kind: 'cams' }
+}
+
+interface AirKorea {
+  station: string
+  pm10: number
+  pm25: number
+  pm10Yest: number | null
+  pm25Yest: number | null
+}
+
+const AK_PROXY = 'https://tqegatiuembcvphxmujl.supabase.co/functions/v1/air-korea'
+
+/** 가까운 측정소 실측 (국내만). 서비스 미승인·측정소 없음이면 null → 모델 값으로 */
+async function fetchAirKorea(lat: number, lon: number): Promise<AirKorea | null> {
+  if (!(lat > 32.5 && lat < 40.5 && lon > 123 && lon < 132.5)) return null
+  try {
+    const res = await fetch(`${AK_PROXY}?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`)
+    if (!res.ok) return null
+    const d = await res.json()
+    return typeof d?.pm10 === 'number' && typeof d?.pm25 === 'number' ? (d as AirKorea) : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 실측(지금·어제)과 모델(앞으로)을 합친다 (순수 함수 — 테스트 대상).
+ * 실측이 있으면 지금·어제는 실측으로, "나빠지는 시각"은 모델에서 실측 등급보다 나쁜 것만.
+ */
+export function mergeAir(model: AirNow | null, ak: AirKorea | null): AirNow | null {
+  if (!ak) return model ? { ...model, source: { kind: 'cams' } } : null
+  const grade = gradeOf(ak.pm10, ak.pm25)
+  const hasYest = ak.pm10Yest !== null && ak.pm25Yest !== null
+  const worse = model?.worse && model.worse.grade > grade ? model.worse : null
+  return {
+    pm10: Math.round(ak.pm10),
+    pm25: Math.round(ak.pm25),
+    grade,
+    pm10Yest: hasYest ? Math.round(ak.pm10Yest as number) : null,
+    pm25Yest: hasYest ? Math.round(ak.pm25Yest as number) : null,
+    gradeYest: hasYest ? gradeOf(ak.pm10Yest as number, ak.pm25Yest as number) : null,
+    worse,
+    source: { kind: 'airkorea', station: ak.station },
+  }
 }
 
 /** 한 시각의 종합 등급 */
@@ -81,6 +128,11 @@ export function summarizeAir(
 }
 
 export async function fetchAir(lat: number, lon: number): Promise<AirNow | null> {
+  const [model, ak] = await Promise.all([fetchAirModel(lat, lon), fetchAirKorea(lat, lon)])
+  return mergeAir(model, ak)
+}
+
+async function fetchAirModel(lat: number, lon: number): Promise<AirNow | null> {
   try {
     const url = new URL('https://air-quality-api.open-meteo.com/v1/air-quality')
     url.searchParams.set('latitude', String(lat))

@@ -24,3 +24,27 @@ grant insert on public.weather_events to anon;
 -- 조회 예시 (대시보드 SQL 편집기)
 -- select date_trunc('day', created_at at time zone 'Asia/Seoul') as day, name, count(*), count(distinct session_id)
 --   from public.weather_events group by 1, 2 order by 1 desc, 3 desc;
+
+-- 요약 (v1.0.64) — 날짜·이름별 건수와 사람 수만. 앱의 #stats 화면이 쓴다.
+-- 방문(weather_page_views)도 'visit' 로 같이 돌려준다. 개별 행·세션 id 는 내보내지 않는다.
+create or replace function public.weather_events_summary(p_days integer default 14)
+returns table (day date, name text, events bigint, people bigint)
+language sql
+security definer
+set search_path = public, pg_temp
+as $$
+  with since as (select (now() at time zone 'Asia/Seoul')::date - greatest(1, least(coalesce(p_days, 14), 60)) + 1 as d)
+  select (e.created_at at time zone 'Asia/Seoul')::date as day, e.name, count(*) as events, count(distinct e.session_id) as people
+    from public.weather_events e, since
+   where (e.created_at at time zone 'Asia/Seoul')::date >= since.d
+   group by 1, 2
+  union all
+  select (v.at at time zone 'Asia/Seoul')::date as day, 'visit' as name, count(*) as events, count(distinct v.session_id) as people
+    from public.weather_page_views v, since
+   where (v.at at time zone 'Asia/Seoul')::date >= since.d
+   group by 1
+  order by 1 desc, 4 desc
+$$;
+
+revoke all on function public.weather_events_summary(integer) from public;
+grant execute on function public.weather_events_summary(integer) to anon;

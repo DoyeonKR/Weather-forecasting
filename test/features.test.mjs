@@ -42,7 +42,7 @@ test('시·군 목록이 있으면 그 목록으로만 판단', () => {
 })
 
 test('권역 이름만 있으면 같은 도시로 본다, 바다 구역은 뺀다', () => {
-  assert.equal(areaMatches({ name: '서울동남권', subs: [] }, '서울특별시 마포구'), true)
+  assert.equal(areaMatches({ name: '서울동남권', subs: [] }, '서울 (기본 위치)'), true) // 구를 모르면 서울 전체
   assert.equal(areaMatches({ name: '제주도남부', subs: [] }, '제주특별자치도 서귀포시'), true)
   assert.equal(areaMatches({ name: '서해중부앞바다', subs: [] }, '인천광역시 중구'), false)
   assert.equal(areaMatches({ name: '부산', subs: [] }, '서울특별시 마포구'), false)
@@ -51,7 +51,7 @@ test('권역 이름만 있으면 같은 도시로 본다, 바다 구역은 뺀�
 test('경보가 주의보보다 먼저', () => {
   const hits = matchWarnings(
     [
-      { kind: '건조주의보', areas: [{ name: '서울동남권', subs: [] }] },
+      { kind: '건조주의보', areas: [{ name: '서울서북권', subs: [] }] },
       { kind: '호우경보', areas: [{ name: '서울서북권', subs: [] }] },
       { kind: '풍랑주의보', areas: [{ name: '동해중부앞바다', subs: [] }] },
     ],
@@ -87,4 +87,11 @@ test('평년 표: 앞뒤 3일 창으로 평균', () => {
   const dates = ['2020-03-01', '2020-03-02', '2021-03-01']
   const t = buildTable(dates, [10, 12, 14], [0, 2, 4])
   assert.deepEqual(t['03-01'], [12, 2, 2])
+})
+
+test('서울은 구로 권역을 가른다', () => {
+  assert.equal(areaMatches({ name: '서울서북권', subs: [] }, '서울특별시 마포구'), true)
+  assert.equal(areaMatches({ name: '서울동남권', subs: [] }, '서울특별시 마포구'), false)
+  assert.equal(areaMatches({ name: '서울동남권', subs: [] }, '서울특별시 송파구'), true)
+  assert.equal(areaMatches({ name: '서울서북권', subs: [] }, '서울특별시 중구'), true)
 })

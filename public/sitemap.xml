@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 네이버 서치어드바이저·구글 서치콘솔에 이 주소를 제출한다:
+     https://doyeonkr.github.io/Weather-forecasting/sitemap.xml
+     (robots.txt 는 도메인 맨 위(doyeonkr.github.io/robots.txt)에만 의미가 있어 이 저장소에 두지 않는다) -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://doyeonkr.github.io/Weather-forecasting/</loc>
+    <lastmod>2026-09-29</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>

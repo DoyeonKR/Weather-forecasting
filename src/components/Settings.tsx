@@ -6,6 +6,7 @@ import {
   enableNotify,
   getNotifyState,
   getRainAlert,
+  sendTestPush,
   setRainAlert,
   type NotifyState,
 } from '../lib/push'
@@ -38,6 +39,8 @@ interface Props {
   /** 내 체감 보정값(°C) */
   feelOffset: number
   onResetFeel: () => void
+  /** 오늘 방문자 수 — 화면 위에는 10명 이상일 때만 보이니 운영자용으로 여기에도 */
+  visitors: number | null
 }
 
 export default function Settings({
@@ -51,6 +54,7 @@ export default function Settings({
   onSetCommute,
   feelOffset,
   onResetFeel,
+  visitors,
 }: Props) {
   const [open, setOpen] = useState(false)
   const [notify, setNotify] = useState<NotifyState | 'loading'>('loading')
@@ -84,6 +88,26 @@ export default function Settings({
     getNotifyState().then(setNotify)
     getRainAlert().then(setRain)
   }, [])
+
+  async function testPush() {
+    if (busy || notify !== 'on') return
+    setBusy(true)
+    setNotice(null)
+    try {
+      const r = await sendTestPush()
+      setNotice(
+        r === 'ok'
+          ? '테스트 알림을 보냈어요. 몇 초 안에 도착하지 않으면 폰 알림 설정을 확인해주세요.'
+          : r === 'too-soon'
+            ? '방금 보냈어요. 1분 뒤에 다시 시도해주세요.'
+            : r === 'no-sub'
+              ? '이 기기의 알림 등록을 찾지 못했어요. 알림을 껐다가 다시 켜주세요.'
+              : '테스트 알림을 보내지 못했어요. 잠시 후 다시 시도해주세요.',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function toggleRain() {
     if (busy || notify !== 'on') return
@@ -322,6 +346,11 @@ export default function Settings({
                   ))}
                 </div>
               </div>
+              {notify === 'on' && (
+                <button type="button" className="order-reset test-push" onClick={testPush} disabled={busy}>
+                  🔔 테스트 알림 보내기
+                </button>
+              )}
               <div className="notify-row rain-row">
                 <div>
                   <h4 className="settings-sub-title">🌂 비 시작 알림</h4>
@@ -344,10 +373,10 @@ export default function Settings({
               </div>
             </div>
 
-            <div className="settings-sec">
+            <details className="settings-sec settings-group">
+              <summary className="settings-sec-title">🚶 출퇴근 시간 <small>{commute.on ? `${commute.am}시 · ${commute.pm}시` : '꺼짐'}</small></summary>
               <div className="notify-row">
                 <div>
-                  <h3 className="settings-sec-title">🚶 출퇴근 시간</h3>
                   <p className="muted small notify-desc">
                     "어제와 비교하면" 카드에 출근·퇴근 시각의 기온을 하루 전과 비교해 보여드려요.
                   </p>
@@ -396,10 +425,10 @@ export default function Settings({
                   </div>
                 </>
               )}
-            </div>
+            </details>
 
-            <div className="settings-sec">
-              <h3 className="settings-sec-title">🧥 내 체감 보정</h3>
+            <details className="settings-sec settings-group">
+              <summary className="settings-sec-title">🧥 내 체감 보정 <small>{feelLabel(feelOffset) ? '보정 중' : '보정 없음'}</small></summary>
               <p className="muted small notify-desc">
                 "어제 어땠어요?"에 답하면 옷차림 추천이 내 체감에 맞게 조금씩 옮겨가요. 이 기기에만 저장돼요.
                 {' '}
@@ -410,10 +439,10 @@ export default function Settings({
                   보정 초기화
                 </button>
               )}
-            </div>
+            </details>
 
-            <div className="settings-sec">
-              <h3 className="settings-sec-title">🏠 처음 열 때 보여줄 지역</h3>
+            <details className="settings-sec settings-group">
+              <summary className="settings-sec-title">🏠 처음 열 때 보여줄 지역</summary>
               <p className="muted small notify-desc">앱을 켜면 이 지역 날씨부터 보여드려요.</p>
               <div className="night-times">
                 <button
@@ -434,10 +463,10 @@ export default function Settings({
                   </button>
                 ))}
               </div>
-            </div>
+            </details>
 
-            <div className="settings-sec">
-              <h3 className="settings-sec-title">🧩 화면 순서</h3>
+            <details className="settings-sec settings-group">
+              <summary className="settings-sec-title">🧩 화면 순서</summary>
               <p className="muted small notify-desc">
                 메인 화면 카드 순서예요. 화면에서 카드를 길게 눌러 끌어도 바꿀 수 있어요.
               </p>
@@ -453,10 +482,10 @@ export default function Settings({
                 ))}
               </ul>
               <button type="button" className="order-reset" onClick={() => onSetOrder([...DEFAULT_ORDER])}>기본 순서로</button>
-            </div>
+            </details>
 
-            <div className="settings-sec">
-              <h3 className="settings-sec-title">🎨 색상 테마</h3>
+            <details className="settings-sec settings-group">
+              <summary className="settings-sec-title">🎨 색상 테마</summary>
               <p className="muted small notify-desc">버튼과 강조색이 바뀌어요.</p>
               <div className="accent-row">
                 {ACCENTS.map((a) => (
@@ -471,7 +500,10 @@ export default function Settings({
                   />
                 ))}
               </div>
-            </div>
+            </details>
+            <p className="muted small settings-foot">
+              오늘 방문 {visitors ?? '–'}명 · 화면 위에는 하루 10명이 넘을 때만 보여요
+            </p>
           </div>
         </div>,
           document.body,

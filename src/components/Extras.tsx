@@ -1,10 +1,10 @@
 // 메인·비교 카드에 붙는 작은 조각들 — 미세먼지 줄, 체감 질문, 출퇴근 비교, 평년 비교, 특보 배너
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PersonSimpleWalk, Warning } from '@phosphor-icons/react'
 import { GRADE_LABEL, gradePm10, gradePm25, type AirNow } from '../lib/air'
 import { codeLabel } from '../lib/compare'
 import { commuteSlots, type CommutePrefs } from '../lib/commute'
-import { feelLabel, type FeelVote } from '../lib/feel'
+import { feelLabel, rememberClothes, yesterdayClothes, type FeelVote } from '../lib/feel'
 import type { Normal } from '../lib/normals'
 import type { WarnHit } from '../lib/warn'
 import type { WeatherData } from '../lib/weather'
@@ -42,6 +42,9 @@ export function AirRow({ air }: { air: AirNow }) {
           어제 이맘때보다 {cmp === 'better' ? '맑아요' : cmp === 'worse' ? '탁해요' : '비슷해요'}
         </span>
       )}
+      <small className="air-src">
+        {air.source?.kind === 'airkorea' ? `${air.source.station} 측정소` : '예측 모델'}
+      </small>
       {air.worse && (
         <span className="air-cmp worse">
           {air.worse.hour}시쯤 {GRADE_LABEL[air.worse.grade]} 예상
@@ -52,16 +55,28 @@ export function AirRow({ air }: { air: AirNow }) {
 }
 
 // ── 어제 어땠어요? ───────────────────────────────────
+/** 받침이 있으면 '이었어요.', 없으면 '였어요.' */
+function eottae(word: string) {
+  const c = word.charCodeAt(word.length - 1) - 0xac00
+  return c >= 0 && c < 11172 && c % 28 === 0 ? '였어요.' : '이었어요.'
+}
 export function FeelAsk({
   answered,
   offset,
   onVote,
+  todayClothes,
 }: {
   answered: boolean
   offset: number
   onVote: (v: FeelVote) => void
+  /** 오늘 보여준 옷차림 멘트 제목 — 내일 질문에 쓰려고 남긴다 */
+  todayClothes: string | null
 }) {
   const [justVoted, setJustVoted] = useState(false)
+  const [yesterday] = useState(yesterdayClothes)
+  useEffect(() => {
+    if (todayClothes) rememberClothes(todayClothes)
+  }, [todayClothes])
   if (answered && !justVoted) return null
   if (justVoted) {
     return (
@@ -76,7 +91,9 @@ export function FeelAsk({
   }
   return (
     <div className="feel-ask">
-      <span className="feel-q">어제 날씨, 입은 옷에 비해 어땠어요?</span>
+      <span className="feel-q">
+        {yesterday ? `어제 추천은 '${yesterday}'${eottae(yesterday)} 그렇게 입었다면 어땠어요?` : '어제 날씨, 입은 옷에 비해 어땠어요?'}
+      </span>
       <div className="feel-btns">
         <button type="button" onClick={() => vote('cold')}>
           추웠어요

@@ -89,6 +89,8 @@ export interface Tip {
   emoji: string
   title: string
   body: string
+  /** 옷차림 멘트 표시 (내 체감 질문이 어제 추천을 가리킬 때 쓴다) */
+  kind?: 'clothes'
 }
 
 /** 오늘의 실용 멘트 — 강수·기온·바람·자외선을 세분화된 구간으로 판단, 최대 3개 */
@@ -109,8 +111,8 @@ export function funTips(opts: {
   // rank 가 낮을수록 먼저 보여준다. 예전에는 넣는 순서대로 잘라서,
   // 강풍 팁 하나가 켜지면 혹한이나 폭염 안내가 3개 밖으로 밀려났다.
   const tips: (Tip & { rank: number })[] = []
-  const add = (emoji: string, title: string, body: string, rank: number) =>
-    tips.push({ emoji, title, body, rank })
+  const add = (emoji: string, title: string, body: string, rank: number, kind?: 'clothes') =>
+    tips.push({ emoji, title, body, rank, kind })
   const prob = today.precipProbMax ?? 0
   const rain = today.precipSum
   const wind = today.windMax ?? 0
@@ -191,7 +193,7 @@ export function funTips(opts: {
           ? ' (추위를 타는 편이라 한 단계 따뜻하게 골랐어요)'
           : ' (더위를 타는 편이라 한 단계 가볍게 골랐어요)'
         : ''
-    add(clothes.emoji, clothes.title, clothes.body + note, clothes.rank)
+    add(clothes.emoji, clothes.title, clothes.body + note, clothes.rank, 'clothes')
   }
 
   // ── 5순위: 일교차·중간 바람
@@ -214,7 +216,7 @@ export function funTips(opts: {
     .slice()
     .sort((a, b) => a.rank - b.rank)
     .slice(0, 3)
-    .map(({ emoji, title, body }) => ({ emoji, title, body }))
+    .map(({ emoji, title, body, kind }) => (kind ? { emoji, title, body, kind } : { emoji, title, body }))
 }
 
 /**

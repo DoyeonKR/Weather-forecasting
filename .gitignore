@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# 브라우저 점검용 임시 프로필 · 루트에 떨어진 스크린샷
+.tmp-*/
+/*.png
