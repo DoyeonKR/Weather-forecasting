@@ -3,6 +3,7 @@
 import type { Located } from './geo'
 import type { KmaNow } from './kmaNow'
 import type { WeatherData } from './weather'
+import type { AirNow } from './air'
 
 const KEY = 'eojeboda.lastWeather.v1'
 /** 이보다 오래된 날씨는 보여주지 않는다 (시간대별 '지금'이 너무 어긋난다) */
@@ -14,6 +15,8 @@ export interface LastWeather {
   loc: Located
   wx: WeatherData
   kmaNow: KmaNow | null
+  /** 미세먼지 (따로 받아서 늦게 채워진다) */
+  air?: AirNow | null
 }
 
 type Store = Record<string, LastWeather>

@@ -10,6 +10,8 @@ const VAPID_PUBLIC =
 /** 서비스워커가 구독을 재발급할 때 다시 저장하려면 지역·시간이 필요하다 */
 const PREFS_CACHE = 'eojeboda-push'
 const PREFS_URL = 'https://eojeboda.local/push-prefs'
+/** 비 시작 알림 여부 — 서비스워커가 구독을 재발급할 때도 읽는다 (public/sw.js) */
+const RAIN_URL = 'https://eojeboda.local/push-rain'
 
 function urlBase64ToUint8Array(base64: string): Uint8Array {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4)
@@ -147,8 +149,64 @@ async function clearPrefs(): Promise<void> {
   try {
     const c = await caches.open(PREFS_CACHE)
     await c.delete(PREFS_URL)
+    await c.delete(RAIN_URL)
   } catch {
     // 무시
+  }
+}
+
+/** 비 시작 알림을 켜 두었는지 (이 기기 기준) */
+export async function getRainAlert(): Promise<boolean> {
+  try {
+    const c = await caches.open(PREFS_CACHE)
+    const hit = await c.match(RAIN_URL)
+    return hit ? (await hit.json()) === true : false
+  } catch {
+    return false
+  }
+}
+
+async function saveRainFlag(on: boolean) {
+  try {
+    const c = await caches.open(PREFS_CACHE)
+    await c.put(RAIN_URL, new Response(JSON.stringify(on)))
+  } catch {
+    // 무시
+  }
+}
+
+async function setRainOnServer(endpoint: string, on: boolean): Promise<boolean> {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/rpc/weather_push_set_rain`, {
+      method: 'POST',
+      headers: {
+        apikey: SB_ANON,
+        Authorization: `Bearer ${SB_ANON}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_endpoint: endpoint, p_on: on }),
+    })
+    // 함수는 해당 구독이 있으면 true 를 돌려준다
+    return res.ok && (await res.json()) === true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 비 시작 알림 켜기·끄기. 날씨 알림이 켜져 있어야 한다(같은 구독에 얹는다).
+ * 'no-sub' 면 날씨 알림부터 켜야 한다.
+ */
+export async function setRainAlert(on: boolean): Promise<'ok' | 'no-sub' | 'failed'> {
+  try {
+    const reg = await readyWithTimeout()
+    const sub = reg ? await reg.pushManager.getSubscription() : null
+    if (!sub) return 'no-sub'
+    if (!(await setRainOnServer(sub.endpoint, on))) return 'failed'
+    await saveRainFlag(on)
+    return 'ok'
+  } catch {
+    return 'failed'
   }
 }
 
@@ -215,6 +273,8 @@ export async function enableNotify(
       return 'save-failed'
     }
     await savePrefs(body)
+    // 알림을 껐다 켜거나 시간을 바꿔도 비 알림 선택은 유지한다 (새 구독이면 서버 값이 꺼짐이라서)
+    if (await getRainAlert()) await setRainOnServer(j.endpoint, true)
     return 'ok'
   } catch {
     if (created) await created.unsubscribe().catch(() => {})

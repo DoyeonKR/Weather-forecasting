@@ -150,3 +150,35 @@ test('평범한 날에도 멘트가 하나는 나온다', () => {
   })
   assert.ok(tips.length >= 1)
 })
+
+// ── 내 체감 보정 · 미세먼지 (v1.0.63)
+
+test('추위를 타는 사람은 옷차림을 한 단계 따뜻하게, 숫자는 실제 기온 그대로', () => {
+  const base = { today: day({ tmax: 21.5, tmin: 14 }), yesterday: day({ tmax: 21, tmin: 14 }), uvMax: null }
+  assert.match(titles(funTips(base)), /가벼운 긴팔/)
+  const cold = funTips({ ...base, feelOffset: -2 })
+  assert.match(titles(cold), /긴팔 \+ 겉옷/)
+  assert.match(bodies(cold), /21\.5°/)
+  assert.match(bodies(cold), /추위를 타는 편/)
+})
+
+test('체감 보정은 폭염·혹한 같은 위험 안내를 바꾸지 않는다', () => {
+  const hot = funTips({ today: day({ tmax: 34, tmin: 26 }), yesterday: day({ tmax: 33 }), uvMax: null, feelOffset: -4 })
+  assert.match(titles(hot), /폭염/)
+  const freezing = funTips({ today: day({ tmax: -3, tmin: -10 }), yesterday: day({ tmax: -2 }), uvMax: null, feelOffset: 4 })
+  assert.match(titles(freezing), /혹한/)
+})
+
+test('보정 폭은 ±4° 로 묶인다', () => {
+  const a = funTips({ today: day({ tmax: 22, tmin: 15 }), yesterday: day({ tmax: 22 }), uvMax: null, feelOffset: -40 })
+  assert.match(titles(a), /긴팔 \+ 겉옷/)
+})
+
+test('미세먼지 나쁨이면 마스크, 매우 나쁨이면 맨 앞', () => {
+  const bad = funTips({ today: day({ tmax: 20, tmin: 12 }), yesterday: day({ tmax: 20 }), uvMax: null, airGrade: 2 })
+  assert.match(titles(bad), /마스크/)
+  const worst = funTips({ today: day({ tmax: 20, tmin: 12 }), yesterday: day({ tmax: 20 }), uvMax: null, airGrade: 3 })
+  assert.equal(worst[0].title, '미세먼지 매우 나쁨')
+  const good = funTips({ today: day({ tmax: 20, tmin: 12 }), yesterday: day({ tmax: 20 }), uvMax: null, airGrade: 1 })
+  assert.doesNotMatch(titles(good), /마스크|미세먼지/)
+})

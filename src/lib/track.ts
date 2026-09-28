@@ -89,3 +89,47 @@ export async function fetchTodayVisitors(): Promise<number | null> {
     return null
   }
 }
+
+/**
+ * 기능 사용 집계 — 어떤 버튼이 쓰이는지만 이름 없이 센다.
+ * 위치·검색어 같은 내용은 보내지 않는다(props 에는 종류 구분값만).
+ * 서버 쪽 name CHECK 목록과 맞춰야 한다 (supabase/sql/weather_events.sql).
+ */
+export type EventName =
+  | 'share'
+  | 'share_done'
+  | 'search'
+  | 'place_select'
+  | 'notify_on'
+  | 'notify_off'
+  | 'rain_alert_on'
+  | 'rain_alert_off'
+  | 'refresh'
+  | 'feel_vote'
+  | 'hourly_scroll'
+  | 'commute_set'
+
+const lastSent = new Map<string, number>()
+
+export function trackEvent(name: EventName, props?: Record<string, string | number | boolean>): void {
+  try {
+    if (!import.meta.env.PROD) return
+    // 같은 동작을 연달아 누른 것은 한 번으로 (가로 스크롤처럼 여러 번 불리는 것 포함)
+    const now = Date.now()
+    if (now - (lastSent.get(name) ?? 0) < 1500) return
+    lastSent.set(name, now)
+    fetch(`${SB_URL}/rest/v1/weather_events`, {
+      method: 'POST',
+      headers: {
+        apikey: SB_ANON,
+        Authorization: `Bearer ${SB_ANON}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({ session_id: visitorId(), name, props: props ?? null }),
+      keepalive: true,
+    }).catch(() => {})
+  } catch {
+    // 집계 실패는 앱 동작에 영향 없음
+  }
+}

@@ -43,6 +43,18 @@ const VAPID_PUBLIC =
   'BPoiXRatsIBxTbpFwTPoZ87skWs4-qKJsX3VVbZn1OS-8QigkrTI7FfZeN5Uq-SDWJaykFUdPXey0GfBdDrMU5g'
 const PREFS_CACHE = 'eojeboda-push'
 const PREFS_URL = 'https://eojeboda.local/push-prefs'
+// 비 시작 알림을 켰는지. 구독 저장 함수 인자와 섞으면 RPC 가 모르는 인자로 실패하므로 따로 둔다.
+const RAIN_URL = 'https://eojeboda.local/push-rain'
+
+async function readRain() {
+  try {
+    const c = await caches.open(PREFS_CACHE)
+    const hit = await c.match(RAIN_URL)
+    return hit ? (await hit.json()) === true : false
+  } catch {
+    return false
+  }
+}
 
 async function readPrefs() {
   try {
@@ -103,6 +115,14 @@ async function resubscribe(oldSub) {
     // 걷어내면 설정에서 꺼진 것으로 보이고, 사용자가 다시 켤 수 있다.
     await sub.unsubscribe().catch(() => {})
     return
+  }
+  // 새 endpoint 행은 비 알림이 꺼진 채로 만들어진다. 켜 두었던 사람은 다시 켠다.
+  if (await readRain()) {
+    await fetch(SB_URL + '/rest/v1/rpc/weather_push_set_rain', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ p_endpoint: j.endpoint, p_on: true }),
+    }).catch(() => {})
   }
   // 옛 endpoint 로 남은 행은 지운다 (그대로 두면 하루에 두 번 온다)
   if (oldSub && oldSub.endpoint && oldSub.endpoint !== j.endpoint) {

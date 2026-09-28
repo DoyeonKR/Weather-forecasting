@@ -1816,109 +1816,6 @@ body {
   margin: 0;
 }
 
-.hourly-svg {
-  width: 100%;
-  height: auto;
-  display: block;
-  margin-top: 6px;
-  overflow: visible;
-}
-
-.hourly-legend {
-  display: flex;
-  gap: 10px;
-  font-size: 11px;
-  color: var(--sub);
-}
-
-.hourly-legend .hl {
-  display: inline-block;
-  width: 13px;
-  height: 0;
-  border-top: 2px solid var(--accent);
-  vertical-align: middle;
-  margin-right: 4px;
-}
-
-.hourly-legend .hl.yest {
-  border-top: 2px dashed rgba(255, 255, 255, 0.55);
-}
-
-.hourly-legend .hl.rain {
-  height: 8px;
-  border: none;
-  background: var(--cold);
-  border-radius: 2px;
-}
-
-.hourly-dayband {
-  fill: rgba(255, 220, 130, 0.06);
-}
-
-.hourly-grid {
-  stroke: rgba(255, 255, 255, 0.08);
-  stroke-width: 1;
-}
-
-.hourly-grid-label {
-  font-size: 9px;
-  fill: var(--sub);
-  opacity: 0.7;
-}
-
-.hourly-line {
-  fill: none;
-  stroke-width: 2.4;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-}
-
-.hourly-line.today {
-  stroke: var(--accent);
-}
-
-.hourly-line.yest {
-  stroke: rgba(255, 255, 255, 0.5);
-  stroke-dasharray: 4 4;
-  stroke-width: 1.8;
-}
-
-.hourly-nowline {
-  stroke: var(--accent);
-  stroke-width: 1;
-  stroke-dasharray: 2 3;
-  opacity: 0.6;
-}
-
-.hourly-now {
-  fill: var(--accent);
-  stroke: #fff;
-  stroke-width: 1.6;
-}
-
-.hourly-bar {
-  fill: var(--cold);
-  opacity: 0.9;
-}
-
-.hourly-temp-label {
-  font-size: 11px;
-  font-weight: 800;
-  fill: var(--text);
-}
-
-.hourly-temp-label.max {
-  fill: var(--warm);
-}
-
-.hourly-temp-label.min {
-  fill: var(--cold);
-}
-
-.hourly-hour {
-  font-size: 10px;
-  fill: var(--sub);
-}
 
 .hourly-foot {
   margin-top: 6px;
@@ -2319,67 +2216,12 @@ body {
   margin-bottom: 8px;
 }
 
-.hourly-points {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 2px;
-  margin-top: 16px;
-}
-
-.hourly-point {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  color: var(--sub);
-  font-variant-numeric: tabular-nums;
-}
-
-.hourly-point span {
-  font-size: 11px;
-}
-
-.hourly-point svg {
-  color: #ffcb29;
-}
-
-.hourly-point strong {
-  color: var(--warm);
-  font-size: 15px;
-}
-
-.hourly-point small {
-  color: var(--cold);
-  font-size: 9px;
-}
-
-.hourly-embedded .hourly-svg {
-  margin-top: -24px;
-}
-
-.hourly-embedded .hourly-hour {
-  opacity: 0;
-}
 
 .hourly-embedded .section-title {
   color: var(--text);
   font-size: 18px;
 }
 
-.hourly-embedded .hourly-line.today {
-  stroke: var(--warm);
-}
-
-.hourly-embedded .hourly-now,
-.hourly-embedded .hourly-bar {
-  fill: var(--cold);
-}
-
-.hourly-embedded .hourly-dayband,
-.hourly-embedded .hourly-grid {
-  opacity: 0.45;
-}
 
 .hero-section-title {
   margin: 22px 0 4px;
@@ -2623,14 +2465,6 @@ body {
     font-size: 10px;
   }
 
-  .hourly-legend {
-    display: none;
-  }
-
-  .hourly-svg {
-    margin-inline: -5px;
-    width: calc(100% + 10px);
-  }
 
   .tips-visual .tip {
     min-height: 94px;
@@ -2738,31 +2572,14 @@ body {
 
 .stat-chip-label,
 .visitors,
-.hourly-point span,
 .radar-ticks {
   font-size: 12px;
 }
 
-.hourly-point small,
-.hourly-grid-label,
 .radar-credit {
   font-size: 11px;
 }
 
-.hourly-temp-label {
-  font-size: 12px;
-}
-
-/* 그래프는 viewBox(340) 라 넓은 화면에서는 글씨도 같이 두 배로 커진다 — 원래 크기로 */
-@media (min-width: 860px) {
-  .hourly-grid-label {
-    font-size: 9px;
-  }
-
-  .hourly-temp-label {
-    font-size: 11px;
-  }
-}
 
 /* 날씨 카드 위 줄: 날짜 + "20:50 기준 ↻" (새로고침은 여기 하나로 모은다) */
 .hero-date {
@@ -2823,39 +2640,25 @@ body {
   }
 }
 
-/* 시간대 그래프 범례: 좁은 화면에서 숨기면 점선이 "어제"라는 걸 알 길이 없다. 제목 아래 한 줄로. */
-@media (max-width: 420px) {
-  .hourly-legend {
-    display: flex;
-    width: 100%;
-    gap: 12px;
-    font-size: 11px;
-  }
-}
 
 /* 날씨 아이콘 색 — 전부 노랑이면 구름·비도 해처럼 보인다 */
-.wi-sun,
-.hourly-point svg.wi-sun {
+.wi-sun {
   color: #ffcb29;
 }
 
-.wi-cloud,
-.hourly-point svg.wi-cloud {
+.wi-cloud {
   color: #aebcd3;
 }
 
-.wi-rain,
-.hourly-point svg.wi-rain {
+.wi-rain {
   color: #5fb0ff;
 }
 
-.wi-snow,
-.hourly-point svg.wi-snow {
+.wi-snow {
   color: #eaf2ff;
 }
 
-.wi-storm,
-.hourly-point svg.wi-storm {
+.wi-storm {
   color: #b69cff;
 }
 
@@ -2969,4 +2772,548 @@ body {
 .neon-frame {
   z-index: 1900;
   border-radius: calc(min(env(safe-area-inset-bottom, 0px), 1px) * 44);
+}
+
+/* ── 시간대별 가로 스크롤 그래프 (2026-09-28) ───────────────────
+   칸 하나 52px, 받아 둔 예보 끝(약 7일)까지 3시간 간격. 좌우로 밀어서 넘긴다.
+   비교 대상은 "하루 전 같은 시각" — 점선, 두 선 사이 면 색, 칸마다 ▲▼ 로 세 번 말한다. */
+.hs-more {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* 34 -> 46 */
+.hs-more::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+}
+
+.hs-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 8px;
+  color: var(--sub);
+  font-size: 12px;
+}
+
+.hs-legend .hl {
+  display: inline-block;
+  width: 16px;
+  height: 0;
+  margin-right: 5px;
+  border-top: 2.5px solid var(--warm);
+  vertical-align: middle;
+}
+
+.hs-legend .hl.yest {
+  border-top: 2px dashed rgba(255, 255, 255, 0.6);
+}
+
+.hs-legend .hl.band {
+  width: 10px;
+  height: 10px;
+  margin-right: 2px;
+  border: 0;
+  border-radius: 2px;
+}
+
+.hs-legend .hl.band.warm {
+  background: rgba(255, 120, 100, 0.5);
+}
+
+.hs-legend .hl.band.cold {
+  margin-right: 5px;
+  background: rgba(90, 170, 255, 0.5);
+}
+
+.hourly-scroll {
+  margin: 10px -4px 0;
+  padding-bottom: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  cursor: grab;
+  /* 오른쪽이 흐려져야 "더 있다"가 보인다. 끝에 닿으면 푼다. */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+}
+
+.hourly-scroll.at-end {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.hourly-scroll:active {
+  cursor: grabbing;
+}
+
+.hs-cols {
+  display: flex;
+}
+
+.hs-col {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hs-group {
+  flex: 0 0 auto;
+}
+
+.hs-group + .hs-group {
+  box-shadow: inset 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.hs-group-cols {
+  display: flex;
+}
+
+/* 날짜 표시는 자기 날짜 묶음 안에서 왼쪽에 붙는다 — 밀어도 지금 보는 날이 보인다 */
+.hs-day {
+  position: sticky;
+  left: 0;
+  display: block;
+  width: max-content;
+  height: 18px;
+  padding: 0 6px;
+  color: #9ec3ff;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.hs-hour {
+  color: var(--sub);
+  font-size: 12px;
+}
+
+.hs-temp {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.hs-delta {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.hs-delta.warm {
+  color: var(--warm);
+}
+
+.hs-delta.cold {
+  color: var(--cold);
+}
+
+.hs-delta.same {
+  color: var(--sub);
+}
+
+.hs-rain {
+  color: var(--cold);
+  font-size: 11px;
+}
+
+.hs-svg {
+  display: block;
+  overflow: visible;
+}
+
+.hs-daysep {
+  stroke: rgba(255, 255, 255, 0.16);
+  stroke-width: 1;
+}
+
+.hs-band.warm {
+  fill: rgba(255, 120, 100, 0.3);
+}
+
+.hs-band.cold {
+  fill: rgba(90, 170, 255, 0.3);
+}
+
+.hs-band.same {
+  fill: rgba(255, 255, 255, 0.06);
+}
+
+.hs-line {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.hs-line.now {
+  stroke: var(--warm);
+  stroke-width: 2.6;
+}
+
+.hs-line.prev {
+  stroke: rgba(255, 255, 255, 0.6);
+  stroke-width: 1.8;
+  stroke-dasharray: 4 4;
+}
+
+.hs-dot {
+  fill: var(--warm);
+}
+
+.hs-dot.first {
+  fill: #fff;
+  stroke: var(--warm);
+  stroke-width: 2;
+}
+
+.hs-rainbar {
+  fill: var(--cold);
+  opacity: 0.85;
+}
+
+/* 어제와 비교 — 기온 범위 막대에 머리글·눈금·차이 문장 */
+.range-wrap {
+  gap: 10px;
+}
+
+.range-head {
+  margin-bottom: -4px;
+  color: var(--sub);
+  font-size: 11px;
+}
+
+.range-head .range-min,
+.range-head .range-max {
+  color: var(--sub);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.range-head-mid {
+  text-align: center;
+}
+
+.range-track {
+  overflow: hidden;
+}
+
+.range-gridline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.range-scale {
+  margin-top: -6px;
+}
+
+.range-ticks {
+  position: relative;
+  height: 14px;
+  color: var(--sub);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.range-ticks span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+.range-summary {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.range-diff {
+  font-weight: 800;
+}
+
+.range-diff.warm {
+  color: var(--warm);
+}
+
+.range-diff.cold {
+  color: var(--cold);
+}
+
+.range-diff.same {
+  color: var(--sub);
+}
+
+/* ── v1.0.63 추가 기능 ───────────────────────────────────────── */
+
+/* 날씨 카드 위 줄 오른쪽: 공유 · 기준 시각 */
+.hero-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+/* 미세먼지 한 줄 */
+.air-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 12px;
+  color: var(--sub);
+  font-size: 13px;
+}
+
+.air-row b {
+  font-weight: 800;
+}
+
+.air-row small {
+  color: var(--sub);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.air-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.air-dot.g0,
+.air-g.g0 {
+  color: #4fa3ff;
+  background-color: currentColor;
+}
+
+.air-g.g0,
+.air-g.g1,
+.air-g.g2,
+.air-g.g3 {
+  background-color: transparent;
+}
+
+.air-dot.g1,
+.air-g.g1 {
+  color: #3ecf8e;
+}
+
+.air-dot.g2,
+.air-g.g2 {
+  color: #ffb547;
+}
+
+.air-dot.g3,
+.air-g.g3 {
+  color: #ff5f5f;
+}
+
+.air-dot.g1,
+.air-dot.g2,
+.air-dot.g3 {
+  background-color: currentColor;
+}
+
+.air-cmp {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.air-cmp.better {
+  color: #7fd0ff;
+}
+
+.air-cmp.worse {
+  color: #ffb547;
+}
+
+/* 어제 어땠어요? */
+.feel-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+}
+
+.feel-q {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.feel-btns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.feel-btns button {
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.feel-done {
+  margin: 14px 0 0;
+  color: var(--sub);
+  font-size: 13px;
+}
+
+/* 출퇴근길 */
+.commute-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.commute-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    'when icon temp'
+    'diff diff rain';
+  align-items: center;
+  gap: 2px 10px;
+}
+
+.commute-when {
+  grid-area: when;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.commute-when small {
+  color: var(--sub);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.commute-list li > svg {
+  grid-area: icon;
+}
+
+.commute-temp {
+  grid-area: temp;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.commute-diff {
+  grid-area: diff;
+  color: var(--sub);
+  font-size: 12px;
+}
+
+.commute-rain {
+  grid-area: rain;
+  color: var(--cold);
+  font-size: 12px;
+  text-align: right;
+}
+
+.normal-line {
+  color: var(--sub);
+}
+
+/* 기상특보 배너 */
+.warn-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 181, 71, 0.45);
+  border-radius: 12px;
+  background: rgba(255, 181, 71, 0.12);
+  color: #ffd79a;
+  font-size: 13px;
+}
+
+.warn-banner.severe {
+  border-color: rgba(255, 95, 95, 0.55);
+  background: rgba(255, 95, 95, 0.14);
+  color: #ffb4b4;
+}
+
+.warn-banner span {
+  flex: 1;
+  min-width: 0;
+}
+
+.warn-banner small {
+  opacity: 0.8;
+}
+
+.warn-banner a {
+  flex: 0 0 auto;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* 공유 결과 한 줄 */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 2500;
+  transform: translateX(-50%);
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(8, 12, 20, 0.92);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* 설정 — 알림 안의 작은 제목 */
+.settings-sub-title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.rain-row {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }

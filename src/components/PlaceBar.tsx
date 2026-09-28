@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Crosshair, MagnifyingGlass, MapPin, Star } from '@phosphor-icons/react'
 import { searchPlaces, type Place } from '../lib/places'
 import { useLongPressReorder } from '../lib/reorder'
+import { trackEvent } from '../lib/track'
 
 interface Props {
   favorites: Place[]
@@ -61,6 +62,7 @@ export default function PlaceBar({
   async function runSearch() {
     const q = query.trim()
     if (!q) return
+    trackEvent('search')
     setBusy(true)
     setSearchError(false)
     try {

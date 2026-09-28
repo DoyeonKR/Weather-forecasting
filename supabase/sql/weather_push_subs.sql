@@ -96,3 +96,34 @@ revoke all on public.weather_push_subs from anon, authenticated;
 revoke all on public.weather_page_views from anon, authenticated;
 grant insert on public.weather_page_views to anon;
 -- 조회는 weather_today_visitors() (security definer) 로만
+
+-- ── 비 시작 알림 (v1.0.63, 2026-09-28 적용) ─────────────────────
+-- 켠 사람만 받는다. 기본값 꺼짐이라 기존 구독자에게는 아무것도 바뀌지 않는다.
+alter table public.weather_push_subs add column if not exists rain_alert boolean not null default false;
+alter table public.weather_push_subs add column if not exists last_rain_alert timestamptz;
+
+-- 자기 endpoint 의 비 알림만 켜고 끈다. 해당 구독이 없으면 false.
+create or replace function public.weather_push_set_rain(p_endpoint text, p_on boolean)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if p_endpoint is null or length(p_endpoint) < 20 or p_on is null then
+    raise exception 'invalid input';
+  end if;
+  update public.weather_push_subs set rain_alert = p_on where endpoint = p_endpoint;
+  return found;
+end
+$$;
+
+revoke all on function public.weather_push_set_rain(text, boolean) from public;
+grant execute on function public.weather_push_set_rain(text, boolean) to anon;
+
+-- 크론: KST 07:50~21:50 매시 (UTC 22,23,0~12시 50분). 초단기예보가 매시 45분쯤 나온 직후.
+-- 키는 weather-night 잡의 명령에서 그대로 가져와 새로 적지 않는다.
+-- select cron.schedule('weather-rain', '50 22,23,0-12 * * *',
+--   (select replace(command, 'mode=night', 'mode=rain') from cron.job where jobname = 'weather-night'));
+--
+-- 점검: weather-push?key=…&probe=위도,경도 → 보내지 않고 판단(실황·예보 두 칸)만 돌려준다.

@@ -96,8 +96,16 @@ export function funTips(opts: {
   today: DayStats
   yesterday: DayStats
   uvMax: number | null
+  /** 대기질 종합 등급 (0 좋음 ~ 3 매우 나쁨). 모르면 생략 */
+  airGrade?: number | null
+  /**
+   * 내 체감 보정(°C). 음수면 추위를 타는 편 → 옷차림을 더 따뜻한 쪽으로 고른다.
+   * 옷차림 단계에만 쓴다. 폭염·혹한 같은 위험 안내는 실제 기온으로만 판단한다.
+   */
+  feelOffset?: number
 }): Tip[] {
   const { today, yesterday, uvMax } = opts
+  const feel = Math.max(-4, Math.min(4, opts.feelOffset ?? 0))
   // rank 가 낮을수록 먼저 보여준다. 예전에는 넣는 순서대로 잘라서,
   // 강풍 팁 하나가 켜지면 혹한이나 폭염 안내가 3개 밖으로 밀려났다.
   const tips: (Tip & { rank: number })[] = []
@@ -163,30 +171,28 @@ export function funTips(opts: {
   else if (dMax >= 4)
     add('🌡️', '어제보다 따뜻', `어제보다 ${dMax}° 더 따뜻해요. 어제보다 한 겹 정도는 가볍게 가도 괜찮고, 야외 일정은 한낮을 피하면 한결 낫습니다.`, 2)
 
+  // ── 1~2순위: 미세먼지 (종합 등급)
+  const air = opts.airGrade ?? null
+  if (air !== null && air >= 3)
+    add('😷', '미세먼지 매우 나쁨', '공기가 매우 나빠요. 바깥 활동은 줄이고, 나간다면 KF94 마스크를 챙기세요. 환기는 짧게, 창문은 닫아두는 편이 낫습니다.', 0)
+  else if (air !== null && air >= 2)
+    add('😷', '마스크 챙기기', '미세먼지가 나쁨이에요. 오래 걷거나 뛰는 야외 운동은 오늘은 쉬고, 외출할 땐 마스크를 챙기세요.', 1)
+
   // ── 4순위: 절대 기온 옷차림 (낮 최고 기준)
   const t = today.tmax
-  if (t >= 35)
-    add('🥵', '위험한 더위', `낮 최고 ${round1(t)}°, 위험한 더위예요. 한낮 야외활동은 최대한 피하고 물을 수시로 마시세요. 어르신과 아이는 특히 조심해야 하는 날입니다.`, 0)
-  else if (t >= 33)
-    add('🔥', '폭염, 양산 추천', `낮 최고 ${round1(t)}° 폭염이에요. 통풍 잘 되는 옷에 양산이 의외로 큰 도움이 됩니다. 실내외 온도차가 크니 냉방병도 슬쩍 조심.`, 0)
-  else if (t >= 31)
-    add('💧', '물 자주 마시기', `한낮이 ${round1(t)}°까지 올라 푹푹 쪄요. 목마르기 전에 물을 미리 마시고, 뙤약볕 일정은 짧게 끊어 가세요.`, 2)
-  else if (t >= 28)
-    add('☀️', '반팔 + 얇은 겉옷', `낮엔 ${round1(t)}°까지 올라 반팔이 맞아요. 다만 실내 냉방이 셀 수 있으니 얇은 겉옷 하나면 완벽합니다.`, 2)
-  else if (t >= 25)
-    add('😌', '반팔 날씨', rainsToday ? `낮 최고 ${round1(t)}°, 비만 아니면 반팔이 딱 좋은 온도예요. 젖어도 금방 마르는 옷이 편합니다.` : `낮 최고 ${round1(t)}°, 반팔이나 아주 얇은 긴팔이 딱 좋은 날이에요. 활동하기 좋습니다.`, 2)
-  else if (t >= 21)
-    add('🍃', '가벼운 긴팔', `낮 ${round1(t)}°로 쾌적한 날씨예요. 가벼운 긴팔 하나로 충분하고, 산책이나 야외 일정 잡기 좋은 날입니다.`, 2)
-  else if (t >= 17)
-    add('🍂', '긴팔 + 겉옷', `낮에도 ${round1(t)}°라 선선해요. 긴팔에 가벼운 겉옷 조합을 추천해요. 해 지면 제법 쌀쌀해집니다.`, 2)
-  else if (t >= 12)
-    add('🧥', '니트·자켓', `낮 최고가 ${round1(t)}°에 그쳐요. 니트나 자켓 정도는 입어야 하는 날씨입니다. 얇게 나가면 종일 웅크리게 돼요.`, 2)
-  else if (t >= 5)
-    add('🧤', '코트·패딩', `종일 추워요(낮 최고 ${round1(t)}°). 코트나 패딩을 꺼낼 때가 됐습니다. 목만 따뜻해도 체감이 확 달라져요.`, 2)
-  else if (t >= 0)
-    add('⛄', '패딩 풀장착', `낮에도 ${round1(t)}°밖에 안 돼요. 두꺼운 패딩에 목도리, 장갑까지 풀장착을 추천합니다. 따뜻한 음료 텀블러도 챙기세요.`, 0)
-  else
-    add('🥶', '혹한, 핫팩', `낮 최고가 영하 ${Math.abs(round1(t))}°인 혹한이에요. 핫팩을 챙기고 피부 노출을 최소화하세요. 수도 동파도 조심할 날입니다.`, 0)
+  // 체감 보정은 쾌적~쌀쌀 구간(5~31°)의 옷차림에만. 그 밖은 위험 안내라 실제 값으로 본다.
+  const tc = t >= 5 && t < 31 ? t + feel : t
+  const clothes = clothingTip(tc, t, rainsToday)
+  if (clothes) {
+    const plain = clothingTip(t, t, rainsToday)
+    const note =
+      plain && plain.title !== clothes.title
+        ? feel < 0
+          ? ' (추위를 타는 편이라 한 단계 따뜻하게 골랐어요)'
+          : ' (더위를 타는 편이라 한 단계 가볍게 골랐어요)'
+        : ''
+    add(clothes.emoji, clothes.title, clothes.body + note, clothes.rank)
+  }
 
   // ── 5순위: 일교차·중간 바람
   if (today.tmax - today.tmin >= 12 && today.tmax >= 20)
@@ -209,6 +215,39 @@ export function funTips(opts: {
     .sort((a, b) => a.rank - b.rank)
     .slice(0, 3)
     .map(({ emoji, title, body }) => ({ emoji, title, body }))
+}
+
+/**
+ * 옷차림 단계 — 단계는 tc(보정한 온도)로 고르고, 문장 속 숫자는 실제 낮 최고 t 로 쓴다.
+ * (보정한 숫자를 보여주면 "낮 최고 18°" 인데 예보는 21° 인 이상한 화면이 된다)
+ */
+function clothingTip(
+  tc: number,
+  t: number,
+  rainsToday: boolean,
+): { emoji: string; title: string; body: string; rank: number } | null {
+  const c = (emoji: string, title: string, body: string, rank: number) => ({ emoji, title, body, rank })
+  if (tc >= 35)
+    return c('🥵', '위험한 더위', `낮 최고 ${round1(t)}°, 위험한 더위예요. 한낮 야외활동은 최대한 피하고 물을 수시로 마시세요. 어르신과 아이는 특히 조심해야 하는 날입니다.`, 0)
+  if (tc >= 33)
+    return c('🔥', '폭염, 양산 추천', `낮 최고 ${round1(t)}° 폭염이에요. 통풍 잘 되는 옷에 양산이 의외로 큰 도움이 됩니다. 실내외 온도차가 크니 냉방병도 슬쩍 조심.`, 0)
+  if (tc >= 31)
+    return c('💧', '물 자주 마시기', `한낮이 ${round1(t)}°까지 올라 푹푹 쪄요. 목마르기 전에 물을 미리 마시고, 뙤약볕 일정은 짧게 끊어 가세요.`, 2)
+  if (tc >= 28)
+    return c('☀️', '반팔 + 얇은 겉옷', `낮엔 ${round1(t)}°까지 올라 반팔이 맞아요. 다만 실내 냉방이 셀 수 있으니 얇은 겉옷 하나면 완벽합니다.`, 2)
+  if (tc >= 25)
+    return c('😌', '반팔 날씨', rainsToday ? `낮 최고 ${round1(t)}°, 비만 아니면 반팔이 딱 좋은 온도예요. 젖어도 금방 마르는 옷이 편합니다.` : `낮 최고 ${round1(t)}°, 반팔이나 아주 얇은 긴팔이 딱 좋은 날이에요. 활동하기 좋습니다.`, 2)
+  if (tc >= 21)
+    return c('🍃', '가벼운 긴팔', `낮 ${round1(t)}°로 쾌적한 날씨예요. 가벼운 긴팔 하나로 충분하고, 산책이나 야외 일정 잡기 좋은 날입니다.`, 2)
+  if (tc >= 17)
+    return c('🍂', '긴팔 + 겉옷', `낮에도 ${round1(t)}°라 선선해요. 긴팔에 가벼운 겉옷 조합을 추천해요. 해 지면 제법 쌀쌀해집니다.`, 2)
+  if (tc >= 12)
+    return c('🧥', '니트·자켓', `낮 최고가 ${round1(t)}°에 그쳐요. 니트나 자켓 정도는 입어야 하는 날씨입니다. 얇게 나가면 종일 웅크리게 돼요.`, 2)
+  if (tc >= 5)
+    return c('🧤', '코트·패딩', `종일 추워요(낮 최고 ${round1(t)}°). 코트나 패딩을 꺼낼 때가 됐습니다. 목만 따뜻해도 체감이 확 달라져요.`, 2)
+  if (tc >= 0)
+    return c('⛄', '패딩 풀장착', `낮에도 ${round1(t)}°밖에 안 돼요. 두꺼운 패딩에 목도리, 장갑까지 풀장착을 추천합니다. 따뜻한 음료 텀블러도 챙기세요.`, 0)
+  return c('🥶', '혹한, 핫팩', `낮 최고가 영하 ${Math.abs(round1(t))}°인 혹한이에요. 핫팩을 챙기고 피부 노출을 최소화하세요. 수도 동파도 조심할 날입니다.`, 0)
 }
 
 /** 현재 날씨 → 배경 테마 클래스 */

@@ -1,10 +1,23 @@
 // 설정 패널 — 알림 온오프 + 색상 테마(포인트 컬러)
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { disableNotify, enableNotify, getNotifyState, type NotifyState } from '../lib/push'
+import {
+  disableNotify,
+  enableNotify,
+  getNotifyState,
+  getRainAlert,
+  setRainAlert,
+  type NotifyState,
+} from '../lib/push'
 import type { Place } from '../lib/places'
 import { ACCENTS, ACCENT_KEY } from '../lib/accent'
 import { DEFAULT_ORDER, SECTION_LABEL, moveItem, type SectionKey } from '../lib/sections'
+import type { CommutePrefs } from '../lib/commute'
+import { feelLabel } from '../lib/feel'
+import { trackEvent } from '../lib/track'
+
+const AM_HOURS = [6, 7, 8, 9, 10]
+const PM_HOURS = [16, 17, 18, 19, 20, 21]
 
 const NIGHT_KEY = 'eojeboda:nighttime'
 const MORNING_KEY = 'eojeboda:morningtime'
@@ -20,11 +33,28 @@ interface Props {
   onSetHome: (id: string) => void
   sectionOrder: SectionKey[]
   onSetOrder: (next: SectionKey[]) => void
+  commute: CommutePrefs
+  onSetCommute: (next: CommutePrefs) => void
+  /** 내 체감 보정값(°C) */
+  feelOffset: number
+  onResetFeel: () => void
 }
 
-export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrder, onSetOrder }: Props) {
+export default function Settings({
+  loc,
+  favorites,
+  homeId,
+  onSetHome,
+  sectionOrder,
+  onSetOrder,
+  commute,
+  onSetCommute,
+  feelOffset,
+  onResetFeel,
+}: Props) {
   const [open, setOpen] = useState(false)
   const [notify, setNotify] = useState<NotifyState | 'loading'>('loading')
+  const [rain, setRain] = useState(false)
   const [busy, setBusy] = useState(false)
   // alert 은 패널을 닫은 한참 뒤에 맥락 없이 뜬다. 패널 안에 남는 문구로 알린다.
   const [notice, setNotice] = useState<string | null>(null)
@@ -52,7 +82,25 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
 
   useEffect(() => {
     getNotifyState().then(setNotify)
+    getRainAlert().then(setRain)
   }, [])
+
+  async function toggleRain() {
+    if (busy || notify !== 'on') return
+    setBusy(true)
+    setNotice(null)
+    try {
+      const next = !rain
+      const r = await setRainAlert(next)
+      if (r === 'ok') {
+        setRain(next)
+        trackEvent(next ? 'rain_alert_on' : 'rain_alert_off')
+      } else if (r === 'no-sub') setNotice('날씨 알림을 먼저 켜주세요.')
+      else setNotice('비 알림 설정을 저장하지 못했어요. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const panelRef = useRef<HTMLDivElement>(null)
   const openerRef = useRef<HTMLButtonElement>(null)
@@ -108,10 +156,15 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
         const off = await disableNotify()
         // 못 껐으면 껐다고 표시하면 안 된다. 다음 날 아침에 또 알림이 온다.
         setNotify(off ? 'off' : await getNotifyState())
+        if (off) {
+          setRain(false)
+          trackEvent('notify_off')
+        }
         if (!off) setNotice('알림을 끄지 못했어요. 잠시 후 다시 시도해주세요.')
       } else {
         const r = await enableNotify(loc, nightTime, morningTime)
         setNotify(r === 'ok' ? 'on' : await getNotifyState())
+        if (r === 'ok') trackEvent('notify_on')
         if (r === 'denied')
           setNotice('알림 권한이 필요해요. 브라우저 설정에서 알림을 허용해주세요.')
         else if (r === 'no-sw')
@@ -269,6 +322,94 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
                   ))}
                 </div>
               </div>
+              <div className="notify-row rain-row">
+                <div>
+                  <h4 className="settings-sub-title">🌂 비 시작 알림</h4>
+                  <p className="muted small notify-desc">
+                    한 시간 안에 비가 시작될 것 같으면 알려드려요. 07~22시에만, 6시간에 한 번까지.
+                    기상청 초단기예보 기준이라 국내에서만 동작해요.
+                    {notify !== 'on' ? ' 위의 날씨 알림을 먼저 켜주세요.' : ''}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={`notify-toggle ${rain && notify === 'on' ? 'on' : ''}`}
+                  onClick={toggleRain}
+                  disabled={busy || notify !== 'on'}
+                  aria-label={rain ? '비 시작 알림 끄기' : '비 시작 알림 켜기'}
+                  aria-pressed={rain && notify === 'on'}
+                >
+                  <span className="notify-knob" />
+                </button>
+              </div>
+            </div>
+
+            <div className="settings-sec">
+              <div className="notify-row">
+                <div>
+                  <h3 className="settings-sec-title">🚶 출퇴근 시간</h3>
+                  <p className="muted small notify-desc">
+                    "어제와 비교하면" 카드에 출근·퇴근 시각의 기온을 하루 전과 비교해 보여드려요.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={`notify-toggle ${commute.on ? 'on' : ''}`}
+                  onClick={() => onSetCommute({ ...commute, on: !commute.on })}
+                  aria-label={commute.on ? '출퇴근 비교 끄기' : '출퇴근 비교 켜기'}
+                  aria-pressed={commute.on}
+                >
+                  <span className="notify-knob" />
+                </button>
+              </div>
+              {commute.on && (
+                <>
+                  <div className="night-row">
+                    <span className="muted small">출근</span>
+                    <div className="night-times">
+                      {AM_HOURS.map((h) => (
+                        <button
+                          key={h}
+                          type="button"
+                          className={`night-chip ${commute.am === h ? 'on' : ''}`}
+                          onClick={() => onSetCommute({ ...commute, am: h })}
+                        >
+                          {h}시
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="night-row">
+                    <span className="muted small">퇴근</span>
+                    <div className="night-times">
+                      {PM_HOURS.map((h) => (
+                        <button
+                          key={h}
+                          type="button"
+                          className={`night-chip ${commute.pm === h ? 'on' : ''}`}
+                          onClick={() => onSetCommute({ ...commute, pm: h })}
+                        >
+                          {h}시
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="settings-sec">
+              <h3 className="settings-sec-title">🧥 내 체감 보정</h3>
+              <p className="muted small notify-desc">
+                "어제 어땠어요?"에 답하면 옷차림 추천이 내 체감에 맞게 조금씩 옮겨가요. 이 기기에만 저장돼요.
+                {' '}
+                지금: {feelLabel(feelOffset) ?? '보정 없음'}
+              </p>
+              {Math.abs(feelOffset) >= 0.5 && (
+                <button type="button" className="order-reset" onClick={onResetFeel}>
+                  보정 초기화
+                </button>
+              )}
             </div>
 
             <div className="settings-sec">

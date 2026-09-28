@@ -2,9 +2,11 @@ import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import {
   ArrowClockwise,
   CaretDown,
+  CloudFog,
   CloudSun,
   Drop,
   MapPin,
+  ShareNetwork,
   Sun,
   Sunglasses,
   ThermometerSimple,
@@ -16,6 +18,12 @@ import {
 import { locate, type Located } from './lib/geo'
 import { weatherIcon, weatherTone, type UiIcon } from './lib/weatherIcon'
 import { loadLast, saveLast } from './lib/lastWeather'
+import { GRADE_LABEL, fetchAir, type AirNow } from './lib/air'
+import { answeredToday, loadFeel, resetFeel, voteFeel, type FeelVote } from './lib/feel'
+import { loadCommute, saveCommute, type CommutePrefs } from './lib/commute'
+import { fetchNormal, type Normal } from './lib/normals'
+import { fetchWarnings, matchWarnings, type WarnItem } from './lib/warn'
+import { AirRow, CommuteCompare, FeelAsk, NormalLine, WarnBanner } from './components/Extras'
 import { fetchWeather, type WeatherData } from './lib/weather'
 import {
   codeLabel,
@@ -38,7 +46,7 @@ import WeatherFx from './components/WeatherFx'
 import { DeltaHero, PrecipCompare, TempRangeBars, WindCompare } from './components/CompareGraphic'
 import ComparePlaces from './components/ComparePlaces'
 import CoupangBanner from './components/CoupangBanner'
-import { fetchTodayVisitors } from './lib/track'
+import { fetchTodayVisitors, trackEvent } from './lib/track'
 import HourlyCard from './components/HourlyCard'
 import { loadOrder, saveOrder, type SectionKey } from './lib/sections'
 import { useLongPressReorder } from './lib/reorder'
@@ -57,6 +65,7 @@ function hhmm(ms: number) {
 }
 
 function tipIcon(emoji: string): UiIcon {
+  if (emoji === '😷') return CloudFog
   if ('🌧️☔☂️🌂🌦️💧'.includes(emoji)) return Umbrella
   if ('☀️🔥🥵🧴🕶️🌡️🌅'.includes(emoji)) return emoji.includes('🕶️') ? Sunglasses : Sun
   if ('💨🍃'.includes(emoji)) return Wind
@@ -84,6 +93,13 @@ export default function App() {
   const [sectionOrder, setSectionOrder] = useState<SectionKey[]>(loadOrder)
   /** 헤더의 지역 버튼을 누를 때마다 올려서 검색창을 연다 */
   const [searchSignal, setSearchSignal] = useState(0)
+  const [air, setAir] = useState<AirNow | null>(boot?.air ?? null)
+  const [feel, setFeel] = useState(loadFeel)
+  const [commute, setCommute] = useState<CommutePrefs>(loadCommute)
+  const [normal, setNormal] = useState<Normal | null>(null)
+  const [warnItems, setWarnItems] = useState<WarnItem[] | null>(null)
+  /** 공유·복사 결과를 잠깐 보여주는 한 줄 */
+  const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
     fetchTodayVisitors().then(setVisitors)
@@ -108,7 +124,11 @@ export default function App() {
           setLoc(cached.loc)
           setWx(cached.wx)
           setKmaNow(cached.kmaNow)
+          setAir(cached.air ?? null)
           loadedId.current = id
+        } else {
+          // 다른 지역의 미세먼지가 남아 있으면 안 된다
+          setAir(null)
         }
       }
       try {
@@ -142,7 +162,13 @@ export default function App() {
         setKmaNow(obs)
         loadedId.current = id
         setStatus('ready')
-        saveLast(id, { loc: where, wx: weather, kmaNow: obs })
+        saveLast(id, { loc: where, wx: weather, kmaNow: obs, air: null })
+        // 미세먼지는 날씨를 붙잡지 않도록 따로 받는다 (없으면 줄만 안 보인다)
+        fetchAir(where.lat, where.lon).then((a) => {
+          if (seq !== loadSeq.current) return
+          setAir(a)
+          saveLast(id, { loc: where, wx: weather, kmaNow: obs, air: a })
+        })
       } catch {
         if (seq !== loadSeq.current) return
         setStatus('error')
@@ -156,6 +182,7 @@ export default function App() {
 
   function selectPlace(id: string) {
     if (id === 'current') promptRef.current = true
+    if (id !== selectedId) trackEvent('place_select', { kind: id === 'current' ? 'current' : 'favorite' })
     if (id === selectedId) load(id)
     else setSelectedId(id)
   }
@@ -171,6 +198,38 @@ export default function App() {
     // favorites 변경만으로는 재로드하지 않음 (선택 변경 시에만)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId])
+
+  // 평년(최근 10년)과 기상특보 — 지역이 바뀔 때만. 둘 다 실패하면 조용히 숨는다.
+  const locLat = loc?.lat
+  const locLon = loc?.lon
+  useEffect(() => {
+    if (locLat === undefined || locLon === undefined) return
+    let alive = true
+    setNormal(null)
+    fetchNormal(locLat, locLon).then((n) => alive && setNormal(n))
+    if (inKoreaBounds(locLat, locLon)) fetchWarnings().then((w) => alive && setWarnItems(w))
+    else setWarnItems(null)
+    return () => {
+      alive = false
+    }
+  }, [locLat, locLon])
+
+  useEffect(() => {
+    if (!toast) return
+    const t = window.setTimeout(() => setToast(null), 2600)
+    return () => window.clearTimeout(t)
+  }, [toast])
+
+  function onFeelVote(v: FeelVote) {
+    setFeel(voteFeel(v))
+    trackEvent('feel_vote', { v })
+  }
+
+  function onSetCommute(next: CommutePrefs) {
+    setCommute(next)
+    saveCommute(next)
+    trackEvent('commute_set', { on: next.on, am: next.am, pm: next.pm })
+  }
 
   // 홈 화면 앱은 며칠씩 떠 있다. 다시 볼 때 오래된 날씨면 알아서 새로 받는다.
   const latest = useRef({ load, selectedId, fetchedAt: wx?.fetchedAt ?? 0 })
@@ -269,7 +328,34 @@ export default function App() {
   // 현재 날씨 상태: 기상청 관측(PTY)이 강수를 잡으면 관측값 우선, 아니면 모델 라벨
   const obsLabel = ptyLabel(kmaNow?.pty ?? null)
   const now = obsLabel ?? codeLabel(wx.nowCode)
-  const tips = funTips({ today: wx.today, yesterday: wx.yesterday, uvMax: wx.uvMaxToday })
+  const tips = funTips({
+    today: wx.today,
+    yesterday: wx.yesterday,
+    uvMax: wx.uvMaxToday,
+    airGrade: air?.grade ?? null,
+    feelOffset: feel.offset,
+  })
+  const warnHits = warnItems ? matchWarnings(warnItems, loc.label) : []
+
+  async function onShare() {
+    if (!wx || !loc) return
+    trackEvent('share')
+    // 캔버스 그리기 코드는 누를 때만 받는다
+    const { shareCompare } = await import('./lib/share')
+    const r = await shareCompare({
+      place: loc.label.replace(' (기본 위치)', ''),
+      nowTemp: wx.nowTemp,
+      condition: now.label,
+      delta: wx.nowTemp - wx.yesterdaySameHour,
+      today: wx.today,
+      yesterday: wx.yesterday,
+      air: air ? GRADE_LABEL[air.grade] : null,
+    })
+    if (r === 'shared') trackEvent('share_done')
+    if (r === 'copied') setToast('링크와 요약을 복사했어요')
+    else if (r === 'downloaded') setToast('공유 이미지를 저장했어요')
+    else if (r === 'failed') setToast('공유하지 못했어요')
+  }
   const picks = partnerPicks({ today: wx.today, uvMax: wx.uvMaxToday })
   const alerts = tomorrowAlerts(wx.tomorrow, wx.today)
   const tomorrowLabel = codeLabel(wx.tomorrow.code)
@@ -314,6 +400,10 @@ export default function App() {
             onSetHome={setHome}
             sectionOrder={sectionOrder}
             onSetOrder={applyOrder}
+            commute={commute}
+            onSetCommute={onSetCommute}
+            feelOffset={feel.offset}
+            onResetFeel={() => setFeel(resetFeel())}
           />
         </div>
       </header>
@@ -365,14 +455,22 @@ export default function App() {
       {key === 'hero' && (
         <>
           <section className="hero card">
+            <WarnBanner hits={warnHits} />
             <div className="hero-date">
               <span>
                 {new Intl.DateTimeFormat('ko-KR', { month: '2-digit', day: '2-digit', weekday: 'long' }).format(new Date())}
               </span>
+              <span className="hero-actions">
+              <button type="button" className="hero-updated" onClick={onShare} aria-label="어제와 비교한 오늘 날씨 공유하기">
+                <ShareNetwork size={14} weight="bold" aria-hidden /> 공유
+              </button>
               <button
                 type="button"
                 className={`hero-updated ${Date.now() - wx.fetchedAt > STALE_MS ? 'stale' : ''}`}
-                onClick={() => selectPlace(selectedId)}
+                onClick={() => {
+                  trackEvent('refresh')
+                  selectPlace(selectedId)
+                }}
                 disabled={status === 'loading'}
                 aria-label={
                   status === 'loading' ? '날씨 새로 받는 중' : `${hhmm(wx.fetchedAt)} 기준 날씨, 눌러서 새로고침`
@@ -381,6 +479,7 @@ export default function App() {
                 <ArrowClockwise size={14} weight="bold" aria-hidden className={status === 'loading' ? 'spin' : ''} />
                 {status === 'loading' ? '갱신 중…' : `${hhmm(wx.fetchedAt)} 기준`}
               </button>
+              </span>
             </div>
             <div className="hero-main">
               {(() => {
@@ -418,6 +517,7 @@ export default function App() {
                   </span>
                 </div>
               </div>
+              {air && <AirRow air={air} />}
             </div>
             <HourlyCard wx={wx} embedded />
             {tips.length > 0 && (
@@ -444,6 +544,7 @@ export default function App() {
                 >
                   {tipsOpen ? '접기 ▲' : '자세히 보기 ▼'}
                 </button>
+                <FeelAsk answered={answeredToday(feel)} offset={feel.offset} onVote={onFeelVote} />
               </>
             )}
             {picks.length > 0 && (
@@ -464,11 +565,13 @@ export default function App() {
           <section className="card">
             <h2 className="section-title">어제와 비교하면</h2>
             <p className="cmp-summary">{compareSummary(wx.today, wx.yesterday)}</p>
+            <CommuteCompare wx={wx} prefs={commute} />
             <div className="cmp-sec">
               <h3 className="cmp-title">
                 <ThermometerSimple size={16} weight="duotone" className="warm-icon" aria-hidden /> 기온
               </h3>
               <TempRangeBars today={wx.today} yesterday={wx.yesterday} />
+              {normal && <NormalLine normal={normal} today={wx.today} />}
             </div>
             <div className="cmp-sec">
               <h3 className="cmp-title">
@@ -626,9 +729,12 @@ export default function App() {
         {partnersActive() && <p className="muted small">{PARTNERS_NOTICE}</p>}
         <p className="muted small">
             위치는 날씨를 물어볼 때만 쓰고 기기 안에 둡니다. 알림을 켜면 알림 보낼 지역과 시간만
-            저장하고, 알림을 끄면 지웁니다. 방문 수는 이름 없이 숫자만 셉니다.
+            저장하고, 알림을 끄면 지웁니다. 방문 수와 어떤 버튼이 쓰이는지는 이름 없이 숫자만 셉니다.
         </p>
-        <p className="muted small">데이터: 기상청 · Open-Meteo · RainViewer · © OpenStreetMap</p>
+        <p className="muted small">
+          데이터: 기상청 · Open-Meteo · RainViewer · © OpenStreetMap · 미세먼지는 CAMS 예측 모델 값이라
+          측정소 값과 다를 수 있어요
+        </p>
         <p className="muted small">
           <a
             className="family-link"
@@ -640,6 +746,11 @@ export default function App() {
           </a>
         </p>
       </footer>
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
     </div>
   )
 }
