@@ -93,13 +93,15 @@ src/
 │   ├── sections.ts    # 섹션 순서 저장·이동
 │   ├── reorder.ts     # 롱탭 드래그 정렬 (FLIP 애니메이션)
 │   ├── accent.ts      # 색상 테마 토큰
+│   ├── weatherIcon.ts # 날씨 라벨 → 선형 아이콘·색 계열
+│   ├── lastWeather.ts # 마지막 날씨 캐시 (재방문 시 바로 표시)
 │   ├── partners.ts    # 날씨에 맞는 준비물 추천
 │   ├── push.ts        # 웹푸시 구독 (RPC 두 개로만 저장·해제)
 │   ├── track.ts       # 익명 방문 집계
 │   └── geo.ts         # geolocation + 역지오코딩
 ├── components/
 │   ├── RadarMap.tsx      # Leaflet 지도 + 실황/예측 타임라인 (지연 로드)
-│   ├── HourlyCard.tsx    # 24시간 기온·강수 그래프
+│   ├── HourlyCard.tsx    # 앞으로 15시간(3시간 간격) 기온·강수 그래프
 │   ├── CompareGraphic.tsx# 어제 대비 변화를 막대로
 │   ├── ComparePlaces.tsx # 다른 지역과 나란히 비교
 │   ├── WeatherFx.tsx     # 현재 날씨에 맞춘 배경 애니메이션
