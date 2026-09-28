@@ -1,7 +1,8 @@
-// 시간대별 기온·강수 — 앞으로 24시간 기온 곡선(어제 같은 시간대 점선 겹침) + 강수량 막대
+// 시간대별 기온·강수 — 지금부터 3시간 간격 6개 지점(15시간) 기온 곡선
+// (어제 같은 시간대 점선 겹침) + 강수량 막대
 import { codeLabel } from '../lib/compare'
 import type { WeatherData } from '../lib/weather'
-import { Cloud, CloudFog, CloudLightning, CloudRain, CloudSun, MoonStars, Snowflake, Sun } from '@phosphor-icons/react'
+import { weatherIcon, weatherTone } from '../lib/weatherIcon'
 
 interface Props {
   wx: WeatherData
@@ -17,13 +18,11 @@ const CHART_H = 92
 const RAIN_TOP = TOP + CHART_H + 8
 const RAIN_H = 18
 
-function iconFor(label: string, hour: number) {
-  if (label.includes('뇌우')) return CloudLightning
-  if (label.includes('눈')) return Snowflake
-  if (label.includes('안개')) return CloudFog
-  if (label.includes('비') || label.includes('소나기')) return CloudRain
-  if (label.includes('구름') || label.includes('흐림')) return label.includes('조금') ? CloudSun : Cloud
-  return hour >= 6 && hour < 19 ? Sun : MoonStars
+const STEP_H = 3
+
+/** 강수량 표기 — 1mm 미만은 소수 한 자리 */
+function mm(v: number) {
+  return v < 1 ? `${v.toFixed(1)}mm` : `${Math.round(v)}mm`
 }
 
 export default function HourlyCard({ wx, embedded = false }: Props) {
@@ -31,12 +30,16 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
   // 기기 시간이 아니라 해당 지역 현지 시각 기준 (다른 시간대 즐겨찾기 대응)
   const nowHour = wx.nowHourLocal
   const start = 24 + nowHour
-  const idx = Array.from({ length: 6 }, (_, i) => start + i * 3).filter((i) => i < temp.length)
+  const idx = Array.from({ length: 6 }, (_, i) => start + i * STEP_H).filter((i) => i < temp.length)
   if (idx.length < 6) return null
+  /** 그래프가 덮는 시간 (지금 ~ 마지막 지점) */
+  const spanH = (idx.length - 1) * STEP_H
   const tToday = idx.map((i) => temp[i])
   const tYest = idx.map((i) => temp[i - 24])
   const pr = idx.map((i) => precip[i] ?? 0)
+  const anyRain = pr.some((p) => p > 0)
   const hours = idx.map((i) => new Date(time[i]).getHours())
+  const labels = idx.map((i) => codeLabel(code?.[i] ?? wx.nowCode).label)
 
   const all = [...tToday, ...tYest].filter((v) => typeof v === 'number' && !Number.isNaN(v))
   const lo = Math.floor(Math.min(...all)) - 1
@@ -91,19 +94,24 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
       </div>
       <div className="hourly-points" aria-hidden>
         {idx.map((sourceIndex, k) => {
-          const label = codeLabel(code?.[sourceIndex] ?? wx.nowCode)
-          const Icon = iconFor(label.label, hours[k])
+          const Icon = weatherIcon(labels[k], hours[k] >= 6 && hours[k] < 19)
           return (
             <div className="hourly-point" key={sourceIndex}>
               <span>{k === 0 ? '지금' : `${hours[k]}시`}</span>
-              <Icon size={23} weight="duotone" />
+              <Icon size={23} weight="duotone" className={`wi-${weatherTone(labels[k])}`} />
               <strong>{Math.round(tToday[k])}°</strong>
-              <small>{pr[k] > 0 ? `${pr[k].toFixed(1)}mm` : '0mm'}</small>
+              {/* 비가 한 번도 없으면 줄을 통째로 뺀다. 있으면 자리만 맞추고 0 은 비워 둔다. */}
+              {anyRain && <small>{pr[k] > 0 ? mm(pr[k]) : '\u00a0'}</small>}
             </div>
           )
         })}
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="hourly-svg" role="img" aria-label="앞으로 24시간 기온과 강수량">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="hourly-svg"
+        role="img"
+        aria-label={`앞으로 ${spanH}시간 기온과 강수량`}
+      >
         <defs>
           <linearGradient id="hourlyFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.28" />
@@ -178,8 +186,12 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
         {(() => {
           const rainy = pr.findIndex((p, k) => p >= 0.5 && k > 0)
           if (rainy > 0) return `${hours[rainy]}시쯤 비가 올 수 있어요`
-          const lb = codeLabel(wx.today.code)
-          return `앞으로 24시간 ${lb.label} 흐름이에요`
+          // 하루 전체 코드가 아니라 그래프에 그려진 시간대에서 가장 많이 나온 날씨로 말한다.
+          // (지금 맑은데 "흐림 흐름"이라고 하면 바로 위 아이콘과 부딪힌다)
+          const counts = new Map<string, number>()
+          for (const l of labels) counts.set(l, (counts.get(l) ?? 0) + 1)
+          const main = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0]
+          return `앞으로 ${spanH}시간 ${main.startsWith('대체로') ? main : `대체로 ${main}`}`
         })()}
       </div>
     </section>

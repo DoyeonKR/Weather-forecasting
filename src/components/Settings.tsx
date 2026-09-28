@@ -69,8 +69,13 @@ export default function Settings({ loc, favorites, homeId, onSetHome, sectionOrd
       if (ev.key === 'Escape' && !busyRef.current) setOpen(false)
     }
     window.addEventListener('keydown', onKey)
+    // 시트가 화면보다 길어 안쪽을 스크롤하면 뒤 페이지까지 같이 밀렸다
+    const root = document.documentElement
+    const prevOverflow = root.style.overflow
+    root.style.overflow = 'hidden'
     return () => {
       window.removeEventListener('keydown', onKey)
+      root.style.overflow = prevOverflow
       setNotice(null)
       opener?.focus()
     }

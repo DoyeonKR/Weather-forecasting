@@ -1,5 +1,5 @@
 // 위치 바 — 항상 보이는 동네 검색 + 현재 위치/즐겨찾기 칩
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Crosshair, MagnifyingGlass, MapPin, Star } from '@phosphor-icons/react'
 import { searchPlaces, type Place } from '../lib/places'
 import { useLongPressReorder } from '../lib/reorder'
@@ -16,9 +16,20 @@ interface Props {
   onMove: (id: string, dir: -1 | 1) => void
   /** 전체 순서 교체 (드래그 정렬) */
   onReorder: (ids: string[]) => void
+  /** 값이 바뀔 때마다 검색창을 열고 입력 커서를 둔다 (헤더의 지역 버튼) */
+  openSearchSignal?: number
 }
 
-export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRemove, onMove, onReorder }: Props) {
+export default function PlaceBar({
+  favorites,
+  selectedId,
+  onSelect,
+  onView,
+  onRemove,
+  onMove,
+  onReorder,
+  openSearchSignal = 0,
+}: Props) {
   const chipReorder = useLongPressReorder<string>({
     order: favorites.map((f) => f.id),
     onChange: onReorder,
@@ -32,6 +43,20 @@ export default function PlaceBar({ favorites, selectedId, onSelect, onView, onRe
   const [editMode, setEditMode] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const focusOnOpen = useRef(false)
+
+  useEffect(() => {
+    if (!openSearchSignal) return
+    focusOnOpen.current = true
+    setSearchOpen(true)
+  }, [openSearchSignal])
+
+  // 검색창이 그려진 뒤에 커서를 둔다 (이미 열려 있었으면 바로)
+  useEffect(() => {
+    if (!searchOpen || !focusOnOpen.current) return
+    focusOnOpen.current = false
+    inputRef.current?.focus()
+  }, [searchOpen, openSearchSignal])
 
   async function runSearch() {
     const q = query.trim()

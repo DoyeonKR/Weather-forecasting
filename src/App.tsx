@@ -1,22 +1,21 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState, type ComponentType } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import {
-  Cloud,
-  CloudFog,
-  CloudLightning,
-  CloudRain,
+  ArrowClockwise,
+  CaretDown,
   CloudSun,
   Drop,
   MapPin,
-  MoonStars,
-  Snowflake,
   Sun,
   Sunglasses,
   ThermometerSimple,
   TShirt,
   Umbrella,
+  Warning,
   Wind,
 } from '@phosphor-icons/react'
 import { locate, type Located } from './lib/geo'
+import { weatherIcon, weatherTone, type UiIcon } from './lib/weatherIcon'
+import { loadLast, saveLast } from './lib/lastWeather'
 import { fetchWeather, type WeatherData } from './lib/weather'
 import {
   codeLabel,
@@ -48,21 +47,13 @@ import './App.css'
 type Status = 'loading' | 'ready' | 'error'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
+/** 방문자 수가 이보다 적으면 숨긴다 — "오늘 2명"은 오히려 믿음을 깎는다 */
+const VISITORS_MIN = 10
+/** 탭으로 돌아왔을 때 이보다 오래된 날씨면 새로 받는다 */
+const STALE_MS = 15 * 60 * 1000
 
-type UiIcon = ComponentType<{
-  size?: number
-  weight?: 'regular' | 'bold' | 'duotone'
-  className?: string
-  'aria-hidden'?: boolean
-}>
-
-function weatherIcon(label: string, isDay: boolean): UiIcon {
-  if (label.includes('뇌우')) return CloudLightning
-  if (label.includes('눈')) return Snowflake
-  if (label.includes('안개')) return CloudFog
-  if (label.includes('비') || label.includes('소나기')) return CloudRain
-  if (label.includes('구름') || label.includes('흐림')) return label.includes('조금') ? CloudSun : Cloud
-  return isDay ? Sun : MoonStars
+function hhmm(ms: number) {
+  return new Intl.DateTimeFormat('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false }).format(ms)
 }
 
 function tipIcon(emoji: string): UiIcon {
@@ -83,12 +74,16 @@ export default function App() {
   const [homeId, setHomeId] = useState<string>(loadHome)
   /** 검색으로 보는 임시 장소 (즐겨찾기 아님) */
   const [tempPlace, setTempPlace] = useState<Place | null>(null)
-  const [loc, setLoc] = useState<Located | null>(null)
-  const [wx, setWx] = useState<WeatherData | null>(null)
-  const [kmaNow, setKmaNow] = useState<KmaNow | null>(null)
+  // 지난번에 받아 둔 날씨가 있으면 스피너 없이 그것부터 보여주고 곧바로 새로 받는다
+  const [boot] = useState(() => loadLast(selectedId))
+  const [loc, setLoc] = useState<Located | null>(boot?.loc ?? null)
+  const [wx, setWx] = useState<WeatherData | null>(boot?.wx ?? null)
+  const [kmaNow, setKmaNow] = useState<KmaNow | null>(boot?.kmaNow ?? null)
   const [visitors, setVisitors] = useState<number | null>(null)
   const [tipsOpen, setTipsOpen] = useState(true)
   const [sectionOrder, setSectionOrder] = useState<SectionKey[]>(loadOrder)
+  /** 헤더의 지역 버튼을 누를 때마다 올려서 검색창을 연다 */
+  const [searchSignal, setSearchSignal] = useState(0)
 
   useEffect(() => {
     fetchTodayVisitors().then(setVisitors)
@@ -99,12 +94,23 @@ export default function App() {
   // 지역을 빠르게 바꿀 때 먼저 시작한 요청이 나중 결과를 덮어쓰지 않도록
   const loadSeq = useRef(0)
   // 지금 화면에 그려진 날씨가 어느 지역 것인지 (실패했을 때 선택을 되돌리는 기준)
-  const loadedId = useRef('')
+  const loadedId = useRef(boot ? selectedId : '')
 
   const load = useCallback(
     async (id: string) => {
       const seq = ++loadSeq.current
       setStatus('loading')
+      // 다른 지역으로 바꿀 때 받아 둔 날씨가 있으면 먼저 보여준다.
+      // 지역 이름과 날씨가 같은 출처라 헤더와 본문이 어긋나지 않는다.
+      if (loadedId.current !== id) {
+        const cached = loadLast(id)
+        if (cached) {
+          setLoc(cached.loc)
+          setWx(cached.wx)
+          setKmaNow(cached.kmaNow)
+          loadedId.current = id
+        }
+      }
       try {
         let where: Located
         const fav =
@@ -136,6 +142,7 @@ export default function App() {
         setKmaNow(obs)
         loadedId.current = id
         setStatus('ready')
+        saveLast(id, { loc: where, wx: weather, kmaNow: obs })
       } catch {
         if (seq !== loadSeq.current) return
         setStatus('error')
@@ -164,6 +171,19 @@ export default function App() {
     // favorites 변경만으로는 재로드하지 않음 (선택 변경 시에만)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId])
+
+  // 홈 화면 앱은 며칠씩 떠 있다. 다시 볼 때 오래된 날씨면 알아서 새로 받는다.
+  const latest = useRef({ load, selectedId, fetchedAt: wx?.fetchedAt ?? 0 })
+  latest.current = { load, selectedId, fetchedAt: wx?.fetchedAt ?? 0 }
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      const { load: run, selectedId: id, fetchedAt } = latest.current
+      if (fetchedAt && Date.now() - fetchedAt > STALE_MS) run(id)
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
 
   function addFavorite(p: Place) {
     setFavorites((prev) => {
@@ -270,19 +290,22 @@ export default function App() {
                 갱신 실패, 눌러서 다시 시도
               </button>
             ) : (
-              visitors !== null && <span className="visitors">👀 오늘 {visitors}명</span>
+              visitors !== null &&
+              visitors >= VISITORS_MIN && <span className="visitors">👀 오늘 {visitors}명</span>
             )}
           </span>
         </div>
         <div className="top-right">
+          {/* 위치 칩은 "다른 지역 보기" 하나만 한다. 새로고침은 날씨 카드의 기준 시각 버튼. */}
           <button
             type="button"
             className="loc"
-            onClick={() => selectPlace(selectedId)}
-            title={loc.isFallback && selectedId === 'current' ? '눌러서 내 위치 사용' : `${loc.label} 새로고침`}
+            onClick={() => setSearchSignal((n) => n + 1)}
+            aria-label={`지역 바꾸기, 지금 ${loc.label}`}
           >
             <MapPin size={17} weight="fill" aria-hidden />
             <span className="loc-name">{loc.label.replace(' (기본 위치)', '(기본)')}</span>
+            <CaretDown size={13} weight="bold" aria-hidden />
           </button>
           <Settings
             loc={{ lat: loc.lat, lon: loc.lon, label: loc.label }}
@@ -302,6 +325,7 @@ export default function App() {
         onView={viewPlace}
         onRemove={removeFavorite}
         onMove={moveFavorite}
+        openSearchSignal={searchSignal}
         onReorder={(ids) => {
           setFavorites((prev) => {
             const map = new Map(prev.map((f) => [f.id, f]))
@@ -342,7 +366,21 @@ export default function App() {
         <>
           <section className="hero card">
             <div className="hero-date">
-              {new Intl.DateTimeFormat('ko-KR', { month: '2-digit', day: '2-digit', weekday: 'long' }).format(new Date())}
+              <span>
+                {new Intl.DateTimeFormat('ko-KR', { month: '2-digit', day: '2-digit', weekday: 'long' }).format(new Date())}
+              </span>
+              <button
+                type="button"
+                className={`hero-updated ${Date.now() - wx.fetchedAt > STALE_MS ? 'stale' : ''}`}
+                onClick={() => selectPlace(selectedId)}
+                disabled={status === 'loading'}
+                aria-label={
+                  status === 'loading' ? '날씨 새로 받는 중' : `${hhmm(wx.fetchedAt)} 기준 날씨, 눌러서 새로고침`
+                }
+              >
+                <ArrowClockwise size={14} weight="bold" aria-hidden className={status === 'loading' ? 'spin' : ''} />
+                {status === 'loading' ? '갱신 중…' : `${hhmm(wx.fetchedAt)} 기준`}
+              </button>
             </div>
             <div className="hero-main">
               {(() => {
@@ -395,11 +433,15 @@ export default function App() {
                         <div className="tip-title">{t.title}</div>
                         {tipsOpen && <div className="tip-body">{t.body}</div>}
                       </div>
-                      <span className="tip-chevron" aria-hidden>›</span>
                     </li>)
                   })}
                 </ul>
-                <button type="button" className="tips-more" onClick={() => setTipsOpen((o) => !o)}>
+                <button
+                  type="button"
+                  className="tips-more"
+                  aria-expanded={tipsOpen}
+                  onClick={() => setTipsOpen((o) => !o)}
+                >
                   {tipsOpen ? '접기 ▲' : '자세히 보기 ▼'}
                 </button>
               </>
@@ -423,15 +465,21 @@ export default function App() {
             <h2 className="section-title">어제와 비교하면</h2>
             <p className="cmp-summary">{compareSummary(wx.today, wx.yesterday)}</p>
             <div className="cmp-sec">
-              <h3 className="cmp-title">🌡️ 기온</h3>
+              <h3 className="cmp-title">
+                <ThermometerSimple size={16} weight="duotone" className="warm-icon" aria-hidden /> 기온
+              </h3>
               <TempRangeBars today={wx.today} yesterday={wx.yesterday} />
             </div>
             <div className="cmp-sec">
-              <h3 className="cmp-title">💧 강수</h3>
+              <h3 className="cmp-title">
+                <Drop size={16} weight="duotone" className="cold-icon" aria-hidden /> 강수
+              </h3>
               <PrecipCompare today={wx.today} yesterday={wx.yesterday} />
             </div>
             <div className="cmp-sec">
-              <h3 className="cmp-title">💨 바람</h3>
+              <h3 className="cmp-title">
+                <Wind size={16} weight="duotone" className="wind-icon" aria-hidden /> 바람
+              </h3>
               <WindCompare today={wx.today} yesterday={wx.yesterday} />
             </div>
           </section>
@@ -443,8 +491,11 @@ export default function App() {
           <section className="card">
             <h2 className="section-title">내일은 오늘보다</h2>
             <div className="tomorrow-row">
-              <span className="tomorrow-emoji" aria-hidden>
-                {tomorrowLabel.emoji}
+              <span className={`tomorrow-emoji wi-${weatherTone(tomorrowLabel.label)}`} aria-hidden>
+                {(() => {
+                  const TomorrowIcon = weatherIcon(tomorrowLabel.label)
+                  return <TomorrowIcon size={40} weight="duotone" />
+                })()}
               </span>
               <div className="tomorrow-info">
                 <div>
@@ -459,7 +510,9 @@ export default function App() {
             {alerts.length > 0 && (
               <ul className="alerts">
                 {alerts.map((a) => (
-                  <li key={a}>⚠️ {a}</li>
+                  <li key={a}>
+                    <Warning size={16} weight="duotone" aria-hidden /> {a}
+                  </li>
                 ))}
               </ul>
             )}
@@ -488,6 +541,7 @@ export default function App() {
                 return wx.week.map((d, i) => {
                   const dt = new Date(`${d.date}T00:00:00`)
                   const lb = codeLabel(d.stats.code)
+                  const DayIcon = weatherIcon(lb.label)
                   const dayName = i === 0 ? '오늘' : WEEKDAYS[dt.getDay()]
                   const left = ((d.stats.tmin - lo) / span) * 100
                   const width = Math.max(((d.stats.tmax - d.stats.tmin) / span) * 100, 4)
@@ -499,8 +553,8 @@ export default function App() {
                       <span className="week-date">
                         {dt.getMonth() + 1}.{dt.getDate()}
                       </span>
-                      <span className="week-emoji" role="img" aria-label={lb.label}>
-                        {lb.emoji}
+                      <span className={`week-emoji wi-${weatherTone(lb.label)}`} role="img" aria-label={lb.label}>
+                        <DayIcon size={22} weight="duotone" aria-hidden />
                       </span>
                       <span className="week-prob">
                         {(d.stats.precipProbMax ?? 0) >= 20 ? `${d.stats.precipProbMax}%` : ''}
@@ -544,7 +598,6 @@ export default function App() {
           </div>
         ))}
         <CoupangBanner id={1020557} template="banner" height={90} maxWidth={728} />
-        <p className="muted small order-hint">카드나 즐겨찾기 칩을 길게 누르면 순서를 바꿀 수 있어요 · 설정(⚙️)에서도 변경 가능</p>
       </div>
 
       <footer className="foot">

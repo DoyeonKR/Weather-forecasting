@@ -30,6 +30,11 @@ interface Props {
 }
 
 const RADAR_OPACITY = 0.65
+/** 터치 화면이면 한 손가락은 페이지 스크롤에 양보하고, 지도는 두 손가락으로 움직인다 */
+const TOUCH_FIRST =
+  typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia('(pointer: coarse)').matches
+    : false
 const GRID_N = 13 // 13x13 격자 (169좌표 — Open-Meteo 무료 한도 고려)
 const GRID_STEP = 0.28 // ≈ 28km 간격 (전체 ±1.8° 커버)
 const GRID_CACHE_TTL = 20 * 60 * 1000 // 20분 캐시로 호출량 절약
@@ -308,6 +313,7 @@ export default function RadarMap({ lat, lon }: Props) {
   const [idx, setIdx] = useState(0)
   const [playing, setPlaying] = useState(false)
   const [error, setError] = useState(false)
+  const [gestureHint, setGestureHint] = useState(false)
 
   // 지도 초기화 (최초 1회)
   useEffect(() => {
@@ -316,6 +322,10 @@ export default function RadarMap({ lat, lon }: Props) {
       center: [lat, lon],
       zoom: 8,
       zoomControl: false,
+      // 한 손가락 드래그를 지도가 가져가면 화면 40% 를 덮는 지도 위에서 스크롤이 멈춘다.
+      // 끄면 Leaflet 이 touch-action: pan-x pan-y 를 걸어 스크롤은 페이지로 가고,
+      // 두 손가락 핀치(TouchZoom)가 확대·이동을 함께 맡는다.
+      dragging: !TOUCH_FIRST,
     })
     L.control.zoom({ position: 'bottomright' }).addTo(map)
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -502,12 +512,52 @@ export default function RadarMap({ lat, lon }: Props) {
     return () => window.clearInterval(t)
   }, [playing, timeline.length])
 
+  // 한 손가락으로 지도를 끌려고 하면 방법을 잠깐 알려준다
+  useEffect(() => {
+    const el = containerRef.current
+    if (!TOUCH_FIRST || !el) return
+    let startY = 0
+    let startX = 0
+    let timer: number | null = null
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) {
+        setGestureHint(false)
+        return
+      }
+      startX = e.touches[0].clientX
+      startY = e.touches[0].clientY
+    }
+    const onMove = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return
+      const dx = Math.abs(e.touches[0].clientX - startX)
+      const dy = Math.abs(e.touches[0].clientY - startY)
+      // 세로로 훑는 건 스크롤이다. 가로로 끄는 것만 "지도를 옮기려는" 동작으로 본다.
+      if (dx > 24 && dx > dy * 1.5) {
+        setGestureHint(true)
+        if (timer !== null) window.clearTimeout(timer)
+        timer = window.setTimeout(() => setGestureHint(false), 1600)
+      }
+    }
+    el.addEventListener('touchstart', onStart, { passive: true })
+    el.addEventListener('touchmove', onMove, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onStart)
+      el.removeEventListener('touchmove', onMove)
+      if (timer !== null) window.clearTimeout(timer)
+    }
+  }, [])
+
   const current = timeline[idx]
   const isFuture = current?.kind === 'forecast'
 
   return (
     <div className="radar-wrap">
       <div ref={containerRef} className="radar-map" />
+      {TOUCH_FIRST && (
+        <div className={`radar-gesture-hint ${gestureHint ? 'show' : ''}`} aria-hidden>
+          두 손가락으로 지도를 움직여요
+        </div>
+      )}
       <button
         type="button"
         className="radar-locate"
