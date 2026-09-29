@@ -2,24 +2,25 @@
 import type { DayStats } from '../lib/compare'
 import { round1 } from '../lib/compare'
 
-/** 지금 vs 어제 같은 시각: 큰 화살표 + 숫자 (캡슐 강조) */
+/**
+ * 지금 vs 어제 같은 시각 — 이 앱의 핵심 질문이라 숫자 배지가 아니라 문장으로 말한다.
+ * (예전에는 ▼2.3° 와 8~11px 캡션이 오른쪽 구석에 있어서 무슨 숫자인지 알기 어려웠다)
+ */
 export function DeltaHero({ nowTemp, yesterdaySameHour }: { nowTemp: number; yesterdaySameHour: number }) {
   const d = round1(nowTemp - yesterdaySameHour)
   const same = Math.abs(d) < 0.5
   const mood = same ? 'same' : d > 0 ? 'warm' : 'cold'
   return (
-    <div className={`delta-hero ${mood}`}>
-      <div className="delta-hero-main">
-        {same ? (
-          <span className="delta-hero-num same">≈</span>
-        ) : (
-          <>
-            <span className={`delta-hero-arrow ${mood}`}>{d > 0 ? '▲' : '▼'}</span>
-            <span className={`delta-hero-num ${mood}`}>{Math.abs(d)}°</span>
-          </>
-        )}
-      </div>
-      <span className="delta-hero-cap">어제 이 시간 {round1(yesterdaySameHour)}°</span>
+    <div className={`delta-line ${mood}`}>
+      <span className="delta-line-arrow" aria-hidden>
+        {same ? '≈' : d > 0 ? '▲' : '▼'}
+      </span>
+      <span className="delta-line-text">
+        <b>{same ? '어제 이 시간과 비슷해요' : `어제 이 시간보다 ${Math.abs(d).toFixed(1)}° ${d > 0 ? '따뜻해요' : '추워요'}`}</b>
+        <small>
+          어제 {round1(yesterdaySameHour).toFixed(1)}° → 지금 {round1(nowTemp).toFixed(1)}°
+        </small>
+      </span>
     </div>
   )
 }

@@ -47,6 +47,7 @@ export function AirRow({ air }: { air: AirNow }) {
       </small>
       {air.worse && (
         <span className="air-cmp worse">
+          {air.worse.nextDay ? '내일 ' : ''}
           {air.worse.hour}시쯤 {GRADE_LABEL[air.worse.grade]} 예상
         </span>
       )}

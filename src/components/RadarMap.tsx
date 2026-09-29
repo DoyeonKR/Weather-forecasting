@@ -3,7 +3,9 @@
 // 타임라인 슬라이더: 기본은 현재, 드래그로 과거~미래 탐색.
 import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
+import { ArrowsIn, ArrowsOut, CloudRain, Crosshair, Pause, Play, Sun } from '@phosphor-icons/react'
 import 'leaflet/dist/leaflet.css'
+import { fetchRainSummary, type RainSummary } from '../lib/rainSoon'
 import { lccForward, lccInverse } from '../lib/lcc'
 import { mapleForecastOverlays } from '../lib/kmaMaple'
 
@@ -27,6 +29,10 @@ interface TimelineItem {
 interface Props {
   lat: number
   lon: number
+  /** 지금 기온 — 0도 근처면 "비" 대신 "눈"이라고 말한다 */
+  tempC?: number
+  /** 기상청 실황이 말하는 "지금 비가 오는지" (모르면 null) */
+  observedRaining?: boolean | null
 }
 
 const RADAR_OPACITY = 0.65
@@ -302,7 +308,7 @@ function renderFrameImage(values: number[]): string | null {
   return big.toDataURL('image/png')
 }
 
-export default function RadarMap({ lat, lon }: Props) {
+export default function RadarMap({ lat, lon, tempC, observedRaining = null }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const radarLayersRef = useRef<(L.TileLayer | L.ImageOverlay)[]>([])
@@ -314,6 +320,10 @@ export default function RadarMap({ lat, lon }: Props) {
   const [playing, setPlaying] = useState(false)
   const [error, setError] = useState(false)
   const [gestureHint, setGestureHint] = useState(false)
+  /** 화면을 가득 채워 보기 — 한 손가락으로도 지도를 움직일 수 있다 */
+  const [expanded, setExpanded] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [rain, setRain] = useState<RainSummary | null>(null)
 
   // 지도 초기화 (최초 1회)
   useEffect(() => {
@@ -355,6 +365,49 @@ export default function RadarMap({ lat, lon }: Props) {
     mapRef.current?.setView([lat, lon])
     markerRef.current?.setLatLng([lat, lon])
   }, [lat, lon])
+
+  // 크게 보기: 지도 크기가 바뀌었음을 알리고, 한 손가락 이동을 켠다(닫으면 다시 스크롤에 양보).
+  // 뒤 화면은 스크롤되지 않게 잠근다.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    if (expanded) map.dragging.enable()
+    else if (TOUCH_FIRST) map.dragging.disable()
+    const raf = window.requestAnimationFrame(() => map.invalidateSize())
+    if (!expanded) return () => window.cancelAnimationFrame(raf)
+    const root = document.documentElement
+    const prev = root.style.overflow
+    root.style.overflow = 'hidden'
+    // 카드의 backdrop-filter 가 position:fixed 의 기준을 카드 안으로 가둔다 → 열려 있는 동안만 끈다
+    root.classList.add('radar-fs')
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setExpanded(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.cancelAnimationFrame(raf)
+      root.style.overflow = prev
+      root.classList.remove('radar-fs')
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [expanded])
+
+  // "내 위치에 곧 비가 올까?" 한 줄 — 10분마다 다시 확인
+  const snow = typeof tempC === 'number' && tempC <= 1
+  useEffect(() => {
+    let alive = true
+    const run = () =>
+      fetchRainSummary(lat, lon, snow, observedRaining).then((s) => {
+        if (alive) setRain(s)
+      })
+    setRain(null)
+    run()
+    const t = window.setInterval(run, 10 * 60 * 1000)
+    return () => {
+      alive = false
+      window.clearInterval(t)
+    }
+  }, [lat, lon, snow, observedRaining])
 
   // 프레임 로드: 레이더(과거) + 예보 격자(미래)
   useEffect(() => {
@@ -488,8 +541,8 @@ export default function RadarMap({ lat, lon }: Props) {
       setNowIdx(0)
       setPlaying(false)
     }
-    // 위치가 바뀌면 예보 격자도 다시 (레이더는 전역이지만 함께 재구성)
-  }, [lat, lon])
+    // 위치가 바뀌면 예보 격자도 다시 (레이더는 전역이지만 함께 재구성). reloadKey: "다시 시도"
+  }, [lat, lon, reloadKey])
 
   // 선택된 프레임 표시
   useEffect(() => {
@@ -549,27 +602,78 @@ export default function RadarMap({ lat, lon }: Props) {
 
   const current = timeline[idx]
   const isFuture = current?.kind === 'forecast'
+  const nowPct = timeline.length > 1 ? (nowIdx / (timeline.length - 1)) * 100 : 0
+
+  // 비가 시작·종료되는 시각의 프레임으로 넘긴다 (가장 가까운 예측 프레임)
+  function jumpToRain() {
+    if (!rain?.jumpTo || timeline.length === 0) return
+    let best = -1
+    let bestGap = Infinity
+    timeline.forEach((it, i) => {
+      const gap = Math.abs(it.time - rain.jumpTo!)
+      if (gap < bestGap) {
+        best = i
+        bestGap = gap
+      }
+    })
+    if (best >= 0) {
+      setPlaying(false)
+      setIdx(best)
+    }
+  }
 
   return (
-    <div className="radar-wrap">
-      <div ref={containerRef} className="radar-map" />
-      {TOUCH_FIRST && (
-        <div className={`radar-gesture-hint ${gestureHint ? 'show' : ''}`} aria-hidden>
-          두 손가락으로 지도를 움직여요
+    <div className={`radar-wrap ${expanded ? 'expanded' : ''}`}>
+      {rain && (
+        <div className={`radar-summary ${rain.raining ? 'wet' : rain.jumpTo ? 'soon' : ''}`} role="status">
+          {rain.raining || rain.jumpTo ? (
+            <CloudRain size={20} weight="duotone" aria-hidden />
+          ) : (
+            <Sun size={20} weight="duotone" aria-hidden />
+          )}
+          <span>{rain.text}</span>
+          {rain.jumpTo && (
+            <button type="button" className="radar-summary-go" onClick={jumpToRain}>
+              그 시각 보기
+            </button>
+          )}
         </div>
       )}
-      <button
-        type="button"
-        className="radar-locate"
-        aria-label="현재 위치로 이동"
-        title="현재 위치로 이동"
-        onClick={() => mapRef.current?.setView([lat, lon], 8)}
-      >
-        ◎
-      </button>
+      <div className="radar-stage">
+        <div ref={containerRef} className="radar-map" />
+        {!error && timeline.length === 0 && <div className="radar-loading-pill">레이더 불러오는 중…</div>}
+        {TOUCH_FIRST && !expanded && (
+          <div className={`radar-gesture-hint ${gestureHint ? 'show' : ''}`} aria-hidden>
+            두 손가락으로 움직여요 · 한 손가락은 「크게 보기」에서
+          </div>
+        )}
+        <button
+          type="button"
+          className="radar-expand"
+          aria-label={expanded ? '지도 크게 보기 닫기' : '지도 크게 보기'}
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded ? <ArrowsIn size={16} weight="bold" aria-hidden /> : <ArrowsOut size={16} weight="bold" aria-hidden />}
+          {expanded ? '닫기' : '크게 보기'}
+        </button>
+        <button
+          type="button"
+          className="radar-locate"
+          aria-label="내 위치로 이동"
+          title="내 위치로 이동"
+          onClick={() => mapRef.current?.setView([lat, lon], 8)}
+        >
+          <Crosshair size={20} weight="bold" aria-hidden />
+        </button>
+      </div>
       <div className="radar-bar">
         {error ? (
-          <span className="radar-time">레이더를 불러오지 못했어요</span>
+          <div className="radar-error">
+            <span className="radar-time">레이더를 불러오지 못했어요</span>
+            <button type="button" className="radar-now" onClick={() => setReloadKey((k) => k + 1)}>
+              다시 시도
+            </button>
+          </div>
         ) : (
           <>
             <div className="radar-bar-top">
@@ -580,11 +684,11 @@ export default function RadarMap({ lat, lon }: Props) {
                 aria-label={playing ? '일시정지' : '재생'}
                 disabled={timeline.length === 0}
               >
-                {playing ? '⏸' : '▶'}
+                {playing ? <Pause size={16} weight="fill" aria-hidden /> : <Play size={16} weight="fill" aria-hidden />}
               </button>
               <span className={`radar-time ${isFuture ? 'future' : ''}`}>
                 {current ? timeLabel(current.time) : '로딩 중…'}
-                {current && (isFuture ? ' 예측' : idx === nowIdx ? ' 현재' : '')}
+                {current && (isFuture ? ' 예측' : idx === nowIdx ? ' 현재' : ' 실황')}
               </span>
               <button
                 type="button"
@@ -612,14 +716,48 @@ export default function RadarMap({ lat, lon }: Props) {
               aria-label="레이더 시간 이동"
             />
             {timeline.length > 0 && (
-              <div className="radar-ticks">
-                <span>{timeLabel(timeline[0].time)}</span>
-                <span className="radar-credit">
-                  {inKorea(lat, lon) ? '실황·예측 기상청 레이더' : '실황 RainViewer · 예측 Open-Meteo'}
-                </span>
-                <span>{timeLabel(timeline[timeline.length - 1].time)}</span>
+              <div className="radar-scale">
+                {/* 슬라이더 아래에 지난 시간(실황)과 앞으로(예측)를 색으로 갈라 "지금"이 어디인지 보이게 */}
+                <div className="radar-phase" aria-hidden>
+                  <i className="past" style={{ width: `${nowPct}%` }} />
+                  <i className="future" />
+                </div>
+                <div className="radar-scale-labels">
+                  <span>
+                    {timeLabel(timeline[0].time)} <small>실황</small>
+                  </span>
+                  <span className="radar-now-mark" style={{ left: `${nowPct}%` }}>
+                    지금
+                  </span>
+                  <span>
+                    <small>예측</small> {timeLabel(timeline[timeline.length - 1].time)}
+                  </span>
+                </div>
               </div>
             )}
+            <div className="radar-legend" aria-label="비의 세기 색깔 안내: 왼쪽이 약한 비, 오른쪽이 매우 강한 비">
+              <span className="radar-legend-cap">약함</span>
+              <div className="radar-legend-mid">
+                <div className="radar-legend-bar" aria-hidden>
+                  {RADAR_STOPS.map((s) => (
+                    <i key={s.v} style={{ background: `rgb(${s.c[0]},${s.c[1]},${s.c[2]})` }} />
+                  ))}
+                </div>
+                <div className="radar-legend-vals" aria-hidden>
+                  <span>~1</span>
+                  <span>~3</span>
+                  <span>~6</span>
+                  <span>~12</span>
+                  <span>~25</span>
+                  <span>25↑</span>
+                </div>
+              </div>
+              <span className="radar-legend-cap">매우 강함</span>
+            </div>
+            <div className="radar-legend-unit">시간당 강수량(mm)</div>
+            <div className="radar-credit">
+              {inKorea(lat, lon) ? '실황·예측 기상청 레이더' : '실황 RainViewer · 예측 Open-Meteo'}
+            </div>
           </>
         )}
       </div>

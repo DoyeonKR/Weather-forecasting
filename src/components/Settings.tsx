@@ -1,6 +1,7 @@
 // 설정 패널 — 알림 온오프 + 색상 테마(포인트 컬러)
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { GearSix } from '@phosphor-icons/react'
 import {
   disableNotify,
   enableNotify,
@@ -245,7 +246,7 @@ export default function Settings({
   return (
     <>
       <button ref={openerRef} type="button" className="gear" aria-label="설정" onClick={() => setOpen(true)}>
-        ⚙️
+        <GearSix size={20} weight="bold" aria-hidden />
       </button>
       {open &&
         createPortal(

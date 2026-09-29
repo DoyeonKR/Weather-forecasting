@@ -1,8 +1,10 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import {
   ArrowClockwise,
+  ArrowUp,
   CaretDown,
   CloudFog,
+  Crosshair,
   CloudSun,
   Drop,
   MapPin,
@@ -151,6 +153,10 @@ export default function App() {
           where = await locate(wantPrompt)
           // GPS 를 기다리는 동안 사용자가 다른 지역을 골랐으면 이 결과는 버린다
           if (seq !== loadSeq.current) return
+          // 사용자가 "현재 위치"를 눌렀는데 못 가져왔다면 아무 일도 없는 것처럼 보이면 안 된다
+          if (where.isFallback && wantPrompt) {
+            setToast('내 위치를 가져오지 못했어요. 브라우저의 위치 권한을 확인해주세요')
+          }
           // 권한이 없고 사용자가 요청한 것도 아니면, 즐겨찾기가 있을 때 그쪽을 우선
           if (where.isFallback && !wantPrompt && favorites.length > 0) {
             setSelectedId(favorites[0].id)
@@ -224,9 +230,18 @@ export default function App() {
 
   useEffect(() => {
     if (!toast) return
-    const t = window.setTimeout(() => setToast(null), 2600)
+    const t = window.setTimeout(() => setToast(null), 3800)
     return () => window.clearTimeout(t)
   }, [toast])
+
+  // 긴 화면에서 맨 위로 돌아가는 버튼 — 조금 내려갔을 때만 나타난다
+  const [showTop, setShowTop] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 900)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   function onFeelVote(v: FeelVote) {
     setFeel(voteFeel(v))
@@ -435,6 +450,16 @@ export default function App() {
         }}
       />
 
+      {loc.isFallback && selectedId === 'current' && (
+        <button type="button" className="fallback-note" onClick={() => selectPlace('current')}>
+          <Crosshair size={18} weight="bold" aria-hidden />
+          <span>
+            위치를 몰라 <b>서울</b> 기준으로 보여드리고 있어요
+            <small>눌러서 내 위치로 보기</small>
+          </span>
+        </button>
+      )}
+
       {tempPlace?.id === selectedId && !favorites.some((f) => f.id === selectedId) && (
         <button type="button" className="star-add" onClick={() => addFavorite(tempPlace)}>
           ⭐ {tempPlace.name} 즐겨찾기에 추가
@@ -499,8 +524,8 @@ export default function App() {
                 <div className="hero-temp">{round1(wx.nowTemp).toFixed(1)}°</div>
                 <div className="hero-condition">{now.label}</div>
               </div>
-              <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
             </div>
+            <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
             <div className="hero-subs">
               <div className="stat-chips">
                 <div className="stat-chip">
@@ -709,7 +734,12 @@ export default function App() {
                   </div>
                 }
               >
-                <RadarMap lat={loc.lat} lon={loc.lon} />
+                <RadarMap
+                  lat={loc.lat}
+                  lon={loc.lon}
+                  tempC={wx.nowTemp}
+                  observedRaining={kmaNow ? (kmaNow.pty ?? 0) > 0 || (kmaNow.rn1 ?? 0) > 0 : null}
+                />
               </Suspense>
             </WhenVisible>
           </section>
@@ -772,6 +802,21 @@ export default function App() {
         <div className="toast" role="status">
           {toast}
         </div>
+      )}
+      {showTop && (
+        <button
+          type="button"
+          className="to-top"
+          aria-label="맨 위로"
+          onClick={() =>
+            window.scrollTo({
+              top: 0,
+              behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+            })
+          }
+        >
+          <ArrowUp size={20} weight="bold" aria-hidden />
+        </button>
       )}
       {statsOpen && (
         <Suspense fallback={null}>

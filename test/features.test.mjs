@@ -15,7 +15,8 @@ const built = esbuild.buildSync({
       "export { areaMatches, matchWarnings, coreNames } from './warn'\n" +
       "export { commuteSlots } from './commute'\n" +
       "export { nextOffset, feelLabel } from './feel'\n" +
-      "export { buildTable } from './normals'\n",
+      "export { buildTable } from './normals'\n" +
+      "export { summarizeRain } from './rainSoon'\n",
     resolveDir: libDir,
     loader: 'ts',
   },
@@ -26,7 +27,7 @@ const built = esbuild.buildSync({
 })
 const mod = { exports: {} }
 new Function('module', 'exports', 'require', built.outputFiles[0].text)(mod, mod.exports, require)
-const { areaMatches, matchWarnings, coreNames, commuteSlots, nextOffset, feelLabel, buildTable } = mod.exports
+const { areaMatches, matchWarnings, coreNames, commuteSlots, nextOffset, feelLabel, buildTable, summarizeRain } = mod.exports
 
 test('동네 이름에서 행정 접미사를 뗀다', () => {
   assert.deepEqual(coreNames('서울특별시 마포구'), ['서울', '마포'])
@@ -94,4 +95,56 @@ test('서울은 구로 권역을 가른다', () => {
   assert.equal(areaMatches({ name: '서울동남권', subs: [] }, '서울특별시 마포구'), false)
   assert.equal(areaMatches({ name: '서울동남권', subs: [] }, '서울특별시 송파구'), true)
   assert.equal(areaMatches({ name: '서울서북권', subs: [] }, '서울특별시 중구'), true)
+})
+
+// ── 레이더 위 "곧 비가 올까?" 문장
+const T0 = 1_000_000_000
+const slots = (n) => Array.from({ length: n }, (_, i) => T0 + i * 900)
+
+test('비 없음: 앞으로 3시간 소식 없음', () => {
+  const r = summarizeRain(slots(16), Array(16).fill(0), T0 + 300, false)
+  assert.equal(r.raining, false)
+  assert.match(r.text, /3시간 비 소식이 없어요/)
+  assert.equal(r.jumpTo, null)
+})
+
+test('곧 시작: 분 단위로 말하고 그 시각으로 넘길 수 있다', () => {
+  const p = Array(16).fill(0)
+  p[3] = 0.6 // 2.4mm/h → 보통 비
+  const r = summarizeRain(slots(16), p, T0 + 300, false)
+  assert.equal(r.raining, false)
+  assert.match(r.text, /약 40분 뒤.*비가 시작/)
+  assert.equal(r.jumpTo, T0 + 3 * 900)
+})
+
+test('내리는 중: 세기와 그치는 때', () => {
+  const p = Array(16).fill(0)
+  p[1] = 0.2 // 0.8mm/h → 약한 비
+  p[2] = 0.2
+  const r = summarizeRain(slots(16), p, T0 + 900 + 60, false)
+  assert.equal(r.raining, true)
+  assert.match(r.text, /약한 비가 내리고 있어요.*약 30분 뒤/)
+})
+
+test('계속 내리면 이어진다고 말하고 넘길 시각은 없다', () => {
+  const r = summarizeRain(slots(16), Array(16).fill(0.5), T0 + 60, false)
+  assert.equal(r.raining, true)
+  assert.match(r.text, /이어질 것 같아요/)
+  assert.equal(r.jumpTo, null)
+})
+
+test('기상청 실황이 있으면 지금 여부는 실황이 이긴다', () => {
+  const dry = Array(16).fill(0)
+  assert.equal(summarizeRain(slots(16), dry, T0 + 60, false, true).raining, true)
+  const wet = Array(16).fill(0.5)
+  const r = summarizeRain(slots(16), wet, T0 + 60, false, false)
+  assert.equal(r.raining, false) // 실황은 안 온다 → 예보의 다음 칸에서 시작을 찾는다
+  assert.match(r.text, /비가 시작/)
+})
+
+test('영하 근처면 눈, 자료가 없으면 null', () => {
+  const p = Array(16).fill(0)
+  p[4] = 0.3
+  assert.match(summarizeRain(slots(16), p, T0 + 60, true).text, /눈이 시작/)
+  assert.equal(summarizeRain([], [], T0, false), null)
 })

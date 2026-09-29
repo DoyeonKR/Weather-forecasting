@@ -27,7 +27,8 @@ interface Handlers {
   onLostPointerCapture: (e: RPointerEvent<HTMLElement>) => void
 }
 
-const INTERACTIVE = 'button, a, input, select, textarea, iframe, .radar-map, .leaflet-container, .range-track, .hourly-scroll'
+const INTERACTIVE =
+  'button, a, input, select, textarea, iframe, .radar-wrap, .leaflet-container, .range-track, .hourly-scroll'
 
 export function useLongPressReorder<T extends string>({ order, onChange, axis, holdMs = 550, attr = 'data-reorder-id' }: Options<T>) {
   const [active, setActive] = useState(false) // 정렬 모드

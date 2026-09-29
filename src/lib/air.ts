@@ -33,8 +33,8 @@ export interface AirNow {
   pm10Yest: number | null
   pm25Yest: number | null
   gradeYest: AirGrade | null
-  /** 앞으로 12시간 안에 지금보다 나빠지는 첫 시각 (없으면 null) */
-  worse: { hour: number; grade: AirGrade } | null
+  /** 앞으로 12시간 안에 지금보다 나빠지는 첫 시각 (없으면 null). nextDay: 내일이면 true */
+  worse: { hour: number; grade: AirGrade; nextDay?: boolean } | null
   /** 값의 출처 — 에어코리아 측정소 실측이면 측정소 이름 */
   source?: { kind: 'airkorea'; station: string } | { kind: 'cams' }
 }
@@ -112,7 +112,8 @@ export function summarizeAir(
     if (typeof x !== 'number' || typeof y !== 'number') continue
     const g = gradeOf(x, y)
     if (g > grade && g >= 2) {
-      worse = { hour: hourOf(i), grade: g }
+      // 배열은 어제 0시부터라 48번째부터가 내일이다 ("2시쯤"이 오늘 새벽인지 내일 새벽인지 헷갈리지 않게)
+      worse = { hour: hourOf(i), grade: g, nextDay: i >= 48 }
       break
     }
   }

@@ -34,7 +34,10 @@ test('지금·어제 같은 시각·앞으로 나빠지는 시각', () => {
   const s = summarizeAir(pm10, pm25, nowIdx, (i) => i % 24)
   assert.equal(s.grade, 0)
   assert.equal(s.gradeYest, 2)
-  assert.deepEqual(s.worse, { hour: 14, grade: 2 })
+  assert.deepEqual(s.worse, { hour: 14, grade: 2, nextDay: false })
+  // 내일 새벽이면 그렇게 말한다 (지금 20시 → 12시간 뒤는 내일 8시)
+  const late = summarizeAir(pm10, pm25.map((v, i) => (i === 24 + 20 + 6 ? 50 : 10)), 24 + 20, (i) => i % 24)
+  assert.deepEqual(late.worse, { hour: 2, grade: 2, nextDay: true })
 })
 
 test('값이 없으면 null', () => {
