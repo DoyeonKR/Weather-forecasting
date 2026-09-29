@@ -41,7 +41,7 @@ function dayLabel(t: Date, today: Date): string {
 }
 
 export default function HourlyCard({ wx, embedded = false }: Props) {
-  const { time, temp, precip, code } = wx.hourly
+  const { time, temp, precip, code, prob: probAll } = wx.hourly
   const scrollRef = useRef<HTMLDivElement>(null)
   const [atEnd, setAtEnd] = useState(false)
   const [scrolled, setScrolled] = useState(false)
@@ -95,6 +95,9 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
   const tPrev = idx.map((i) => temp[i - 24])
   const pr = idx.map((i) => precip[i] ?? 0)
   const anyRain = pr.some((p) => p > 0)
+  // 강수확률(%): 예전 캐시에는 없을 수 있다. 30% 미만은 잡음이라 안 보여준다.
+  const prob = idx.map((i) => probAll?.[i] ?? null)
+  const anyProb = prob.some((p) => p !== null && p >= 30)
   const dates = idx.map((i) => new Date(time[i]))
   const hours = dates.map((d) => d.getHours())
   const labels = idx.map((i) => codeLabel(code?.[i] ?? wx.nowCode).label)
@@ -199,6 +202,9 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
                         <span className={`hs-delta ${d > 0 ? 'warm' : d < 0 ? 'cold' : 'same'}`}>
                           {d > 0 ? `▲${d}` : d < 0 ? `▼${-d}` : '='}
                         </span>
+                        {anyProb && (
+                          <small className="hs-prob">{prob[k] !== null && prob[k]! >= 30 ? `${prob[k]}%` : '\u00a0'}</small>
+                        )}
                         {anyRain && <small className="hs-rain">{pr[k] > 0 ? mm(pr[k]) : '\u00a0'}</small>}
                       </div>
                     )

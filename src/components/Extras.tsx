@@ -1,6 +1,7 @@
 // 메인·비교 카드에 붙는 작은 조각들 — 미세먼지 줄, 체감 질문, 출퇴근 비교, 평년 비교, 특보 배너
 import { useEffect, useState } from 'react'
-import { PersonSimpleWalk, Warning } from '@phosphor-icons/react'
+import { PersonSimpleWalk, SunHorizon, Warning } from '@phosphor-icons/react'
+import { uvLabel } from '../lib/uv'
 import { GRADE_LABEL, gradePm10, gradePm25, type AirNow } from '../lib/air'
 import { codeLabel } from '../lib/compare'
 import { commuteSlots, type CommutePrefs } from '../lib/commute'
@@ -15,6 +16,34 @@ function Diff({ d, unit = '°' }: { d: number; unit?: string }) {
   const r = Math.round(d)
   if (r === 0) return <b className="range-diff same">비슷</b>
   return <b className={`range-diff ${r > 0 ? 'warm' : 'cold'}`}>{r > 0 ? `▲${r}${unit}` : `▼${-r}${unit}`}</b>
+}
+
+// ── 일출·일몰·자외선 ─────────────────────────────────
+/** 'YYYY-MM-DDTHH:MM' → 'HH:MM' (해당 지역 현지 시각이라 기기 시간대와 무관하게 그대로 자른다) */
+const hm = (iso: string) => iso.slice(11, 16)
+
+/** 예전에 저장된 캐시에는 sun 이 없을 수 있다 → 없으면 있는 것만 보여주고, 다 없으면 통째로 숨긴다 */
+export function SunRow({ sun, uv }: { sun?: { rise: string; set: string }; uv: number | null }) {
+  if (!sun && uv === null) return null
+  return (
+    <div className="sun-row">
+      {sun && (
+        <>
+          <span>
+            <SunHorizon size={16} weight="duotone" className="wi-sun" aria-hidden /> 일출 <b>{hm(sun.rise)}</b>
+          </span>
+          <span>
+            <SunHorizon size={16} weight="duotone" className="wi-rain" aria-hidden /> 일몰 <b>{hm(sun.set)}</b>
+          </span>
+        </>
+      )}
+      {uv !== null && (
+        <span>
+          자외선 <b>{Math.round(uv)}</b> <small>({uvLabel(Math.round(uv))}, 오늘 최고)</small>
+        </span>
+      )}
+    </div>
+  )
 }
 
 // ── 미세먼지 ─────────────────────────────────────────

@@ -1,7 +1,8 @@
 // 설정 패널 — 알림 온오프 + 색상 테마(포인트 컬러)
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { GearSix } from '@phosphor-icons/react'
+import { GearSix, ShareFat } from '@phosphor-icons/react'
+import { installHint, onInstallChange, promptInstall, type InstallHint } from '../lib/install'
 import {
   disableNotify,
   enableNotify,
@@ -60,6 +61,9 @@ export default function Settings({
   const [open, setOpen] = useState(false)
   const [notify, setNotify] = useState<NotifyState | 'loading'>('loading')
   const [rain, setRain] = useState(false)
+  // 설치 버튼은 브라우저가 나중에 이벤트를 줘야 생긴다 → 바뀌면 다시 읽는다
+  const [install, setInstall] = useState<InstallHint>(installHint)
+  useEffect(() => onInstallChange(() => setInstall(installHint())), [])
   const [busy, setBusy] = useState(false)
   // alert 은 패널을 닫은 한참 뒤에 맥락 없이 뜬다. 패널 안에 남는 문구로 알린다.
   const [notice, setNotice] = useState<string | null>(null)
@@ -140,6 +144,32 @@ export default function Settings({
     panelRef.current?.focus()
     const onKey = (ev: KeyboardEvent) => {
       if (ev.key === 'Escape' && !busyRef.current) setOpen(false)
+      // aria-modal 이어도 브라우저가 Tab 을 가둬 주지 않는다 → 시트 안에서만 돌게
+      if (ev.key === 'Tab') {
+        const root = panelRef.current
+        if (!root) return
+        const items = Array.from(
+          root.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), a[href], input:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((el) => {
+          if (el.offsetParent === null) return false
+          // 접힌 묶음 안의 버튼은 화면에 안 보이는데도 offsetParent 가 남아 있다 → 묶음 제목(summary)만 센다
+          const d = el.closest('details')
+          return !d || d.open || (el.tagName === 'SUMMARY' && el.parentElement === d)
+        })
+        if (items.length === 0) return
+        const first = items[0]
+        const last = items[items.length - 1]
+        const active = document.activeElement
+        if (ev.shiftKey && (active === first || active === root)) {
+          ev.preventDefault()
+          last.focus()
+        } else if (!ev.shiftKey && active === last) {
+          ev.preventDefault()
+          first.focus()
+        }
+      }
     }
     window.addEventListener('keydown', onKey)
     // 시트가 화면보다 길어 안쪽을 스크롤하면 뒤 페이지까지 같이 밀렸다
@@ -373,6 +403,37 @@ export default function Settings({
                 </button>
               </div>
             </div>
+
+            {install !== 'installed' && install !== 'none' && (
+              <div className="settings-sec install-sec">
+                <h3 className="settings-sec-title">📲 앱처럼 설치하기</h3>
+                {install === 'button' ? (
+                  <>
+                    <p className="muted small notify-desc">
+                      홈 화면에 추가하면 주소 없이 바로 열리고, 화면이 더 넓게 보여요.
+                    </p>
+                    <button
+                      type="button"
+                      className="order-reset test-push"
+                      onClick={async () => {
+                        const r = await promptInstall()
+                        if (r === 'accepted') setNotice('설치했어요! 홈 화면에서 열어보세요.')
+                      }}
+                    >
+                      홈 화면에 설치
+                    </button>
+                  </>
+                ) : (
+                  <ol className="install-steps muted small">
+                    <li>
+                      Safari 아래의 <ShareFat size={14} weight="bold" aria-hidden /> 공유 버튼을 누르세요
+                    </li>
+                    <li>「홈 화면에 추가」를 고르세요</li>
+                    <li>홈 화면의 아이콘으로 열면 알림도 받을 수 있어요</li>
+                  </ol>
+                )}
+              </div>
+            )}
 
             <details className="settings-sec settings-group">
               <summary className="settings-sec-title">🚶 출퇴근 시간 <small>{commute.on ? `${commute.am}시 · ${commute.pm}시` : '꺼짐'}</small></summary>

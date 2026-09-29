@@ -48,3 +48,7 @@ $$;
 
 revoke all on function public.weather_events_summary(integer) from public;
 grant execute on function public.weather_events_summary(integer) to anon;
+
+-- 보관 기간 (v1.0.66): 180일이 지난 기능 사용 기록은 매주 지운다 (일요일 18:15 UTC = 월요일 03:15 KST).
+-- select cron.schedule('weather-events-purge', '15 18 * * 0',
+--   $$delete from public.weather_events where created_at < now() - interval '180 days'$$);

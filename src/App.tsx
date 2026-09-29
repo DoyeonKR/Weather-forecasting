@@ -9,12 +9,14 @@ import {
   Drop,
   MapPin,
   ShareNetwork,
+  Star,
   Sun,
   Sunglasses,
   ThermometerSimple,
   TShirt,
   Umbrella,
   Warning,
+  WifiSlash,
   Wind,
 } from '@phosphor-icons/react'
 import { locate, type Located } from './lib/geo'
@@ -25,7 +27,7 @@ import { answeredToday, loadFeel, resetFeel, voteFeel, type FeelVote } from './l
 import { loadCommute, saveCommute, type CommutePrefs } from './lib/commute'
 import { fetchNormal, type Normal } from './lib/normals'
 import { fetchWarnings, matchWarnings, type WarnItem } from './lib/warn'
-import { AirRow, CommuteCompare, FeelAsk, NormalLine, WarnBanner } from './components/Extras'
+import { AirRow, CommuteCompare, FeelAsk, NormalLine, SunRow, WarnBanner } from './components/Extras'
 import { fetchWeather, type WeatherData } from './lib/weather'
 import {
   codeLabel,
@@ -52,6 +54,7 @@ import ComparePlaces from './components/ComparePlaces'
 import CoupangBanner from './components/CoupangBanner'
 import { fetchTodayVisitors, trackEvent } from './lib/track'
 import HourlyCard from './components/HourlyCard'
+import { SectionBoundary } from './components/ErrorBoundary'
 import { loadOrder, saveOrder, type SectionKey } from './lib/sections'
 import { useLongPressReorder } from './lib/reorder'
 import './App.css'
@@ -255,16 +258,31 @@ export default function App() {
   }
 
   // 홈 화면 앱은 며칠씩 떠 있다. 다시 볼 때 오래된 날씨면 알아서 새로 받는다.
-  const latest = useRef({ load, selectedId, fetchedAt: wx?.fetchedAt ?? 0 })
-  latest.current = { load, selectedId, fetchedAt: wx?.fetchedAt ?? 0 }
+  const latest = useRef({ load, selectedId, fetchedAt: wx?.fetchedAt ?? 0, status })
+  latest.current = { load, selectedId, fetchedAt: wx?.fetchedAt ?? 0, status }
+  // 인터넷이 끊겼을 때: 안내를 띄우고, 다시 연결되면 알아서 새로 받는다
+  const [online, setOnline] = useState(() => navigator.onLine !== false)
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState !== 'visible') return
       const { load: run, selectedId: id, fetchedAt } = latest.current
       if (fetchedAt && Date.now() - fetchedAt > STALE_MS) run(id)
     }
+    const onOnline = () => {
+      setOnline(true)
+      const { load: run, selectedId: id, fetchedAt, status: st } = latest.current
+      // 끊긴 사이 갱신에 실패했거나 2분 넘게 지났으면 바로 새로 받는다
+      if (st === 'error' || !fetchedAt || Date.now() - fetchedAt > 2 * 60 * 1000) run(id)
+    }
+    const onOffline = () => setOnline(false)
     document.addEventListener('visibilitychange', onVisible)
-    return () => document.removeEventListener('visibilitychange', onVisible)
+    window.addEventListener('online', onOnline)
+    window.addEventListener('offline', onOffline)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('online', onOnline)
+      window.removeEventListener('offline', onOffline)
+    }
   }, [])
 
   function addFavorite(p: Place) {
@@ -432,6 +450,18 @@ export default function App() {
         </div>
       </header>
 
+      {!online && (
+        <div className="offline-note" role="status">
+          <WifiSlash size={18} weight="bold" aria-hidden />
+          <span>
+            인터넷에 연결되어 있지 않아요
+            <small>마지막으로 받은 날씨({hhmm(wx.fetchedAt)} 기준)를 보여드리고 있어요</small>
+          </span>
+        </div>
+      )}
+
+      {/* 랜드마크: 스크린리더가 "지역 선택 / 본문 / 바닥글"로 건너뛸 수 있게. 화면 배치는 그대로(display: contents) */}
+      <div role="region" aria-label="지역 선택" className="loc-region">
       <PlaceBar
         favorites={favorites}
         selectedId={selectedId}
@@ -462,10 +492,12 @@ export default function App() {
 
       {tempPlace?.id === selectedId && !favorites.some((f) => f.id === selectedId) && (
         <button type="button" className="star-add" onClick={() => addFavorite(tempPlace)}>
-          ⭐ {tempPlace.name} 즐겨찾기에 추가
+          <Star size={16} weight="fill" aria-hidden /> {tempPlace.name} 즐겨찾기에 추가
         </button>
       )}
+      </div>
 
+      <main className="app-main">
       <div
         key={selectedId}
         ref={reorder.setContainer}
@@ -486,6 +518,7 @@ export default function App() {
             data-reorder-id={key}
             className={`section-wrap ${reorder.dragId === key ? 'dragging' : ''}`}
           >
+            <SectionBoundary name={key}>
       {key === 'hero' && (
         <>
           <section className="hero card">
@@ -551,6 +584,7 @@ export default function App() {
                   </span>
                 </div>
               </div>
+              <SunRow sun={wx.sun} uv={wx.uvMaxToday} />
               {air && <AirRow air={air} />}
             </div>
             <HourlyCard wx={wx} embedded />
@@ -748,12 +782,14 @@ export default function App() {
             {key === 'places' && (
               <ComparePlaces baseLabel={loc.label} baseWx={wx} favorites={favorites} />
                     )}
+            </SectionBoundary>
             {/* 카드가 하나 늘어서 3 → 4 (여전히 '이번 주' 아래) */}
             {i === 4 && <CoupangBanner id={1020558} template="carousel" height={140} />}
           </div>
         ))}
         <CoupangBanner id={1020557} template="banner" height={90} maxWidth={728} />
       </div>
+      </main>
 
       <footer className="foot">
         <a

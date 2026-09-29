@@ -16,7 +16,8 @@ const built = esbuild.buildSync({
       "export { commuteSlots } from './commute'\n" +
       "export { nextOffset, feelLabel } from './feel'\n" +
       "export { buildTable } from './normals'\n" +
-      "export { summarizeRain } from './rainSoon'\n",
+      "export { summarizeRain } from './rainSoon'\n" +
+      "export { placeLabel } from './places'\n",
     resolveDir: libDir,
     loader: 'ts',
   },
@@ -27,7 +28,7 @@ const built = esbuild.buildSync({
 })
 const mod = { exports: {} }
 new Function('module', 'exports', 'require', built.outputFiles[0].text)(mod, mod.exports, require)
-const { areaMatches, matchWarnings, coreNames, commuteSlots, nextOffset, feelLabel, buildTable, summarizeRain } = mod.exports
+const { areaMatches, matchWarnings, coreNames, commuteSlots, nextOffset, feelLabel, buildTable, summarizeRain, placeLabel } = mod.exports
 
 test('동네 이름에서 행정 접미사를 뗀다', () => {
   assert.deepEqual(coreNames('서울특별시 마포구'), ['서울', '마포'])
@@ -147,4 +148,19 @@ test('영하 근처면 눈, 자료가 없으면 null', () => {
   p[4] = 0.3
   assert.match(summarizeRain(slots(16), p, T0 + 60, true).text, /눈이 시작/)
   assert.equal(summarizeRain([], [], T0, false), null)
+})
+
+test('장소 이름: 도로·역이 아니라 시·구·동으로', () => {
+  assert.equal(placeLabel({ country_code: 'kr', city: '성남시', borough: '분당구', suburb: '판교', quarter: '백현동' }, 'x'), '성남시 분당구 판교')
+  assert.equal(placeLabel({ country_code: 'kr', city: '부산광역시', borough: '해운대구' }, 'x'), '부산광역시 해운대구')
+  assert.equal(placeLabel({ country_code: 'kr', state: '제주특별자치도' }, 'x'), '제주특별자치도')
+  // 시·군과 읍·면이 같이 오면 시·군까지 (읍·면은 이름이 겹치기 쉬워 "판교면"만으론 어디인지 모른다)
+  assert.equal(placeLabel({ country_code: 'kr', county: '서천군', town: '판교면' }, 'x'), '서천군 판교면')
+})
+
+test('장소 이름: 해외는 나라부터, 같은 이름 반복 없음', () => {
+  assert.equal(placeLabel({ country_code: 'jp', country: '일본', city: '도쿄도' }, 'x'), '일본 도쿄도')
+  assert.equal(placeLabel({ country_code: 'us', country: '미국', state: '텍사스', town: 'Paris', county: 'Lamar County' }, 'x'), '미국 텍사스 Paris')
+  assert.equal(placeLabel({ country_code: 'fr', country: '프랑스', state: '일드프랑스', city: '파리', suburb: '파리' }, 'x'), '프랑스 일드프랑스 파리')
+  assert.equal(placeLabel(undefined, '판교, 분당구, 성남시, 경기도, 13525, 대한민국'), '성남시 분당구 판교')
 })

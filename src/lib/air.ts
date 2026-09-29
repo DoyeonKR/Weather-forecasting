@@ -3,6 +3,8 @@
 // 국내는 에어코리아 측정소 실측을 먼저 쓰고(서버 프록시 air-korea), 안 되면 모델 값으로.
 // 모델 값일 때는 화면에 출처를 함께 밝힌다.
 
+import { isBackedOff, markFailed, markOk } from './backoff'
+
 /** 환경부 예보 등급: 0 좋음 · 1 보통 · 2 나쁨 · 3 매우 나쁨 */
 export type AirGrade = 0 | 1 | 2 | 3
 
@@ -52,12 +54,22 @@ const AK_PROXY = 'https://tqegatiuembcvphxmujl.supabase.co/functions/v1/air-kore
 /** 가까운 측정소 실측 (국내만). 서비스 미승인·측정소 없음이면 null → 모델 값으로 */
 async function fetchAirKorea(lat: number, lon: number): Promise<AirKorea | null> {
   if (!(lat > 32.5 && lat < 40.5 && lon > 123 && lon < 132.5)) return null
+  if (isBackedOff('air-korea')) return null
   try {
     const res = await fetch(`${AK_PROXY}?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`)
-    if (!res.ok) return null
+    // 502(서비스 미승인·업스트림 장애)는 잠시 쉰다. 404(가까운 측정소 없음)는 이 지점만의 사정이라 쉬지 않는다.
+    if (!res.ok) {
+      if (res.status >= 500) markFailed('air-korea')
+      return null
+    }
     const d = await res.json()
-    return typeof d?.pm10 === 'number' && typeof d?.pm25 === 'number' ? (d as AirKorea) : null
+    if (typeof d?.pm10 === 'number' && typeof d?.pm25 === 'number') {
+      markOk('air-korea')
+      return d as AirKorea
+    }
+    return null
   } catch {
+    markFailed('air-korea')
     return null
   }
 }

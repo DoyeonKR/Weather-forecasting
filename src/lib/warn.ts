@@ -3,6 +3,8 @@
 // ⚠ 특보 구역(예: 서울동남권, 경기도(수원, 성남))과 동네 이름은 1:1 대응표가 없다.
 //   시·군 이름이 구역 목록에 있으면 확실히, 광역시·서울처럼 권역만 있으면 "그 도시 어딘가"로 본다.
 
+import { isBackedOff, markFailed, markOk } from './backoff'
+
 export interface WarnArea {
   name: string
   subs: string[]
@@ -105,12 +107,20 @@ export function matchWarnings(items: WarnItem[], label: string): WarnHit[] {
 
 /** 발효 중인 특보 목록. 서비스가 막혀 있거나 실패하면 null (배너를 숨긴다) */
 export async function fetchWarnings(): Promise<WarnItem[] | null> {
+  // 서비스 승인 전에는 매번 502 — 잠시 쉬었다가 다시 시도한다 (lib/backoff)
+  if (isBackedOff('kma-warn')) return null
   try {
     const res = await fetch(PROXY)
-    if (!res.ok) return null
+    if (!res.ok) {
+      markFailed('kma-warn')
+      return null
+    }
     const d = await res.json()
-    return Array.isArray(d?.items) ? (d.items as WarnItem[]) : null
+    if (!Array.isArray(d?.items)) return null
+    markOk('kma-warn')
+    return d.items as WarnItem[]
   } catch {
+    markFailed('kma-warn')
     return null
   }
 }

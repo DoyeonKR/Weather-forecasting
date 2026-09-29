@@ -1,15 +1,20 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
+import { RootBoundary } from './components/ErrorBoundary.tsx'
 import { trackVisit } from './lib/track.ts'
 import { applySavedAccent } from './lib/accent.ts'
+import { captureInstallPrompt } from './lib/install.ts'
 
 trackVisit()
 applySavedAccent()
+captureInstallPrompt()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <RootBoundary>
+      <App />
+    </RootBoundary>
   </StrictMode>,
 )
 

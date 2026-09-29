@@ -23,8 +23,13 @@ export interface WeatherData {
   tomorrow: DayStats
   /** 오늘부터 7일 (date: YYYY-MM-DD) */
   week: { date: string; stats: DayStats }[]
-  /** 시간별 (어제 0시 ~ 내일 23시, 로컬) */
-  hourly: { time: string[]; temp: number[]; precip: number[]; code: number[] }
+  /**
+   * 시간별 (어제 0시 ~ 예보 끝, 로컬). prob: 시간별 강수확률 %.
+   * ⚠ prob·sun 은 나중에 추가된 값이라 예전에 저장된 캐시에는 없다 — 항상 없을 수 있다고 보고 쓴다.
+   */
+  hourly: { time: string[]; temp: number[]; precip: number[]; code: number[]; prob?: (number | null)[] }
+  /** 오늘 일출·일몰 (해당 지역 현지 시각, 'YYYY-MM-DDTHH:MM') */
+  sun?: { rise: string; set: string }
   fetchedAt: number
 }
 
@@ -42,6 +47,7 @@ interface OpenMeteoResponse {
     temperature_2m: number[]
     precipitation: number[]
     weather_code: number[]
+    precipitation_probability?: (number | null)[]
   }
   daily: {
     time: string[] // YYYY-MM-DD
@@ -51,6 +57,8 @@ interface OpenMeteoResponse {
     precipitation_probability_max: (number | null)[]
     weather_code: number[]
     uv_index_max: (number | null)[]
+    sunrise?: string[]
+    sunset?: string[]
     wind_speed_10m_max: (number | null)[]
     wind_gusts_10m_max: (number | null)[]
   }
@@ -79,10 +87,10 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     'current',
     'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day',
   )
-  url.searchParams.set('hourly', 'temperature_2m,precipitation,weather_code')
+  url.searchParams.set('hourly', 'temperature_2m,precipitation,weather_code,precipitation_probability')
   url.searchParams.set(
     'daily',
-    'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,uv_index_max,wind_speed_10m_max,wind_gusts_10m_max',
+    'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,uv_index_max,wind_speed_10m_max,wind_gusts_10m_max,sunrise,sunset',
   )
   const res = await fetch(url)
   if (!res.ok) throw new Error(`날씨 API 오류 (${res.status})`)
@@ -112,7 +120,13 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
       temp: data.hourly.temperature_2m,
       precip: data.hourly.precipitation,
       code: data.hourly.weather_code,
+      prob: data.hourly.precipitation_probability,
     },
+    // daily[0] 이 어제라 오늘은 1번
+    sun:
+      data.daily.sunrise?.[1] && data.daily.sunset?.[1]
+        ? { rise: data.daily.sunrise[1], set: data.daily.sunset[1] }
+        : undefined,
     fetchedAt: Date.now(),
   }
 }

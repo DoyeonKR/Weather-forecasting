@@ -50,9 +50,9 @@ body {
 
 .shell > .card,
 .shell > .top,
-.shell > .placebar,
+.shell .placebar,
 .shell > .foot,
-.shell > .star-add,
+.shell .star-add,
 .shell > .cp-banner {
   position: relative;
   z-index: 1;
@@ -1582,7 +1582,7 @@ body {
   animation: switch-in 0.4s ease-out;
 }
 
-.shell > .switch-enter {
+.shell .switch-enter {
   position: relative;
   z-index: 1;
 }
@@ -1948,9 +1948,9 @@ body {
 }
 
 .shell > .top,
-.shell > .placebar,
-.shell > .star-add,
-.shell > .switch-enter,
+.shell .placebar,
+.shell .star-add,
+.shell .switch-enter,
 .shell > .foot {
   width: min(100%, 1080px);
   margin-inline: auto;
@@ -3671,11 +3671,99 @@ body {
 }
 
 /* 크게 보기: 카드 묶음(z-index 1)이 푸터와 같은 층이라 뒤 화면이 비쳐 보였다 → 열려 있는 동안만 위로 */
-.radar-fs .shell > .switch-enter {
+.radar-fs .shell .switch-enter {
   z-index: 2600;
 }
 
 .radar-fs .to-top,
 .radar-fs .toast {
   display: none;
+}
+
+/* 랜드마크 래퍼는 상자를 만들지 않는다 — 기존 배치·간격 그대로 */
+.loc-region,
+.app-main {
+  display: contents;
+}
+
+/* 카드 하나가 오류로 그려지지 못했을 때 */
+.section-failed {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-failed p {
+  margin: 0;
+  color: var(--sub);
+  font-size: 14px;
+}
+
+/* 일출·일몰·자외선 한 줄 */
+.sun-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin-top: 12px;
+  color: var(--sub);
+  font-size: 13px;
+}
+
+.sun-row > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sun-row b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.sun-row small {
+  font-size: 11px;
+}
+
+/* 시간별 강수확률 */
+.hs-prob {
+  color: var(--cold);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* 오프라인 안내 */
+.offline-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 181, 71, 0.45);
+  border-radius: 14px;
+  background: rgba(255, 181, 71, 0.12);
+  color: #ffd79a;
+  font-size: 14px;
+}
+
+.offline-note svg {
+  flex: 0 0 auto;
+}
+
+.offline-note small {
+  display: block;
+  margin-top: 1px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+/* 설치 안내 */
+.install-steps {
+  margin: 4px 0 0;
+  padding-left: 20px;
+  line-height: 1.7;
+}
+
+.install-steps svg {
+  vertical-align: -2px;
 }
