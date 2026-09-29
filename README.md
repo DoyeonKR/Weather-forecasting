@@ -105,6 +105,7 @@ src/
 │   ├── rainSoon.ts    # "내 위치는 곧 비가 올까?" 문장 (15분 강수 예보 + 기상청 실황)
 │   ├── backoff.ts     # 승인 전인 선택 기능의 실패를 15분 쉬었다 재시도
 │   ├── install.ts     # 홈 화면 설치 버튼·아이폰 안내
+│   ├── inapp.ts       # 카카오톡·네이버 등 앱 안 브라우저 감지, 기본 브라우저로 열기
 │   ├── uv.ts          # 자외선 지수 등급
 │   ├── feel.ts        # 내 체감 보정 (기기 저장)
 │   ├── commute.ts     # 출퇴근 시각 비교
@@ -121,6 +122,7 @@ src/
 │   ├── Extras.tsx        # 미세먼지 줄·체감 질문·출퇴근·평년·특보 배너
 │   ├── StatsPanel.tsx    # 운영자용 이용 통계 (주소 끝 #stats)
 │   ├── ErrorBoundary.tsx # 카드 단위·앱 전체 오류 복구
+│   ├── ShareSheet.tsx    # 기기 공유 창을 못 쓸 때의 공유 시트 (그림·복사)
 │   ├── CompareGraphic.tsx# 어제 대비 변화를 막대로
 │   ├── ComparePlaces.tsx # 다른 지역과 나란히 비교
 │   ├── WeatherFx.tsx     # 현재 날씨에 맞춘 배경 애니메이션

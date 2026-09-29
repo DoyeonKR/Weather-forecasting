@@ -1,4 +1,5 @@
 // 위치 획득 + 역지오코딩 (BigDataCloud — 키 불필요, 클라이언트 무료)
+import { detectInApp } from './inapp'
 
 export interface Located {
   lat: number
@@ -14,9 +15,18 @@ const FALLBACK = { lat: 37.5665, lon: 126.978, label: '서울 (기본 위치)' }
 export function getPosition(): Promise<{ lat: number; lon: number } | null> {
   return new Promise((resolve) => {
     if (!('geolocation' in navigator)) return resolve(null)
+    // 일부 앱 안 브라우저(WebView)는 위치 권한 창을 처리하지 못해 콜백이 영영 오지 않는다 → 로딩이 끝나지 않는다.
+    // 일반 브라우저에는 걸지 않는다: 사용자가 권한 창에서 고민하는 시간을 끊으면 안 된다
+    // (timeout 옵션은 권한 응답 뒤부터 센다).
+    let guard: number | undefined
+    if (detectInApp()) guard = window.setTimeout(() => resolve(null), 15000)
+    const done = (v: { lat: number; lon: number } | null) => {
+      if (guard !== undefined) window.clearTimeout(guard)
+      resolve(v)
+    }
     navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-      () => resolve(null),
+      (pos) => done({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => done(null),
       { timeout: 8000, maximumAge: 10 * 60 * 1000 },
     )
   })

@@ -3767,3 +3767,146 @@ body {
 .install-steps svg {
   vertical-align: -2px;
 }
+
+/* ── 모바일 웹뷰 (v1.0.67) ─────────────────────────────────── */
+
+/* iOS 가로 모드에서 글자를 멋대로 키우지 않게 */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* 버튼을 빠르게 두 번 눌러도 화면이 확대되지 않게 (새로고침·펼치기·시간 이동은 연타하기 쉽다).
+   회색 탭 하이라이트는 끄고, 대신 눌림 표시를 준다. */
+button,
+a,
+summary,
+label {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled):active,
+a.feedback-btn:active,
+summary:active {
+  filter: brightness(1.2);
+}
+
+/* 앱 안 브라우저 안내 */
+.inapp-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--text);
+}
+
+.inapp-note > svg {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.inapp-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 14px;
+}
+
+.inapp-text small {
+  color: var(--sub);
+  font-size: 12px;
+}
+
+.inapp-open {
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 72%, #000);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.inapp-open::after,
+.inapp-x::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+.inapp-x {
+  position: relative;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--sub);
+  cursor: pointer;
+}
+
+/* 공유 시트 */
+.share-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+}
+
+.share-img {
+  width: 100%;
+  max-height: 56vh;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #0a1330;
+  /* 길게 눌러 저장하는 메뉴가 뜨려면 선택·호출 방지를 걸지 않는다 */
+  -webkit-touch-callout: default;
+  user-select: auto;
+}
+
+.share-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.share-actions > * {
+  flex: 1;
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+}
+
+/* 복사가 막힌 환경용 글상자 — 16px 미만이면 iOS 가 포커스 때 화면을 확대한다 */
+.share-text {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  resize: none;
+  user-select: text;
+  -webkit-user-select: text;
+}

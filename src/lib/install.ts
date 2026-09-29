@@ -1,6 +1,8 @@
 // 홈 화면에 설치하기 — 크롬 계열은 설치 버튼을 직접 띄울 수 있고, 아이폰은 사파리 공유 메뉴로만 된다.
 // 알림은 아이폰에서 설치한 앱에서만 오므로 안내가 중요하다 (lib/push.ts 의 needs-install).
 
+import { detectInApp } from './inapp'
+
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
@@ -75,6 +77,8 @@ export type InstallHint = 'installed' | 'button' | 'ios-steps' | 'none'
 
 export function installHint(): InstallHint {
   if (isStandalone()) return 'installed'
+  // 앱 안 브라우저에는 "공유 → 홈 화면에 추가"가 없다. 설치 안내 대신 상단 배너가 기본 브라우저로 안내한다.
+  if (detectInApp()) return 'none'
   if (canPromptInstall()) return 'button'
   if (isIos()) return 'ios-steps'
   return 'none'

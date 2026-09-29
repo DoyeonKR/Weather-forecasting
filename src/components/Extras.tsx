@@ -1,6 +1,7 @@
 // 메인·비교 카드에 붙는 작은 조각들 — 미세먼지 줄, 체감 질문, 출퇴근 비교, 평년 비교, 특보 배너
 import { useEffect, useState } from 'react'
-import { PersonSimpleWalk, SunHorizon, Warning } from '@phosphor-icons/react'
+import { DeviceMobile, PersonSimpleWalk, SunHorizon, Warning, X } from '@phosphor-icons/react'
+import { detectInApp, openInBrowser } from '../lib/inapp'
 import { uvLabel } from '../lib/uv'
 import { GRADE_LABEL, gradePm10, gradePm25, type AirNow } from '../lib/air'
 import { codeLabel } from '../lib/compare'
@@ -16,6 +17,67 @@ function Diff({ d, unit = '°' }: { d: number; unit?: string }) {
   const r = Math.round(d)
   if (r === 0) return <b className="range-diff same">비슷</b>
   return <b className={`range-diff ${r > 0 ? 'warm' : 'cold'}`}>{r > 0 ? `▲${r}${unit}` : `▼${-r}${unit}`}</b>
+}
+
+// ── 앱 안 브라우저 안내 ───────────────────────────────
+const INAPP_KEY = 'eojeboda.inapp.dismissed'
+const INAPP_QUIET_MS = 3 * 24 * 3600 * 1000
+
+function inAppDismissed(): boolean {
+  try {
+    const at = Number(localStorage.getItem(INAPP_KEY))
+    return Number.isFinite(at) && at > 0 && Date.now() - at < INAPP_QUIET_MS
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 카카오톡·네이버 등의 앱 안 브라우저에서는 알림·홈 화면 설치·위치가 잘 안 된다.
+ * 공유 링크로 처음 들어온 사람이 대부분 여기라서, 한 줄로 알리고 기본 브라우저로 넘기는 길을 준다.
+ * 닫으면 3일 동안 조용히 있는다.
+ */
+export function InAppBanner() {
+  const [info] = useState(() => detectInApp())
+  const [hidden, setHidden] = useState(inAppDismissed)
+  const [manual, setManual] = useState(false)
+  if (!info || hidden) return null
+  const close = () => {
+    try {
+      localStorage.setItem(INAPP_KEY, String(Date.now()))
+    } catch {
+      // 저장이 막혀도 이번 화면에서는 닫힌다
+    }
+    setHidden(true)
+  }
+  return (
+    <div className="inapp-note" role="region" aria-label="브라우저 안내">
+      <DeviceMobile size={20} weight="duotone" aria-hidden />
+      <div className="inapp-text">
+        <b>{info.name} 안에서 보고 계세요</b>
+        <small>
+          {manual
+            ? '화면 오른쪽 위·아래의 ⋯ 메뉴에서 「Safari로 열기」를 눌러주세요'
+            : '알림·내 위치는 기본 브라우저에서 더 잘 돼요'}
+        </small>
+      </div>
+      {!manual && (
+        <button
+          type="button"
+          className="inapp-open"
+          onClick={() => {
+            // 열 방법이 없는 환경(아이폰의 네이버·인스타그램 등)은 메뉴 안내로
+            if (!openInBrowser(info)) setManual(true)
+          }}
+        >
+          브라우저로 열기
+        </button>
+      )}
+      <button type="button" className="inapp-x" aria-label="안내 닫기" onClick={close}>
+        <X size={16} weight="bold" aria-hidden />
+      </button>
+    </div>
+  )
 }
 
 // ── 일출·일몰·자외선 ─────────────────────────────────

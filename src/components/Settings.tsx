@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { GearSix, ShareFat } from '@phosphor-icons/react'
 import { installHint, onInstallChange, promptInstall, type InstallHint } from '../lib/install'
+import { detectInApp, openInBrowser } from '../lib/inapp'
 import {
   disableNotify,
   enableNotify,
@@ -41,7 +42,7 @@ interface Props {
   /** 내 체감 보정값(°C) */
   feelOffset: number
   onResetFeel: () => void
-  /** 오늘 방문자 수 — 화면 위에는 10명 이상일 때만 보이니 운영자용으로 여기에도 */
+  /** 오늘 방문자 수 (설정 맨 아래에도 표시) */
   visitors: number | null
 }
 
@@ -61,6 +62,7 @@ export default function Settings({
   const [open, setOpen] = useState(false)
   const [notify, setNotify] = useState<NotifyState | 'loading'>('loading')
   const [rain, setRain] = useState(false)
+  const [inApp] = useState(() => detectInApp())
   // 설치 버튼은 브라우저가 나중에 이벤트를 줘야 생긴다 → 바뀌면 다시 읽는다
   const [install, setInstall] = useState<InstallHint>(installHint)
   useEffect(() => onInstallChange(() => setInstall(installHint())), [])
@@ -315,14 +317,29 @@ export default function Settings({
                     아침엔 오늘 날씨 브리핑, 밤엔 내일이 오늘과 크게 다를 때 출근 준비물을
                     알려드려요. 시간은 아래에서 선택하세요.
                     {notify === 'on' ? ` 지금은 ${loc.label} 기준으로 받는 중.` : ''}
-                    {notify === 'unsupported' ? ' 이 브라우저에서는 지원되지 않아요.' : ''}
+                    {/* 앱 안 브라우저에서는 "지원 안 됨"보다 "어디서 열면 되는지"가 필요하다 */}
+                    {inApp && (notify === 'unsupported' || notify === 'needs-install')
+                      ? ` ${inApp.name} 안에서는 알림을 받을 수 없어요. 기본 브라우저(크롬·사파리)에서 열어주세요.`
+                      : ''}
+                    {!inApp && notify === 'unsupported' ? ' 이 브라우저에서는 지원되지 않아요.' : ''}
                     {notify === 'blocked'
                       ? ' 브라우저에서 이 사이트의 알림을 차단해 뒀어요. 주소창 옆 자물쇠에서 알림을 허용으로 바꿔주세요.'
                       : ''}
-                    {notify === 'needs-install'
+                    {!inApp && notify === 'needs-install'
                       ? ' 아이폰은 공유 버튼에서 홈 화면에 추가한 뒤 알림을 켤 수 있어요.'
                       : ''}
                   </p>
+                  {inApp && (notify === 'unsupported' || notify === 'needs-install') && (
+                    <button
+                      type="button"
+                      className="order-reset test-push"
+                      onClick={() => {
+                        if (!openInBrowser(inApp)) setNotice('화면 오른쪽 위·아래의 ⋯ 메뉴에서 「Safari로 열기」를 눌러주세요.')
+                      }}
+                    >
+                      기본 브라우저로 열기
+                    </button>
+                  )}
                 </div>
                 <button
                   type="button"
@@ -564,7 +581,7 @@ export default function Settings({
               </div>
             </details>
             <p className="muted small settings-foot">
-              오늘 방문 {visitors ?? '–'}명 · 화면 위에는 하루 10명이 넘을 때만 보여요
+              오늘 방문 {visitors ?? '–'}명
             </p>
           </div>
         </div>,

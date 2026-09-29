@@ -22,12 +22,13 @@ import {
 import { locate, type Located } from './lib/geo'
 import { weatherIcon, weatherTone, type UiIcon } from './lib/weatherIcon'
 import { loadLast, saveLast } from './lib/lastWeather'
+import { detectInApp } from './lib/inapp'
 import { GRADE_LABEL, fetchAir, type AirNow } from './lib/air'
 import { answeredToday, loadFeel, resetFeel, voteFeel, type FeelVote } from './lib/feel'
 import { loadCommute, saveCommute, type CommutePrefs } from './lib/commute'
 import { fetchNormal, type Normal } from './lib/normals'
 import { fetchWarnings, matchWarnings, type WarnItem } from './lib/warn'
-import { AirRow, CommuteCompare, FeelAsk, NormalLine, SunRow, WarnBanner } from './components/Extras'
+import { AirRow, CommuteCompare, FeelAsk, InAppBanner, NormalLine, SunRow, WarnBanner } from './components/Extras'
 import { fetchWeather, type WeatherData } from './lib/weather'
 import {
   codeLabel,
@@ -46,6 +47,7 @@ import WhenVisible from './components/WhenVisible'
 const RadarMap = lazy(() => import('./components/RadarMap'))
 // 운영자용 — 주소 끝 #stats 로만 연다
 const StatsPanel = lazy(() => import('./components/StatsPanel'))
+const ShareSheet = lazy(() => import('./components/ShareSheet'))
 import PlaceBar from './components/PlaceBar'
 import Settings from './components/Settings'
 import WeatherFx from './components/WeatherFx'
@@ -62,8 +64,6 @@ import './App.css'
 type Status = 'loading' | 'ready' | 'error'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
-/** 방문자 수가 이보다 적으면 숨긴다 — "오늘 2명"은 오히려 믿음을 깎는다 */
-const VISITORS_MIN = 10
 /** 탭으로 돌아왔을 때 이보다 오래된 날씨면 새로 받는다 */
 const STALE_MS = 15 * 60 * 1000
 
@@ -107,6 +107,8 @@ export default function App() {
   const [warnItems, setWarnItems] = useState<WarnItem[] | null>(null)
   /** 공유·복사 결과를 잠깐 보여주는 한 줄 */
   const [toast, setToast] = useState<string | null>(null)
+  /** 기기 공유 창을 못 쓸 때 띄우는 시트 */
+  const [sheet, setSheet] = useState<{ blob: Blob | null; text: string } | null>(null)
   const [statsOpen, setStatsOpen] = useState(() => location.hash === '#stats')
   useEffect(() => {
     const onHash = () => setStatsOpen(location.hash === '#stats')
@@ -158,7 +160,11 @@ export default function App() {
           if (seq !== loadSeq.current) return
           // 사용자가 "현재 위치"를 눌렀는데 못 가져왔다면 아무 일도 없는 것처럼 보이면 안 된다
           if (where.isFallback && wantPrompt) {
-            setToast('내 위치를 가져오지 못했어요. 브라우저의 위치 권한을 확인해주세요')
+            setToast(
+              detectInApp()
+                ? '앱 안 브라우저에서는 위치가 막혀 있어요. 기본 브라우저에서 열어주세요'
+                : '내 위치를 가져오지 못했어요. 브라우저의 위치 권한을 확인해주세요',
+            )
           }
           // 권한이 없고 사용자가 요청한 것도 아니면, 즐겨찾기가 있을 때 그쪽을 우선
           if (where.isFallback && !wantPrompt && favorites.length > 0) {
@@ -383,19 +389,20 @@ export default function App() {
     trackEvent('share')
     // 캔버스 그리기 코드는 누를 때만 받는다
     const { shareCompare } = await import('./lib/share')
-    const r = await shareCompare({
-      place: loc.label.replace(' (기본 위치)', ''),
-      nowTemp: wx.nowTemp,
-      condition: now.label,
-      delta: wx.nowTemp - wx.yesterdaySameHour,
-      today: wx.today,
-      yesterday: wx.yesterday,
-      air: air ? GRADE_LABEL[air.grade] : null,
-    })
+    const r = await shareCompare(
+      {
+        place: loc.label.replace(' (기본 위치)', ''),
+        nowTemp: wx.nowTemp,
+        condition: now.label,
+        delta: wx.nowTemp - wx.yesterdaySameHour,
+        today: wx.today,
+        yesterday: wx.yesterday,
+        air: air ? GRADE_LABEL[air.grade] : null,
+      },
+      // 기기 공유 창을 못 쓰는 환경(앱 안 브라우저 등) — 그림을 화면에 띄운다
+      (blob, text) => setSheet({ blob, text }),
+    )
     if (r === 'shared') trackEvent('share_done')
-    if (r === 'copied') setToast('링크와 요약을 복사했어요')
-    else if (r === 'downloaded') setToast('공유 이미지를 저장했어요')
-    else if (r === 'failed') setToast('공유하지 못했어요')
   }
   const picks = partnerPicks({ today: wx.today, uvMax: wx.uvMaxToday })
   const alerts = tomorrowAlerts(wx.tomorrow, wx.today)
@@ -417,8 +424,7 @@ export default function App() {
                 갱신 실패, 눌러서 다시 시도
               </button>
             ) : (
-              visitors !== null &&
-              visitors >= VISITORS_MIN && <span className="visitors">👀 오늘 {visitors}명</span>
+              visitors !== null && <span className="visitors">👀 오늘 {visitors}명</span>
             )}
           </span>
         </div>
@@ -450,6 +456,8 @@ export default function App() {
         </div>
       </header>
 
+      <InAppBanner />
+
       {!online && (
         <div className="offline-note" role="status">
           <WifiSlash size={18} weight="bold" aria-hidden />
@@ -480,7 +488,8 @@ export default function App() {
         }}
       />
 
-      {loc.isFallback && selectedId === 'current' && (
+      {/* 앱 안 브라우저에서는 위치가 원래 안 된다 — 위쪽 안내 배너가 이유를 말하니 이 줄까지 겹쳐 쌓지 않는다 */}
+      {loc.isFallback && selectedId === 'current' && !detectInApp() && (
         <button type="button" className="fallback-note" onClick={() => selectPlace('current')}>
           <Crosshair size={18} weight="bold" aria-hidden />
           <span>
@@ -853,6 +862,11 @@ export default function App() {
         >
           <ArrowUp size={20} weight="bold" aria-hidden />
         </button>
+      )}
+      {sheet && (
+        <Suspense fallback={null}>
+          <ShareSheet blob={sheet.blob} text={sheet.text} onClose={() => setSheet(null)} />
+        </Suspense>
       )}
       {statsOpen && (
         <Suspense fallback={null}>

@@ -12,7 +12,8 @@ export interface ShareInput {
   air?: string | null
 }
 
-export type ShareResult = 'shared' | 'copied' | 'downloaded' | 'cancelled' | 'failed'
+/** sheet: 기기 공유 창을 못 써서 화면 시트로 넘김(그림·복사 버튼) */
+export type ShareResult = 'shared' | 'sheet' | 'cancelled'
 
 export const SHARE_URL = 'https://doyeonkr.github.io/Weather-forecasting/?ref=share'
 const FONT = "'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif"
@@ -127,7 +128,11 @@ export async function drawShareCard(s: ShareInput): Promise<Blob | null> {
   return await new Promise((resolve) => cv.toBlob((b) => resolve(b), 'image/png'))
 }
 
-export async function shareCompare(s: ShareInput): Promise<ShareResult> {
+export async function shareCompare(
+  s: ShareInput,
+  /** 기기 공유 창을 못 쓸 때 — 앱이 시트를 띄운다. 그림을 못 만들었어도 문구는 보낸다 */
+  onSheet: (blob: Blob | null, text: string) => void,
+): Promise<ShareResult> {
   const text = `${s.place} ${headline(s.delta)} (지금 ${Math.round(s.nowTemp)}°, ${s.condition})`
   const blob = await drawShareCard(s).catch(() => null)
   const file = blob ? new File([blob], 'eojeboda-today.png', { type: 'image/png' }) : null
@@ -141,22 +146,11 @@ export async function shareCompare(s: ShareInput): Promise<ShareResult> {
       return 'shared'
     }
   } catch (e) {
-    // 사용자가 공유 시트를 닫은 것은 실패가 아니다
+    // 사용자가 공유 창을 닫은 것은 실패가 아니다
     if ((e as Error)?.name === 'AbortError') return 'cancelled'
   }
-  try {
-    await navigator.clipboard.writeText(`${text}\n${SHARE_URL}`)
-    return 'copied'
-  } catch {
-    // 클립보드도 막혔으면 그림이라도 저장
-  }
-  if (blob) {
-    const a = document.createElement('a')
-    a.href = URL.createObjectURL(blob)
-    a.download = 'eojeboda-today.png'
-    a.click()
-    window.setTimeout(() => URL.revokeObjectURL(a.href), 5000)
-    return 'downloaded'
-  }
-  return 'failed'
+  // 예전에는 여기서 몰래 파일을 내려받았다. 앱 안 브라우저(WebView)는 그 다운로드를 막는 일이 많아서
+  // "저장했어요"라고 알려 놓고 아무것도 저장되지 않았다 → 그림을 화면에 보여주고 사용자가 고르게 한다.
+  onSheet(blob, text)
+  return 'sheet'
 }
