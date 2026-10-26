@@ -747,8 +747,9 @@ export default function App() {
                 const span = hi - lo
                 return wx.week.map((d, i) => {
                   const dt = new Date(`${d.date}T00:00:00`)
-                  const lb = codeLabel(d.stats.code)
-                  const DayIcon = weatherIcon(lb.label)
+                  // 오늘 줄은 남은 시간 기준 (밤에 맑으면 해 대신 달)
+                  const lb = codeLabel(i === 0 ? ahead.code : d.stats.code)
+                  const DayIcon = weatherIcon(lb.label, i === 0 ? wx.nowIsDay : true)
                   const dayName = i === 0 ? '오늘' : WEEKDAYS[dt.getDay()]
                   const left = ((d.stats.tmin - lo) / span) * 100
                   const width = Math.max(((d.stats.tmax - d.stats.tmin) / span) * 100, 4)

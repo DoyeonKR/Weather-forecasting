@@ -53,3 +53,12 @@ test('어제도 같은 시간대(지금~자정)로 잘라 비교한다', () => {
   assert.equal(y.precipProbMax, 40)
   assert.equal(yesterdaySameWindow({ yesterday, nowHourLocal: 20, hourly: { precip: arr(0) } }), yesterday)
 })
+
+test('날씨 코드도 남은 시간 중 가장 궂은 것으로', () => {
+  // 아침 8시(32) 소나기 80, 지금 22시 이후는 맑음 0·구름 2
+  const wx = { today: { ...today, code: 80 }, nowHourLocal: 22, hourly: { prob: arr(0), precip: arr(0), code: arr(0, { 32: 80, 46: 2 }) } }
+  assert.equal(todayAhead(wx).code, 2)
+  // 시간별 코드가 없으면 하루 코드
+  const old = { today: { ...today, code: 80 }, nowHourLocal: 22, hourly: { prob: arr(0), precip: arr(0) } }
+  assert.equal(todayAhead(old).code, 80)
+})

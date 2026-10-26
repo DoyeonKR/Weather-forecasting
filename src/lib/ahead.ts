@@ -6,18 +6,26 @@ import type { DayStats } from './compare'
 import type { WeatherData } from './weather'
 
 export function todayAhead(wx: Pick<WeatherData, 'today' | 'hourly' | 'nowHourLocal'>): DayStats {
-  const { prob, precip } = wx.hourly
+  const { prob, precip, code } = wx.hourly
   // 시간별 강수확률은 나중에 추가된 값 — 옛 캐시에는 없으니 그때는 하루 값을 그대로
   if (!prob || prob.length < 48) return wx.today
   // 시간별 배열은 어제 0시부터: 24~47 이 오늘
   const from = 24 + wx.nowHourLocal
   let probMax = 0
   let sum = 0
+  // 날씨 코드: 하루 대표 코드(Open-Meteo)와 같은 규칙 — 남은 시간 중 가장 궂은(큰) 코드
+  let worst = -1
   for (let i = from; i <= 47; i++) {
     probMax = Math.max(probMax, prob[i] ?? 0)
     sum += precip[i] ?? 0
+    if (typeof code?.[i] === 'number') worst = Math.max(worst, code[i])
   }
-  return { ...wx.today, precipProbMax: probMax, precipSum: Math.round(sum * 10) / 10 }
+  return {
+    ...wx.today,
+    precipProbMax: probMax,
+    precipSum: Math.round(sum * 10) / 10,
+    code: worst >= 0 ? worst : wx.today.code,
+  }
 }
 
 /**
