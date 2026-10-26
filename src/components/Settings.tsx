@@ -1,7 +1,7 @@
 // 설정 패널 — 알림 온오프 + 색상 테마(포인트 컬러)
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { GearSix, ShareFat } from '@phosphor-icons/react'
+import { Bell, Clock, GearSix, House, Moon, Palette, PuzzlePiece, ShareFat, Sun, TShirt, Umbrella, X } from '@phosphor-icons/react'
 import { installHint, onInstallChange, promptInstall, type InstallHint } from '../lib/install'
 import { detectInApp, openInBrowser } from '../lib/inapp'
 import {
@@ -305,14 +305,14 @@ export default function Settings({
                 disabled={busy}
                 onClick={() => setOpen(false)}
               >
-                ✕
+                <X size={20} weight="bold" aria-hidden />
               </button>
             </div>
 
             <div className="settings-sec">
               <div className="notify-row">
                 <div>
-                  <h3 className="settings-sec-title">🔔 날씨 알림</h3>
+                  <h3 className="settings-sec-title"><Bell size={19} weight="duotone" aria-hidden /> 날씨 알림</h3>
                   <p className="muted small notify-desc">
                     아침엔 오늘 날씨 브리핑, 밤엔 내일이 오늘과 크게 다를 때 출근 준비물을
                     알려드려요. 시간은 아래에서 선택하세요.
@@ -344,6 +344,8 @@ export default function Settings({
                 <button
                   type="button"
                   className={`notify-toggle ${notify === 'on' ? 'on' : ''}`}
+                  role="switch"
+                  aria-checked={notify === 'on'}
                   onClick={toggleNotify}
                   disabled={
                     busy ||
@@ -363,13 +365,14 @@ export default function Settings({
                 </p>
               )}
               <div className="night-row">
-                <span className="muted small">☀️ 아침 브리핑 시간</span>
+                <span className="muted small settings-time-label"><Sun size={16} weight="duotone" aria-hidden /> 아침 브리핑 시간</span>
                 <div className="night-times">
                   {MORNING_TIMES.map((v) => (
                     <button
                       key={v}
                       type="button"
                       className={`night-chip ${morningTime === v ? 'on' : ''}`}
+                      aria-pressed={morningTime === v}
                       onClick={() => pickTime('morning', v)}
                       disabled={busy}
                     >
@@ -379,13 +382,14 @@ export default function Settings({
                 </div>
               </div>
               <div className="night-row">
-                <span className="muted small">🌙 내일 준비 알림 시간</span>
+                <span className="muted small settings-time-label"><Moon size={16} weight="duotone" aria-hidden /> 내일 준비 알림 시간</span>
                 <div className="night-times">
                   {NIGHT_TIMES.map((v) => (
                     <button
                       key={v}
                       type="button"
                       className={`night-chip ${nightTime === v ? 'on' : ''}`}
+                      aria-pressed={nightTime === v}
                       onClick={() => pickTime('night', v)}
                       disabled={busy}
                     >
@@ -401,7 +405,7 @@ export default function Settings({
               )}
               <div className="notify-row rain-row">
                 <div>
-                  <h4 className="settings-sub-title">🌂 비 시작 알림</h4>
+                  <h4 className="settings-sub-title"><Umbrella size={18} weight="duotone" aria-hidden /> 비 시작 알림</h4>
                   <p className="muted small notify-desc">
                     한 시간 안에 비가 시작될 것 같으면 알려드려요. 07~22시에만, 6시간에 한 번까지.
                     기상청 초단기예보 기준이라 국내에서만 동작해요.
@@ -414,7 +418,8 @@ export default function Settings({
                   onClick={toggleRain}
                   disabled={busy || notify !== 'on'}
                   aria-label={rain ? '비 시작 알림 끄기' : '비 시작 알림 켜기'}
-                  aria-pressed={rain && notify === 'on'}
+                  role="switch"
+                  aria-checked={rain && notify === 'on'}
                 >
                   <span className="notify-knob" />
                 </button>
@@ -453,7 +458,7 @@ export default function Settings({
             )}
 
             <details className="settings-sec settings-group">
-              <summary className="settings-sec-title">🚶 출퇴근 시간 <small>{commute.on ? `${commute.am}시 · ${commute.pm}시` : '꺼짐'}</small></summary>
+              <summary className="settings-sec-title"><Clock size={19} weight="duotone" aria-hidden /> 출퇴근 시간 <small>{commute.on ? `${commute.am}시 · ${commute.pm}시` : '꺼짐'}</small></summary>
               <div className="notify-row">
                 <div>
                   <p className="muted small notify-desc">
@@ -465,7 +470,8 @@ export default function Settings({
                   className={`notify-toggle ${commute.on ? 'on' : ''}`}
                   onClick={() => onSetCommute({ ...commute, on: !commute.on })}
                   aria-label={commute.on ? '출퇴근 비교 끄기' : '출퇴근 비교 켜기'}
-                  aria-pressed={commute.on}
+                  role="switch"
+                  aria-checked={commute.on}
                 >
                   <span className="notify-knob" />
                 </button>
@@ -480,6 +486,7 @@ export default function Settings({
                           key={h}
                           type="button"
                           className={`night-chip ${commute.am === h ? 'on' : ''}`}
+                          aria-pressed={commute.am === h}
                           onClick={() => onSetCommute({ ...commute, am: h })}
                         >
                           {h}시
@@ -495,6 +502,7 @@ export default function Settings({
                           key={h}
                           type="button"
                           className={`night-chip ${commute.pm === h ? 'on' : ''}`}
+                          aria-pressed={commute.pm === h}
                           onClick={() => onSetCommute({ ...commute, pm: h })}
                         >
                           {h}시
@@ -507,7 +515,7 @@ export default function Settings({
             </details>
 
             <details className="settings-sec settings-group">
-              <summary className="settings-sec-title">🧥 내 체감 보정 <small>{feelLabel(feelOffset) ? '보정 중' : '보정 없음'}</small></summary>
+              <summary className="settings-sec-title"><TShirt size={19} weight="duotone" aria-hidden /> 내 체감 보정 <small>{feelLabel(feelOffset) ? '보정 중' : '보정 없음'}</small></summary>
               <p className="muted small notify-desc">
                 "어제 어땠어요?"에 답하면 옷차림 추천이 내 체감에 맞게 조금씩 옮겨가요. 이 기기에만 저장돼요.
                 {' '}
@@ -521,12 +529,13 @@ export default function Settings({
             </details>
 
             <details className="settings-sec settings-group">
-              <summary className="settings-sec-title">🏠 처음 열 때 보여줄 지역</summary>
+              <summary className="settings-sec-title"><House size={19} weight="duotone" aria-hidden /> 처음 열 때 보여줄 지역</summary>
               <p className="muted small notify-desc">앱을 켜면 이 지역 날씨부터 보여드려요.</p>
               <div className="night-times">
                 <button
                   type="button"
                   className={`night-chip ${homeId === 'current' ? 'on' : ''}`}
+                  aria-pressed={homeId === 'current'}
                   onClick={() => onSetHome('current')}
                 >
                   📍 현재 위치
@@ -536,6 +545,7 @@ export default function Settings({
                     key={f.id}
                     type="button"
                     className={`night-chip ${homeId === f.id ? 'on' : ''}`}
+                    aria-pressed={homeId === f.id}
                     onClick={() => onSetHome(f.id)}
                   >
                     ⭐ {f.name}
@@ -545,7 +555,7 @@ export default function Settings({
             </details>
 
             <details className="settings-sec settings-group">
-              <summary className="settings-sec-title">🧩 화면 순서</summary>
+              <summary className="settings-sec-title"><PuzzlePiece size={19} weight="duotone" aria-hidden /> 화면 순서</summary>
               <p className="muted small notify-desc">
                 메인 화면 카드 순서예요. 화면에서 카드를 길게 눌러 끌어도 바꿀 수 있어요.
               </p>
@@ -564,7 +574,7 @@ export default function Settings({
             </details>
 
             <details className="settings-sec settings-group">
-              <summary className="settings-sec-title">🎨 색상 테마</summary>
+              <summary className="settings-sec-title"><Palette size={19} weight="duotone" aria-hidden /> 색상 테마</summary>
               <p className="muted small notify-desc">버튼과 강조색이 바뀌어요.</p>
               <div className="accent-row">
                 {ACCENTS.map((a) => (
@@ -575,6 +585,7 @@ export default function Settings({
                     style={{ background: a.color }}
                     onClick={() => pickAccent(a.id)}
                     aria-label={`${a.name} 테마`}
+                    aria-pressed={accent === a.id}
                     title={a.name}
                   />
                 ))}

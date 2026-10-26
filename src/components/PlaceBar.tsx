@@ -1,6 +1,6 @@
 // 위치 바 — 항상 보이는 동네 검색 + 현재 위치/즐겨찾기 칩
 import { useEffect, useRef, useState } from 'react'
-import { Crosshair, MagnifyingGlass, MapPin, Star } from '@phosphor-icons/react'
+import { ArrowClockwise, Crosshair, MagnifyingGlass, MapPin, Star } from '@phosphor-icons/react'
 import { searchPlaces, type Place } from '../lib/places'
 import { useLongPressReorder } from '../lib/reorder'
 import { trackEvent } from '../lib/track'
@@ -41,10 +41,13 @@ export default function PlaceBar({
   const [results, setResults] = useState<Place[]>([])
   const [busy, setBusy] = useState(false)
   const [searchError, setSearchError] = useState(false)
+  const [searchedQuery, setSearchedQuery] = useState('')
   const [editMode, setEditMode] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const toggleRef = useRef<HTMLButtonElement>(null)
   const focusOnOpen = useRef(false)
+  const searchSeq = useRef(0)
 
   useEffect(() => {
     if (!openSearchSignal) return
@@ -61,27 +64,40 @@ export default function PlaceBar({
 
   async function runSearch() {
     const q = query.trim()
-    if (!q) return
+    if (!q || busy) return
+    const seq = ++searchSeq.current
     trackEvent('search')
     setBusy(true)
     setSearchError(false)
+    setSearchedQuery(q)
+    setResults([])
     try {
       const found = await searchPlaces(q)
+      if (seq !== searchSeq.current) return
       setResults(found)
-      setSearchError(found.length === 0)
     } catch {
+      if (seq !== searchSeq.current) return
       setResults([])
       setSearchError(true)
     } finally {
-      setBusy(false)
+      if (seq === searchSeq.current) setBusy(false)
     }
+  }
+
+  function closeSearch() {
+    searchSeq.current++
+    setBusy(false)
+    setSearchOpen(false)
+    setSearchedQuery('')
+    setResults([])
+    setSearchError(false)
+    toggleRef.current?.focus()
   }
 
   function pick(p: Place) {
     onView(p)
     setQuery('')
-    setResults([])
-    inputRef.current?.blur()
+    closeSearch()
   }
 
   return (
@@ -150,41 +166,81 @@ export default function PlaceBar({
             {editMode ? '완료' : '편집'}
           </button>
         )}
-        <button type="button" className="chip ghost search-toggle" aria-expanded={searchOpen} onClick={() => setSearchOpen((o) => !o)}>
+        <button
+          ref={toggleRef}
+          type="button"
+          className="chip ghost search-toggle"
+          aria-expanded={searchOpen}
+          aria-controls="place-search"
+          onClick={() => {
+            if (searchOpen) closeSearch()
+            else {
+              focusOnOpen.current = true
+              setSearchOpen(true)
+            }
+          }}
+        >
           <MagnifyingGlass size={16} weight="bold" aria-hidden /> {searchOpen ? '검색 닫기' : '지역 검색'}
         </button>
       </div>
 
-      {searchOpen && <div className="search-row">
-        <input
-          ref={inputRef}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') runSearch()
-          }}
-          placeholder="동네 검색 (예: 판교, 부산 해운대)"
-          aria-label="동네 검색"
-          className="search-input"
-          enterKeyHint="search"
-        />
-        <button type="button" className="search-btn" onClick={runSearch} disabled={busy}>
-          {busy ? '…' : '검색'}
-        </button>
-      </div>}
-      {searchError && !busy && (
-        <p className="muted small search-error">검색 결과를 가져오지 못했어요. 잠시 후 다시 시도해주세요.</p>
-      )}
-      {results.length > 0 && (
-        <ul className="search-results">
-          {results.map((r) => (
-            <li key={r.id}>
-              <button type="button" onClick={() => pick(r)}>
-                <MapPin size={16} weight="fill" aria-hidden /> {r.name}
-              </button>
-            </li>
-          ))}
-        </ul>
+      {searchOpen && (
+        <div id="place-search" className="place-search" onKeyDown={(e) => {
+          if (e.key === 'Escape') {
+            e.stopPropagation()
+            closeSearch()
+          }
+        }}>
+          <form className="search-row" role="search" aria-label="지역 검색" onSubmit={(e) => {
+            e.preventDefault()
+            runSearch()
+          }}>
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => {
+                searchSeq.current++
+                setQuery(e.target.value)
+                setBusy(false)
+                setResults([])
+                setSearchedQuery('')
+                setSearchError(false)
+              }}
+              placeholder="동네 이름으로 찾아보세요"
+              aria-label="동네 검색"
+              aria-describedby="place-search-status"
+              className="search-input"
+              enterKeyHint="search"
+              autoComplete="off"
+            />
+            <button type="submit" className="search-btn" disabled={busy || !query.trim()}>
+              {busy ? <ArrowClockwise size={18} className="spin" aria-hidden /> : '검색'}
+              {busy && <span className="sr-only">검색 중</span>}
+            </button>
+          </form>
+          <div id="place-search-status" className="search-status" role="status">
+            {busy ? '지역을 찾고 있어요…' : searchError ? (
+              <span className="search-error">지역을 불러오지 못했어요. 연결을 확인하고 다시 검색해주세요.</span>
+            ) : searchedQuery ? (
+              results.length > 0 ? `${results.length}개 지역을 찾았어요. 보고 싶은 곳을 선택하세요.` : (
+                <span>‘{searchedQuery}’ 검색 결과가 없어요. 시·구·동 이름으로 다시 찾아보세요.</span>
+              )
+            ) : '예: 판교, 부산 해운대 · 검색한 지역의 날씨를 바로 볼 수 있어요.'}
+          </div>
+          {results.length > 0 && (
+            <ul className="search-results" aria-label="검색한 지역">
+              {results.map((r) => (
+                <li key={r.id}>
+                  <button type="button" onClick={() => pick(r)}>
+                    <MapPin size={17} weight="duotone" aria-hidden />
+                    <span>{r.name}</span>
+                    <span className="search-result-action" aria-hidden>날씨 보기</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   )

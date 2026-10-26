@@ -438,11 +438,16 @@ export default function App() {
     : partnerPicks({ today: ahead, uvMax: wx.uvMaxToday })
   const alerts = tomorrowAlerts(wx.tomorrow, wx.today)
   const tomorrowLabel = codeLabel(wx.tomorrow.code)
+  const tomorrowTone = weatherTone(tomorrowLabel.label)
+  const tomorrowArt = tomorrowTone === 'sun' || tomorrowTone === 'cloud'
+    ? `${import.meta.env.BASE_URL}images/weather-brief/${wx.tomorrow.tmax >= wx.today.tmax ? 'warmer' : 'cooler'}.webp`
+    : null
 
   return (
     <div className={`shell ${theme} ${status === 'loading' ? 'refreshing' : ''}`}>
       <WeatherFx theme={theme} />
       <div className="neon-frame" aria-hidden />
+      <a className="skip-link" href="#weather-main">날씨 본문으로 건너뛰기</a>
       <header className="top">
         <div>
           <h1 className="brand">무능한 날씨예측기</h1>
@@ -524,8 +529,8 @@ export default function App() {
         <button type="button" className="fallback-note" onClick={() => selectPlace('current')}>
           <Crosshair size={18} weight="bold" aria-hidden />
           <span>
-            위치를 몰라 <b>서울</b> 기준으로 보여드리고 있어요
-            <small>눌러서 내 위치로 보기</small>
+            <b>서울</b> 기준으로 보고 있어요
+            <small>내 위치로 바꾸려면 눌러주세요</small>
           </span>
         </button>
       )}
@@ -539,6 +544,8 @@ export default function App() {
 
       <main className="app-main">
       <div
+        id="weather-main"
+        tabIndex={-1}
         key={selectedId}
         ref={reorder.setContainer}
         className={`switch-enter ${reorder.active ? 'reorder-active' : ''}`}
@@ -569,7 +576,7 @@ export default function App() {
               </span>
               <span className="hero-actions">
               <button type="button" className="hero-updated" onClick={onShare} aria-label="어제와 비교한 오늘 날씨 공유하기">
-                <ShareNetwork size={14} weight="bold" aria-hidden /> 공유
+                <ShareNetwork size={14} weight="bold" aria-hidden /> <span className="hero-share-label">공유</span>
               </button>
               <button
                 type="button"
@@ -591,7 +598,7 @@ export default function App() {
             <div className="hero-main">
               {(() => {
                 const HeroIcon = weatherIcon(now.label, wx.nowIsDay)
-                return <HeroIcon size={112} weight="duotone" aria-hidden />
+                return <HeroIcon size={112} weight="duotone" className={`wi-${weatherTone(now.label)}`} aria-hidden />
               })()}
               <div className="hero-info">
                 <div className="hero-temp">{round1(wx.nowTemp).toFixed(1)}°</div>
@@ -719,24 +726,33 @@ export default function App() {
       )}
       {key === 'tomorrow' && (
         <>
-          <section className="card">
-            <h2 className="section-title">내일은 오늘보다</h2>
-            <div className="tomorrow-row">
-              <span className={`tomorrow-emoji wi-${weatherTone(tomorrowLabel.label)}`} aria-hidden>
+          <section className="card tomorrow-card">
+            <div className="tomorrow-heading">
+              {tomorrowArt && <img className="tomorrow-art" src={tomorrowArt} alt="" loading="lazy" decoding="async" />}
+              <div className="tomorrow-title">
+                <h2 className="section-title">내일은 오늘보다</h2>
+                <p>{tomorrowLabel.label}</p>
+              </div>
+              <span className={`tomorrow-emoji wi-${tomorrowTone}`} aria-hidden>
                 {(() => {
                   const TomorrowIcon = weatherIcon(tomorrowLabel.label)
                   return <TomorrowIcon size={40} weight="duotone" />
                 })()}
               </span>
-              <div className="tomorrow-info">
-                <div>
-                  {tomorrowLabel.label} · {round1(wx.tomorrow.tmin).toFixed(1)}° ~ {round1(wx.tomorrow.tmax).toFixed(1)}°
+            </div>
+            <div className="tomorrow-stats">
+              {([
+                { label: '아침 · 최저', temp: wx.tomorrow.tmin, diff: wx.tomorrow.tmin - wx.today.tmin },
+                { label: '낮 · 최고', temp: wx.tomorrow.tmax, diff: wx.tomorrow.tmax - wx.today.tmax },
+              ]).map(({ label, temp, diff }) => (
+                <div className="tomorrow-stat" key={label}>
+                  <span>{label}</span>
+                  <strong>{round1(temp).toFixed(1)}°</strong>
+                  <small className={Math.abs(round1(diff)) < 0.5 ? 'muted' : diff > 0 ? 'warm-icon' : 'cold-icon'}>
+                    오늘보다 {deltaText(diff)}
+                  </small>
                 </div>
-                <div className="muted small">
-                  낮 기온 {deltaText(wx.tomorrow.tmax - wx.today.tmax)} · 아침 기온{' '}
-                  {deltaText(wx.tomorrow.tmin - wx.today.tmin)}
-                </div>
-              </div>
+              ))}
             </div>
             {alerts.length > 0 && (
               <ul className="alerts">
@@ -754,7 +770,10 @@ export default function App() {
       {key === 'week' && (
         <>
           <section className="card">
-            <h2 className="section-title">이번 주 날씨</h2>
+            <div className="week-heading">
+              <h2 className="section-title">이번 주 날씨</h2>
+              <span className="week-key"><span className="cold-icon">최저</span><span className="warm-icon">최고</span></span>
+            </div>
             <ul className="week">
               <li className="week-head" aria-hidden>
                 <span>요일</span>
