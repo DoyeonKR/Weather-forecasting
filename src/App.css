@@ -4126,6 +4126,204 @@ summary:active {
   white-space: nowrap;
 }
 
+/* ── 상단 날씨 브리핑 띠 (v1.0.74) ─────────────────────────────
+   .shell 바깥 position: fixed. 본문(.shell.has-brief)은 띠 높이 + 위 여백 + 안전 영역만큼 내려간다.
+   z-index 1700: 맨 위로(1500)보다 위, 테두리(1900)·설정/공유(2000)·토스트(2500)·레이더 크게 보기(2600)보다 아래. */
+:root {
+  --brief-h: 80px;
+  --brief-top: 8px;
+}
+
+.brief-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1700;
+  padding: calc(var(--brief-top) + env(safe-area-inset-top)) 16px 8px;
+  /* 스크롤되는 본문이 띠 뒤로 비치지 않게 위쪽을 페이지 바탕색으로 덮는다 */
+  background: linear-gradient(to bottom, rgba(5, 10, 23, 0.96) 70%, rgba(5, 10, 23, 0));
+  pointer-events: none;
+}
+
+.brief {
+  position: relative;
+  max-width: 1080px;
+  height: var(--brief-h);
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid rgba(120, 160, 255, 0.18);
+  border-radius: 14px;
+  background: #0b1630;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+}
+
+.brief-slides,
+.brief-slide {
+  position: absolute;
+  inset: 0;
+}
+
+.brief-slide {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 0 128px 0 16px;
+  /* 풍경은 오른쪽, 넓은 화면에서도 cover 로 늘리지 않는다(README 권장).
+     왼쪽은 이미지와 같은 남색으로 메우고, 글자 쪽으로 살짝 어둡게 덮어 대비를 지킨다. */
+  background-color: #0b1630;
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: auto 150%;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.35s ease,
+    visibility 0s linear 0.35s;
+}
+
+.brief-slide::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(11, 22, 48, 0.92) 0%, rgba(11, 22, 48, 0.7) 50%, rgba(11, 22, 48, 0) 78%);
+  pointer-events: none;
+}
+
+.brief-slide.on {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.35s ease;
+}
+
+.brief-title,
+.brief-sub {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.brief-title {
+  color: #f3f6fc;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.brief-sub {
+  color: #b9c6dd;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 이전 · 1/4 · 다음 · 멈춤 — 풍경 위 오른쪽 아래 작은 알약 */
+.brief-ctrl {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(5, 10, 23, 0.72);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.brief-ctrl button {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #e8eefb;
+  cursor: pointer;
+}
+
+/* 누르는 범위는 위아래로 넓힌다(옆 버튼과는 겹치지 않게) */
+.brief-ctrl button::after {
+  content: '';
+  position: absolute;
+  inset: -8px 0;
+}
+
+.brief-count {
+  min-width: 26px;
+  color: #c9d4ea;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 본문은 띠 아래에서 시작 */
+.shell.has-brief {
+  padding-top: calc(var(--brief-h) + var(--brief-top) + 18px + env(safe-area-inset-top));
+}
+
+/* 아주 좁은 폰: 글자 자리를 넓히려고 오른쪽 여백·글씨를 줄인다 */
+@media (max-width: 359px) {
+  .brief-bar {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .brief-slide {
+    padding-right: 116px;
+    padding-left: 12px;
+  }
+
+  .brief-title {
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 860px) {
+  :root {
+    --brief-h: 84px;
+    --brief-top: 12px;
+  }
+
+  .brief-bar {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .brief-slide {
+    padding-left: 22px;
+    padding-right: 220px;
+  }
+
+  .brief-title {
+    font-size: 18px;
+  }
+
+  .brief-sub {
+    font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brief-slide,
+  .brief-slide.on {
+    transition: none;
+  }
+}
+
+/* 레이더 크게 보기 중에는 띠를 감춘다 (전체 화면 지도 위에 남지 않게) */
+.radar-fs .brief-bar {
+  display: none;
+}
+
 /* ── UI/UX 점검 (2026-10-26): 검색 상태·작은 화면·스크롤 가능한 설정 ── */
 .sr-only {
   position: absolute;
@@ -4485,4 +4683,14 @@ summary:active {
   .place-search .spin {
     animation: none;
   }
+}
+
+/* 좁은 화면에서 제목이 길면 두 줄까지 (80px 안에 제목 2줄 + 보조 1줄이 들어간다) */
+.brief-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  white-space: normal;
+  line-height: 1.25;
 }

@@ -31,11 +31,20 @@ export interface WeatherData {
    */
   hourly: { time: string[]; temp: number[]; precip: number[]; code: number[]; prob?: (number | null)[] }
   /** 오늘 일출·일몰 (해당 지역 현지 시각, 'YYYY-MM-DDTHH:MM') */
-  sun?: { rise: string; set: string }
+  sun?: {
+    rise: string
+    set: string
+    /** 내일 일출·일몰 (daily[2]). 나중에 추가된 값이라 옛 캐시에는 없다 */
+    riseTomorrow?: string
+    setTomorrow?: string
+  }
+  /** 이 지역의 UTC 오프셋(초). "지금 현지 시각"을 계산할 때 쓴다. 옛 캐시에는 없다 */
+  utcOffsetSec?: number
   fetchedAt: number
 }
 
 interface OpenMeteoResponse {
+  utc_offset_seconds?: number
   current: {
     time: string
     temperature_2m: number
@@ -128,8 +137,15 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     // daily[0] 이 어제라 오늘은 1번
     sun:
       data.daily.sunrise?.[1] && data.daily.sunset?.[1]
-        ? { rise: data.daily.sunrise[1], set: data.daily.sunset[1] }
+        ? {
+            rise: data.daily.sunrise[1],
+            set: data.daily.sunset[1],
+            // daily[2] 가 내일 — 극지방 등에서는 비어 올 수 있어 그대로 없음으로 둔다
+            riseTomorrow: data.daily.sunrise[2] || undefined,
+            setTomorrow: data.daily.sunset?.[2] || undefined,
+          }
         : undefined,
+    utcOffsetSec: typeof data.utc_offset_seconds === 'number' ? data.utc_offset_seconds : undefined,
     fetchedAt: Date.now(),
   }
 }

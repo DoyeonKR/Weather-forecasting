@@ -58,6 +58,7 @@ import ComparePlaces from './components/ComparePlaces'
 import CoupangBanner from './components/CoupangBanner'
 import { fetchTodayVisitors, trackEvent } from './lib/track'
 import HourlyCard from './components/HourlyCard'
+import BriefBanner from './components/BriefBanner'
 import { SectionBoundary } from './components/ErrorBoundary'
 import { loadOrder, saveOrder, type SectionKey } from './lib/sections'
 import { useLongPressReorder } from './lib/reorder'
@@ -444,7 +445,10 @@ export default function App() {
     : null
 
   return (
-    <div className={`shell ${theme} ${status === 'loading' ? 'refreshing' : ''}`}>
+    <>
+    {/* 상단 브리핑 띠: .shell(overflow: hidden) 바깥에 고정. 지역·날씨가 바뀌면 같이 바뀐다 */}
+    <BriefBanner wx={wx} resetKey={`${selectedId}|${loc.label}`} />
+    <div className={`shell has-brief ${theme} ${status === 'loading' ? 'refreshing' : ''}`}>
       <WeatherFx theme={theme} />
       <div className="neon-frame" aria-hidden />
       <a className="skip-link" href="#weather-main">날씨 본문으로 건너뛰기</a>
@@ -942,5 +946,6 @@ export default function App() {
         </Suspense>
       )}
     </div>
+    </>
   )
 }
