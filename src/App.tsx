@@ -22,6 +22,7 @@ import {
 import { locate, type Located } from './lib/geo'
 import { weatherIcon, weatherTone, type UiIcon } from './lib/weatherIcon'
 import { loadLast, saveLast } from './lib/lastWeather'
+import { todayAhead } from './lib/ahead'
 import { detectInApp } from './lib/inapp'
 import { GRADE_LABEL, fetchAir, type AirNow } from './lib/air'
 import { answeredToday, loadFeel, resetFeel, voteFeel, type FeelVote } from './lib/feel'
@@ -243,11 +244,19 @@ export default function App() {
     return () => window.clearTimeout(t)
   }, [toast])
 
-  // 긴 화면에서 맨 위로 돌아가는 버튼 — 조금 내려갔을 때만 나타난다
+  // 긴 화면에서 맨 위로 돌아가는 버튼.
+  // 내려가며 읽는 동안 계속 떠 있으면 주간 최고기온·레이더 "지금" 버튼·푸터 글씨를 가렸다 →
+  // 위로 올리기 시작할 때만(= 위로 가고 싶을 때) 나타나고, 다시 내려가면 숨는다.
   const [showTop, setShowTop] = useState(false)
   useEffect(() => {
-    const onScroll = () => setShowTop(window.scrollY > 900)
-    onScroll()
+    let last = window.scrollY
+    const onScroll = () => {
+      const y = window.scrollY
+      const dy = y - last
+      if (Math.abs(dy) < 8) return // 손가락 떨림은 무시
+      setShowTop(y > 900 && dy < 0)
+      last = y
+    }
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
@@ -375,8 +384,10 @@ export default function App() {
   // 현재 날씨 상태: 기상청 관측(PTY)이 강수를 잡으면 관측값 우선, 아니면 모델 라벨
   const obsLabel = ptyLabel(kmaNow?.pty ?? null)
   const now = obsLabel ?? codeLabel(wx.nowCode)
+  // 실용 멘트·추천·강수확률 칸은 "오늘 남은 시간" 기준 (지나간 비로 우산을 권하지 않게)
+  const ahead = todayAhead(wx)
   const tips = funTips({
-    today: wx.today,
+    today: ahead,
     yesterday: wx.yesterday,
     uvMax: wx.uvMaxToday,
     airGrade: air?.grade ?? null,
@@ -404,7 +415,7 @@ export default function App() {
     )
     if (r === 'shared') trackEvent('share_done')
   }
-  const picks = partnerPicks({ today: wx.today, uvMax: wx.uvMaxToday })
+  const picks = partnerPicks({ today: ahead, uvMax: wx.uvMaxToday })
   const alerts = tomorrowAlerts(wx.tomorrow, wx.today)
   const tomorrowLabel = codeLabel(wx.tomorrow.code)
 
@@ -583,7 +594,7 @@ export default function App() {
                 <div className="stat-chip">
                   <Umbrella className="stat-chip-icon rain-icon" size={25} weight="duotone" aria-hidden />
                   <span className="stat-chip-label">강수확률</span>
-                  <span className="stat-chip-value">{wx.today.precipProbMax ?? '?'}%</span>
+                  <span className="stat-chip-value">{ahead.precipProbMax ?? '?'}%</span>
                 </div>
                 <div className="stat-chip">
                   <Wind className="stat-chip-icon wind-icon" size={25} weight="duotone" aria-hidden />

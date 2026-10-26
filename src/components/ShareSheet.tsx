@@ -1,6 +1,6 @@
 // 공유 시트 — 기기 공유 창을 못 쓰는 환경(앱 안 브라우저·일부 데스크톱)에서
 // 파일을 몰래 내려받는 대신 그림을 화면에 보여준다. 길게 눌러 저장하거나 버튼으로 저장·복사한다.
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { X } from '@phosphor-icons/react'
 import { SHARE_URL } from '../lib/share'
 
@@ -39,25 +39,37 @@ export default function ShareSheet({
   text: string
   onClose: () => void
 }) {
-  const url = useMemo(() => (blob ? URL.createObjectURL(blob) : null), [blob])
+  // 주소를 만들고 지우는 일을 같은 효과 안에서 한다. useMemo 로 만들고 효과에서 지우면
+  // StrictMode(개발)가 효과를 한 번 더 돌릴 때 이미 지운 주소를 <img> 가 계속 쓴다.
+  const [url, setUrl] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const [manual, setManual] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
 
   useEffect(() => {
-    return () => {
-      if (url) URL.revokeObjectURL(url)
-    }
-  }, [url])
+    if (!blob) return
+    const u = URL.createObjectURL(blob)
+    setUrl(u)
+    return () => URL.revokeObjectURL(u)
+  }, [blob])
 
+  // 열리면 시트로 포커스를 옮기고(스크린리더가 대화상자를 읽게), 닫히면 원래 자리(공유 버튼)로 돌려준다
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    const opener = document.activeElement as HTMLElement | null
+    panelRef.current?.focus()
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && closeRef.current()
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      opener?.focus?.()
+    }
+  }, [])
 
   return (
     <div className="settings-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="settings-panel share-sheet" role="dialog" aria-modal="true" aria-label="공유하기">
+      <div ref={panelRef} tabIndex={-1} className="settings-panel share-sheet" role="dialog" aria-modal="true" aria-label="공유하기">
         <div className="settings-head">
           <h2 className="settings-title">공유하기</h2>
           <button type="button" className="promo-x" aria-label="닫기" onClick={onClose}>
