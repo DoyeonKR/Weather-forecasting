@@ -37,6 +37,8 @@ export interface AirNow {
   gradeYest: AirGrade | null
   /** 앞으로 12시간 안에 지금보다 나빠지는 첫 시각 (없으면 null). nextDay: 내일이면 true */
   worse: { hour: number; grade: AirGrade; nextDay?: boolean } | null
+  /** 앞으로 12시간, 2시간 간격 등급 (예측 모델). 옛 캐시에는 없다 */
+  outlook?: { hour: number; grade: AirGrade; nextDay: boolean }[]
   /** 값의 출처 — 에어코리아 측정소 실측이면 측정소 이름 */
   source?: { kind: 'airkorea'; station: string } | { kind: 'cams' }
 }
@@ -91,6 +93,8 @@ export function mergeAir(model: AirNow | null, ak: AirKorea | null): AirNow | nu
     pm25Yest: hasYest ? Math.round(ak.pm25Yest as number) : null,
     gradeYest: hasYest ? gradeOf(ak.pm10Yest as number, ak.pm25Yest as number) : null,
     worse,
+    // 앞으로의 흐름은 실측이 없으니 모델 값을 그대로 쓴다
+    outlook: model?.outlook,
     source: { kind: 'airkorea', station: ak.station },
   }
 }
@@ -129,6 +133,13 @@ export function summarizeAir(
       break
     }
   }
+  const outlook: NonNullable<AirNow['outlook']> = []
+  for (let i = nowIdx + 2; i <= nowIdx + 12 && i < pm10.length; i += 2) {
+    const x = pm10[i]
+    const y = pm25[i]
+    if (typeof x !== 'number' || typeof y !== 'number') continue
+    outlook.push({ hour: hourOf(i), grade: gradeOf(x, y), nextDay: i >= 48 })
+  }
   return {
     pm10: Math.round(a),
     pm25: Math.round(b),
@@ -137,6 +148,7 @@ export function summarizeAir(
     pm25Yest: hasYest ? Math.round(yb as number) : null,
     gradeYest: hasYest ? gradeOf(ya as number, yb as number) : null,
     worse,
+    outlook,
   }
 }
 

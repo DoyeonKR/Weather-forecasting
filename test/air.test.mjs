@@ -55,3 +55,13 @@ test('실측이 있으면 지금·어제는 실측, 나빠지는 시각은 실�
   assert.deepEqual(mergeAir(model, null).source, { kind: 'cams' })
   assert.equal(mergeAir(null, null), null)
 })
+
+test('앞으로 12시간 흐름: 2시간 간격 6칸, 내일 넘어가면 표시', () => {
+  const pm10 = Array(72).fill(20)
+  const pm25 = Array(72).fill(10)
+  pm25[24 + 22 + 4] = 50 // 22시 기준 4시간 뒤(내일 2시) 나쁨
+  const s = summarizeAir(pm10, pm25, 24 + 22, (i) => i % 24)
+  assert.equal(s.outlook.length, 6)
+  assert.deepEqual(s.outlook[0], { hour: 0, grade: 0, nextDay: true })
+  assert.deepEqual(s.outlook[1], { hour: 2, grade: 2, nextDay: true })
+})

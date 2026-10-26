@@ -1,8 +1,9 @@
 // 메인 화면 섹션 순서 — 사용자 커스터마이즈 (localStorage)
-export type SectionKey = 'hero' | 'prep' | 'compare' | 'tomorrow' | 'week' | 'radar' | 'places'
+export type SectionKey = 'hero' | 'air' | 'prep' | 'compare' | 'tomorrow' | 'week' | 'radar' | 'places'
 
 export const SECTION_LABEL: Record<SectionKey, string> = {
   hero: '메인 (현재 날씨)',
+  air: '미세먼지',
   prep: '오늘의 준비',
   compare: '어제와 비교하면',
   tomorrow: '내일은 오늘보다',
@@ -11,7 +12,7 @@ export const SECTION_LABEL: Record<SectionKey, string> = {
   places: '지역 비교',
 }
 
-export const DEFAULT_ORDER: SectionKey[] = ['hero', 'prep', 'compare', 'tomorrow', 'week', 'radar', 'places']
+export const DEFAULT_ORDER: SectionKey[] = ['hero', 'air', 'prep', 'compare', 'tomorrow', 'week', 'radar', 'places']
 
 const KEY = 'eojeboda:sections'
 

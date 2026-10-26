@@ -108,8 +108,59 @@ export function SunRow({ sun, uv }: { sun?: { rise: string; set: string }; uv: n
   )
 }
 
-// ── 미세먼지 ─────────────────────────────────────────
-export function AirRow({ air }: { air: AirNow }) {
+// ── 미세먼지 카드 ─────────────────────────────────────
+/** 등급별 행동 안내 — 숫자보다 "그래서 뭘 하면 되는지"를 먼저 */
+const AIR_ADVICE = [
+  '공기가 깨끗해요. 창문 열고 환기하기 좋은 날이에요.',
+  '평소처럼 지내도 괜찮아요. 호흡기가 예민하다면 오래 걷는 운동만 조금 줄이세요.',
+  '외출할 땐 마스크(KF80 이상)를 챙기고, 환기는 짧게만 하세요.',
+  '바깥 활동은 줄이고 KF94 마스크를 쓰세요. 창문은 닫아 두는 게 좋아요.',
+] as const
+
+/** 환경부 등급 경계 — 막대는 등급마다 같은 폭으로 나눠, 값이 어느 칸에 있는지 한눈에 */
+const PM10_CUTS = [0, 30, 80, 150, 200]
+const PM25_CUTS = [0, 15, 35, 75, 100]
+
+function gaugePos(v: number, cuts: number[]): number {
+  for (let g = 0; g < 4; g++) {
+    if (v <= cuts[g + 1] || g === 3) {
+      const t = Math.min(1, Math.max(0, (v - cuts[g]) / (cuts[g + 1] - cuts[g])))
+      return (g + t) * 25
+    }
+  }
+  return 100
+}
+
+function AirGauge({ name, unit, value, cuts, grade }: { name: string; unit: string; value: number; cuts: number[]; grade: number }) {
+  const pos = gaugePos(value, cuts)
+  return (
+    <div className="air-gauge" role="img" aria-label={`${name} ${value}${unit}, ${GRADE_LABEL[grade]}`}>
+      <div className="air-gauge-head" aria-hidden>
+        <span>{name}</span>
+        <b className={`air-g g${grade}`}>
+          {GRADE_LABEL[grade]} <span className="air-num">{value}</span>
+          <small>{unit}</small>
+        </b>
+      </div>
+      <div className="air-gauge-bar" aria-hidden>
+        <i className="g0" />
+        <i className="g1" />
+        <i className="g2" />
+        <i className="g3" />
+        <span className="air-gauge-mark" style={{ left: `${Math.min(pos, 99)}%` }} />
+      </div>
+      <div className="air-gauge-cuts" aria-hidden>
+        {cuts.slice(1, 4).map((c, k) => (
+          <span key={c} style={{ left: `${(k + 1) * 25}%` }}>
+            {c}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export function AirCard({ air }: { air: AirNow }) {
   // 어제 같은 시각과 비교: 등급이 바뀌었으면 등급으로, 아니면 초미세먼지 5㎍ 이상 차이로
   let cmp: 'better' | 'worse' | 'same' | null = null
   if (air.gradeYest !== null && air.pm25Yest !== null) {
@@ -117,32 +168,58 @@ export function AirRow({ air }: { air: AirNow }) {
     else if (Math.abs(air.pm25 - air.pm25Yest) >= 5) cmp = air.pm25 < air.pm25Yest ? 'better' : 'worse'
     else cmp = 'same'
   }
+  const g10 = gradePm10(air.pm10)
+  const g25 = gradePm25(air.pm25)
   return (
-    <div className="air-row">
-      <span className={`air-dot g${air.grade}`} aria-hidden />
-      <span>
-        미세먼지 <b className={`air-g g${gradePm10(air.pm10)}`}>{GRADE_LABEL[gradePm10(air.pm10)]}</b>{' '}
-        <small>{air.pm10}</small>
-      </span>
-      <span>
-        초미세 <b className={`air-g g${gradePm25(air.pm25)}`}>{GRADE_LABEL[gradePm25(air.pm25)]}</b>{' '}
-        <small>{air.pm25}</small>
-      </span>
-      {cmp && (
-        <span className={`air-cmp ${cmp}`}>
-          {cmp === 'same' ? '어제 이맘때와 비슷해요' : `어제 이맘때보다 ${cmp === 'better' ? '맑아요' : '탁해요'}`}
-        </span>
+    <section className="card air-card">
+      <div className="air-card-head">
+        <h2 className="section-title">미세먼지</h2>
+        <small className="air-src">
+          {air.source?.kind === 'airkorea' ? `${air.source.station} 측정소 · 실측` : '예측 모델 값'}
+        </small>
+      </div>
+
+      {/* 결론 한 줄: 종합 등급 + 할 일 */}
+      <div className={`air-verdict g${air.grade}`}>
+        <span className="air-verdict-grade">{GRADE_LABEL[air.grade]}</span>
+        <p>{AIR_ADVICE[air.grade]}</p>
+      </div>
+
+      <AirGauge name="미세먼지 PM10" unit="㎍/㎥" value={air.pm10} cuts={PM10_CUTS} grade={g10} />
+      <AirGauge name="초미세먼지 PM2.5" unit="㎍/㎥" value={air.pm25} cuts={PM25_CUTS} grade={g25} />
+
+      {(cmp || air.worse) && (
+        <div className="air-notes">
+          {cmp && (
+            <span className={`air-cmp ${cmp}`}>
+              {cmp === 'same' ? '어제 이맘때와 비슷해요' : `어제 이맘때보다 ${cmp === 'better' ? '맑아요' : '탁해요'}`}
+              {air.pm25Yest !== null && <small> (초미세 어제 {air.pm25Yest} → 지금 {air.pm25})</small>}
+            </span>
+          )}
+          {air.worse && (
+            <span className="air-cmp worse">
+              {air.worse.nextDay ? '내일 ' : ''}
+              {air.worse.hour}시쯤 {GRADE_LABEL[air.worse.grade]} 예상
+            </span>
+          )}
+        </div>
       )}
-      <small className="air-src">
-        {air.source?.kind === 'airkorea' ? `${air.source.station} 측정소` : '예측 모델'}
-      </small>
-      {air.worse && (
-        <span className="air-cmp worse">
-          {air.worse.nextDay ? '내일 ' : ''}
-          {air.worse.hour}시쯤 {GRADE_LABEL[air.worse.grade]} 예상
-        </span>
+
+      {air.outlook && air.outlook.length > 0 && (
+        <div className="air-outlook">
+          <span className="air-outlook-title">앞으로 12시간</span>
+          <ol>
+            {air.outlook.map((o) => (
+              <li key={`${o.nextDay}-${o.hour}`} className={`g${o.grade}`}>
+                <span>{o.hour}시</span>
+                <i aria-hidden />
+                <b>{GRADE_LABEL[o.grade]}</b>
+              </li>
+            ))}
+          </ol>
+        </div>
       )}
-    </div>
+    </section>
   )
 }
 

@@ -29,7 +29,7 @@ import { answeredToday, loadFeel, resetFeel, voteFeel, type FeelVote } from './l
 import { loadCommute, saveCommute, type CommutePrefs } from './lib/commute'
 import { fetchNormal, type Normal } from './lib/normals'
 import { fetchWarnings, matchWarnings, type WarnItem } from './lib/warn'
-import { AirRow, CommuteCompare, FeelAsk, InAppBanner, NormalLine, SunRow, WarnBanner } from './components/Extras'
+import { AirCard, CommuteCompare, FeelAsk, InAppBanner, NormalLine, SunRow, WarnBanner } from './components/Extras'
 import { fetchWeather, type WeatherData } from './lib/weather'
 import {
   codeLabel,
@@ -625,12 +625,14 @@ export default function App() {
                 </div>
               </div>
               <SunRow sun={wx.sun} uv={wx.uvMaxToday} />
-              {air && <AirRow air={air} />}
+
             </div>
             <HourlyCard wx={wx} embedded />
           </section>
             </>
       )}
+      {/* 값을 아직 못 받았거나 받을 수 없는 곳(해외 일부)은 카드를 그리지 않는다 */}
+      {key === 'air' && air && <AirCard air={air} />}
       {key === 'prep' && (prepTips.length > 0 || picks.length > 0) && (
         <>
           {/* 날씨 카드 하나에 다 넣었더니 모바일에서 첫 카드만 1,500px 가 넘었다. 준비물은 따로 */}
@@ -834,8 +836,8 @@ export default function App() {
               <ComparePlaces baseLabel={loc.label} baseWx={wx} favorites={favorites} />
                     )}
             </SectionBoundary>
-            {/* 카드가 하나 늘어서 3 → 4 (여전히 '이번 주' 아래) */}
-            {i === 4 && <CoupangBanner id={1020558} template="carousel" height={140} />}
+            {/* 기본 순서에서 '이번 주' 바로 아래 (카드가 늘 때마다 함께 옮긴다) */}
+            {i === 5 && <CoupangBanner id={1020558} template="carousel" height={140} />}
           </div>
         ))}
         <CoupangBanner id={1020557} template="banner" height={90} maxWidth={728} />
