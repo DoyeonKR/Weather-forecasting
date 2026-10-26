@@ -18,6 +18,8 @@ export interface WeatherData {
   yesterdaySameHour: number
   /** 오늘 자외선 지수 최대 */
   uvMaxToday: number | null
+  /** 내일 자외선 지수 최대 (밤의 "내일의 준비"용. 옛 캐시에는 없다) */
+  uvMaxTomorrow?: number | null
   yesterday: DayStats
   today: DayStats
   tomorrow: DayStats
@@ -109,6 +111,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     nowIsDay: data.current.is_day === 1,
     yesterdaySameHour,
     uvMaxToday: data.daily.uv_index_max[1] ?? null,
+    uvMaxTomorrow: data.daily.uv_index_max[2] ?? null,
     yesterday: dayStats(data.daily, 0),
     today: dayStats(data.daily, 1),
     tomorrow: dayStats(data.daily, 2),

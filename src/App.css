@@ -3918,3 +3918,12 @@ summary:active {
   font-size: 12px;
   font-weight: 600;
 }
+
+/* "내일의 준비" 옆 작은 설명 */
+.prep-note {
+  display: block;
+  margin-top: 2px;
+  color: var(--sub);
+  font-size: 12px;
+  font-weight: 600;
+}

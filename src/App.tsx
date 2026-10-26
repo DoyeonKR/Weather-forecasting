@@ -33,6 +33,7 @@ import { AirRow, CommuteCompare, FeelAsk, InAppBanner, NormalLine, SunRow, WarnB
 import { fetchWeather, type WeatherData } from './lib/weather'
 import {
   codeLabel,
+  isSnowCode,
   compareSummary,
   deltaText,
   funTips,
@@ -388,13 +389,28 @@ export default function App() {
   const ahead = todayAhead(wx)
   // 비교 카드의 비는 어제도 같은 시간대(지금~자정)로 잘라야 공정하다
   const yestWindow = yesterdaySameWindow(wx)
+  // 눈·어는 비가 온 날은 그친 뒤에도 밤에 다시 언다 → 빙판 판단만은 하루 전체 코드를 쓴다
+  const iceDay = isSnowCode(wx.today.code) || [56, 57, 66, 67].includes(wx.today.code)
+  const tipToday = iceDay && wx.today.tmin <= 0 ? { ...ahead, code: wx.today.code } : ahead
+  // 저녁 8시부터는 오늘 낮 얘기 대신 "내일의 준비" — 오늘을 기준(어제 자리)으로 내일을 본다
+  const prepTomorrow = wx.nowHourLocal >= 20
   const tips = funTips({
-    today: ahead,
+    today: tipToday,
     yesterday: wx.yesterday,
     uvMax: wx.uvMaxToday,
     airGrade: air?.grade ?? null,
     feelOffset: feel.offset,
   })
+  const prepTips = prepTomorrow
+    ? funTips({
+        today: wx.tomorrow,
+        yesterday: wx.today,
+        uvMax: wx.uvMaxTomorrow ?? null,
+        airGrade: null, // 내일 미세먼지는 아직 모른다
+        feelOffset: feel.offset,
+        forTomorrow: true,
+      })
+    : tips
   const warnHits = warnItems ? matchWarnings(warnItems, loc.label) : []
 
   async function onShare() {
@@ -417,7 +433,9 @@ export default function App() {
     )
     if (r === 'shared') trackEvent('share_done')
   }
-  const picks = partnerPicks({ today: ahead, uvMax: wx.uvMaxToday })
+  const picks = prepTomorrow
+    ? partnerPicks({ today: wx.tomorrow, uvMax: wx.uvMaxTomorrow ?? null })
+    : partnerPicks({ today: ahead, uvMax: wx.uvMaxToday })
   const alerts = tomorrowAlerts(wx.tomorrow, wx.today)
   const tomorrowLabel = codeLabel(wx.tomorrow.code)
 
@@ -613,15 +631,18 @@ export default function App() {
           </section>
             </>
       )}
-      {key === 'prep' && (tips.length > 0 || picks.length > 0) && (
+      {key === 'prep' && (prepTips.length > 0 || picks.length > 0) && (
         <>
           {/* 날씨 카드 하나에 다 넣었더니 모바일에서 첫 카드만 1,500px 가 넘었다. 준비물은 따로 */}
           <section className="card prep-card">
-            {tips.length > 0 && (
+            {prepTips.length > 0 && (
               <>
-                <h2 className="section-title">오늘의 준비</h2>
+                <h2 className="section-title">
+                  {prepTomorrow ? '내일의 준비' : '오늘의 준비'}
+                  {prepTomorrow && <small className="prep-note">밤이라 내일 기준으로 골랐어요</small>}
+                </h2>
                 <ul className="tips tips-visual">
-                  {tips.map((t) => {
+                  {prepTips.map((t) => {
                     const TipIcon = tipIcon(t.emoji)
                     return (
                     <li key={t.title} className="tip">
@@ -645,6 +666,7 @@ export default function App() {
                   answered={answeredToday(feel)}
                   offset={feel.offset}
                   onVote={onFeelVote}
+                  // 내일 체감 질문은 "오늘 보여준 옷차림" 기준 — 밤의 내일 추천으로 덮어쓰지 않는다
                   todayClothes={tips.find((t) => t.kind === 'clothes')?.title ?? null}
                 />
               </>

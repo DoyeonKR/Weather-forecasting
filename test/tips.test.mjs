@@ -182,3 +182,25 @@ test('미세먼지 나쁨이면 마스크, 매우 나쁨이면 맨 앞', () => {
   const good = funTips({ today: day({ tmax: 20, tmin: 12 }), yesterday: day({ tmax: 20 }), uvMax: null, airGrade: 1 })
   assert.doesNotMatch(titles(good), /마스크|미세먼지/)
 })
+
+// ── 밤의 "내일의 준비" (v1.0.71)
+test('내일 기준이면 날짜 낱말을 하루씩 민다 (두 번 밀리지 않게)', () => {
+  const tips = funTips({
+    today: day({ tmax: 12, tmin: 4 }), // 내일
+    yesterday: day({ tmax: 18, tmin: 10 }), // 오늘
+    uvMax: null,
+    forTomorrow: true,
+  })
+  assert.match(titles(tips), /오늘보다 (훨씬 추움|서늘)/)
+  assert.doesNotMatch(titles(tips) + bodies(tips), /어제/)
+})
+
+test('빨래 찬스: "오늘 내리던 비가 내일은 그쳐요"', () => {
+  const tips = funTips({
+    today: day({ tmax: 20, tmin: 12 }),
+    yesterday: day({ tmax: 20, precipSum: 5 }),
+    uvMax: null,
+    forTomorrow: true,
+  })
+  assert.match(bodies(tips), /오늘 내리던 비가 내일은 그쳐요/)
+})

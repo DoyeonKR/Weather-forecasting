@@ -105,6 +105,11 @@ export function funTips(opts: {
    * 옷차림 단계에만 쓴다. 폭염·혹한 같은 위험 안내는 실제 기온으로만 판단한다.
    */
   feelOffset?: number
+  /**
+   * 밤에 "내일의 준비"로 쓸 때: today 자리에 내일, yesterday 자리에 오늘을 넣고 이걸 켜면
+   * 문장 속 날짜 낱말을 하루씩 민다 (어제→오늘, 오늘→내일, 내일→모레).
+   */
+  forTomorrow?: boolean
 }): Tip[] {
   const { today, yesterday, uvMax } = opts
   const feel = Math.max(-4, Math.min(4, opts.feelOffset ?? 0))
@@ -216,7 +221,16 @@ export function funTips(opts: {
     .slice()
     .sort((a, b) => a.rank - b.rank)
     .slice(0, 3)
-    .map(({ emoji, title, body, kind }) => (kind ? { emoji, title, body, kind } : { emoji, title, body }))
+    .map(({ emoji, title, body, kind }) => {
+      const t = opts.forTomorrow ? shiftDay(title) : title
+      const b = opts.forTomorrow ? shiftDay(body) : body
+      return kind ? { emoji, title: t, body: b, kind } : { emoji, title: t, body: b }
+    })
+}
+
+/** 문장 속 날짜 낱말을 하루 뒤로 (한 번에 바꿔야 "어제→오늘→내일"로 두 번 밀리지 않는다) */
+export function shiftDay(text: string): string {
+  return text.replace(/어제|오늘|내일/g, (w) => (w === '어제' ? '오늘' : w === '오늘' ? '내일' : '모레'))
 }
 
 /**
