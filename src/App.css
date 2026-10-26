@@ -3910,3 +3910,11 @@ summary:active {
   user-select: text;
   -webkit-user-select: text;
 }
+
+/* 비교 카드 강수: 어느 시간대를 비교하는지 */
+.cmp-window {
+  margin-left: auto;
+  color: var(--sub);
+  font-size: 12px;
+  font-weight: 600;
+}

@@ -19,3 +19,21 @@ export function todayAhead(wx: Pick<WeatherData, 'today' | 'hourly' | 'nowHourLo
   }
   return { ...wx.today, precipProbMax: probMax, precipSum: Math.round(sum * 10) / 10 }
 }
+
+/**
+ * 어제의 같은 시간대(지금 시각 ~ 자정) 강수 — 오늘 남은 시간과 공정하게 비교하려고.
+ * 오늘은 남은 시간, 어제는 하루 전체로 비교하면 저녁마다 "어제보다 비가 덜 온다"가 된다.
+ */
+export function yesterdaySameWindow(
+  wx: Pick<WeatherData, 'yesterday' | 'hourly' | 'nowHourLocal'>,
+): DayStats {
+  const { prob, precip } = wx.hourly
+  if (!prob || prob.length < 48) return wx.yesterday
+  let probMax = 0
+  let sum = 0
+  for (let i = wx.nowHourLocal; i <= 23; i++) {
+    probMax = Math.max(probMax, prob[i] ?? 0)
+    sum += precip[i] ?? 0
+  }
+  return { ...wx.yesterday, precipProbMax: probMax, precipSum: Math.round(sum * 10) / 10 }
+}

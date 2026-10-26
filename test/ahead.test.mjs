@@ -42,3 +42,14 @@ test('시간별 확률이 없는 옛 캐시는 하루 값 그대로', () => {
   const wx = { today, nowHourLocal: 22, hourly: { precip: arr(0) } }
   assert.equal(todayAhead(wx), today)
 })
+
+test('어제도 같은 시간대(지금~자정)로 잘라 비교한다', () => {
+  const { yesterdaySameWindow } = mod.exports
+  const yesterday = { ...today, precipSum: 9, precipProbMax: 90 }
+  // 어제 6시(인덱스 6)에 9mm, 어제 23시(인덱스 23)에 0.5mm — 지금 20시
+  const wx = { yesterday, nowHourLocal: 20, hourly: { prob: arr(0, { 6: 90, 23: 40 }), precip: arr(0, { 6: 9, 23: 0.5 }) } }
+  const y = yesterdaySameWindow(wx)
+  assert.equal(y.precipSum, 0.5)
+  assert.equal(y.precipProbMax, 40)
+  assert.equal(yesterdaySameWindow({ yesterday, nowHourLocal: 20, hourly: { precip: arr(0) } }), yesterday)
+})

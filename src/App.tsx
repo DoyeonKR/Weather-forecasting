@@ -22,7 +22,7 @@ import {
 import { locate, type Located } from './lib/geo'
 import { weatherIcon, weatherTone, type UiIcon } from './lib/weatherIcon'
 import { loadLast, saveLast } from './lib/lastWeather'
-import { todayAhead } from './lib/ahead'
+import { todayAhead, yesterdaySameWindow } from './lib/ahead'
 import { detectInApp } from './lib/inapp'
 import { GRADE_LABEL, fetchAir, type AirNow } from './lib/air'
 import { answeredToday, loadFeel, resetFeel, voteFeel, type FeelVote } from './lib/feel'
@@ -386,6 +386,8 @@ export default function App() {
   const now = obsLabel ?? codeLabel(wx.nowCode)
   // 실용 멘트·추천·강수확률 칸은 "오늘 남은 시간" 기준 (지나간 비로 우산을 권하지 않게)
   const ahead = todayAhead(wx)
+  // 비교 카드의 비는 어제도 같은 시간대(지금~자정)로 잘라야 공정하다
+  const yestWindow = yesterdaySameWindow(wx)
   const tips = funTips({
     today: ahead,
     yesterday: wx.yesterday,
@@ -664,7 +666,7 @@ export default function App() {
         <>
           <section className="card">
             <h2 className="section-title">어제와 비교하면</h2>
-            <p className="cmp-summary">{compareSummary(wx.today, wx.yesterday)}</p>
+            <p className="cmp-summary">{compareSummary(ahead, yestWindow)}</p>
             <CommuteCompare wx={wx} prefs={commute} />
             <div className="cmp-sec">
               <h3 className="cmp-title">
@@ -676,8 +678,10 @@ export default function App() {
             <div className="cmp-sec">
               <h3 className="cmp-title">
                 <Drop size={16} weight="duotone" className="cold-icon" aria-hidden /> 강수
+                {/* 오늘은 남은 시간, 어제는 같은 시간대 — 어느 구간인지 밝혀야 숫자를 오해하지 않는다 */}
+                <small className="cmp-window">{wx.nowHourLocal}시~자정</small>
               </h3>
-              <PrecipCompare today={wx.today} yesterday={wx.yesterday} />
+              <PrecipCompare today={ahead} yesterday={yestWindow} />
             </div>
             <div className="cmp-sec">
               <h3 className="cmp-title">
@@ -760,7 +764,11 @@ export default function App() {
                         <DayIcon size={22} weight="duotone" aria-hidden />
                       </span>
                       <span className="week-prob">
-                        {(d.stats.precipProbMax ?? 0) >= 20 ? `${d.stats.precipProbMax}%` : ''}
+                        {(() => {
+                          // 오늘 줄은 남은 시간 기준 — 위쪽 강수확률 칸(0%)과 같은 숫자를 말하게
+                          const p = i === 0 ? ahead.precipProbMax : d.stats.precipProbMax
+                          return (p ?? 0) >= 20 ? `${p}%` : ''
+                        })()}
                       </span>
                       <span className="week-min">{Math.round(d.stats.tmin)}°</span>
                       <div className="week-track">
