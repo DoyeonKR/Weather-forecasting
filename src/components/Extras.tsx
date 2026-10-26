@@ -130,7 +130,7 @@ export function AirRow({ air }: { air: AirNow }) {
       </span>
       {cmp && (
         <span className={`air-cmp ${cmp}`}>
-          어제 이맘때보다 {cmp === 'better' ? '맑아요' : cmp === 'worse' ? '탁해요' : '비슷해요'}
+          {cmp === 'same' ? '어제 이맘때와 비슷해요' : `어제 이맘때보다 ${cmp === 'better' ? '맑아요' : '탁해요'}`}
         </span>
       )}
       <small className="air-src">
