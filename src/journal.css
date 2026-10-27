@@ -351,3 +351,18 @@ button:disabled { cursor: default; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* ── 카드당 글자 줄이기 (v1.0.86) ─────────────────────────────
+   같은 말을 두 번 하는 소제목·요약·범례·표 머리를 걷어낸다. 정보(숫자·그래프)는 그대로 */
+.journal-flow .hourly-head > .section-title { display: none; }
+.journal-flow .hourly-head { justify-content: flex-end; margin: -60px 0 18px auto; width: max-content; }
+.journal-flow .hs-legend > span:nth-child(n + 3) { display: none; }
+.journal-flow .hourly-foot { display: none; }
+.journal-outlook .week-head,
+.journal-outlook .week-key { display: none; }
+.journal-detail-copy small { display: none; }
+
+@media (max-width: 520px) {
+  /* 디테일 줄: 설명 대신 값 하나 */
+  .journal-detail-value { display: block; max-width: 46%; font-size: 15px; font-weight: 650; }
+}

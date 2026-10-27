@@ -50,7 +50,7 @@ export function buildGlance(opts: {
   const maybe = !rainy && ((prob ?? 0) >= 30 || sum >= 0.3)
 
   // 우산
-  const probText = prob === null ? `강수 ${round1(sum)}mm` : `강수확률 ${prob}%`
+  const probText = prob === null ? `강수 ${round1(sum)}mm` : `강수 ${prob}%`
   const umbrella: GlanceTile = snow
     ? { key: 'umbrella', label: '우산', value: '눈 대비', sub: '미끄럼 조심', tone: 'warn' }
     : rainy
@@ -69,7 +69,7 @@ export function buildGlance(opts: {
     key: 'outfit',
     label: '옷차림',
     value: clothes,
-    sub: `낮 ${Math.round(day.tmax)}° · 아침 ${Math.round(day.tmin)}°`,
+    sub: `${Math.round(day.tmin)}° ~ ${Math.round(day.tmax)}°`,
     tone: hot || cold ? 'alert' : 'info',
   }
 
@@ -77,12 +77,12 @@ export function buildGlance(opts: {
   const g = airGrade === null || airGrade === undefined ? null : Math.max(0, Math.min(3, Math.round(airGrade)))
   const air: GlanceTile =
     g === null
-      ? { key: 'air', label: '미세먼지', value: '정보 없음', sub: '측정값 없음', tone: 'ok' }
+      ? { key: 'air', label: '미세먼지', value: '정보 없음', sub: '', tone: 'ok' }
       : {
           key: 'air',
           label: '미세먼지',
           value: AIR_VALUE[g],
-          sub: forTomorrow ? (g >= 2 ? '지금 · 마스크 챙기기' : '지금 기준') : g >= 2 ? '마스크 챙기기' : '마스크 불필요',
+          sub: g >= 2 ? '마스크 챙기기' : '',
           tone: g === 3 ? 'alert' : g === 2 ? 'warn' : 'ok',
         }
 

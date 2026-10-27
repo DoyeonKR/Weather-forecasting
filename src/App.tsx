@@ -66,7 +66,7 @@ const StatsPanel = lazy(() => import('./components/StatsPanel'))
 const ShareSheet = lazy(() => import('./components/ShareSheet'))
 import PlaceBar from './components/PlaceBar'
 import Settings from './components/Settings'
-import { DeltaHero, PrecipCompare, TempRangeBars, WindCompare } from './components/CompareGraphic'
+import { PrecipCompare, TempRangeBars, WindCompare } from './components/CompareGraphic'
 import WeatherArtwork from './components/WeatherArtwork'
 import WeatherFx from './components/WeatherFx'
 import WeatherBackdrop from './components/WeatherBackdrop'
@@ -544,7 +544,6 @@ export default function App() {
             </div>
             <div className="hero-story">
               <div className="hero-reading">
-                <p className="journal-eyebrow">지금 이곳의 날씨</p>
                 <div className="hero-main">
                   <div className="hero-info">
                     <div className={`hero-temp ${round1(wx.nowTemp).toFixed(1).length > 4 ? 'hero-temp-wide' : ''}`}>{round1(wx.nowTemp).toFixed(1)}<span>°</span></div>
@@ -552,11 +551,9 @@ export default function App() {
                   </div>
                   <WeatherArtwork label={now.label} isDay={wx.nowIsDay} size={144} variant="illustrated" priority />
                 </div>
-                <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
               </div>
             </div>
             <div className="hero-decision">
-            <p className="journal-eyebrow">{prepTomorrow ? '내일 미리 챙기세요' : '오늘 챙길 것'}</p>
             <h2 className="glance-head">{glance.headline}</h2>
             <ul className="glance" aria-label={prepTomorrow ? '내일 챙길 것' : '오늘 챙길 것'}>
               {glance.tiles.map((t) => {
@@ -565,10 +562,9 @@ export default function App() {
                   <li key={t.key} className={`glance-tile tone-${t.tone}`}>
                     <span className="glance-label">
                       <Icon size={18} weight="regular" aria-hidden /> {t.label}
-                      <em>{t.key === 'air' ? '지금' : prepTomorrow ? '내일' : '오늘'}</em>
                     </span>
                     <b className="glance-value">{t.value}</b>
-                    <span className="glance-sub">{t.sub}</span>
+                    {t.sub && <span className="glance-sub">{t.sub}</span>}
                   </li>
                 )
               })}
@@ -691,7 +687,7 @@ export default function App() {
                   <span>{label}</span>
                   <strong>{round1(temp).toFixed(1)}°</strong>
                   <small className={Math.abs(round1(diff)) < 0.5 ? 'muted' : diff > 0 ? 'warm-icon' : 'cold-icon'}>
-                    오늘보다 {deltaText(diff)}
+                    {Math.abs(round1(diff)) < 0.5 ? '오늘과 비슷' : `${diff > 0 ? '▲' : '▼'}${Math.abs(round1(diff))}°`}
                   </small>
                 </div>
               ))}
@@ -836,7 +832,7 @@ export default function App() {
     places: {
       label: '지역 비교',
       Icon: MapPin,
-      impact: { value: '다른 지역과 비교', sub: `${loc.label.replace(' (기본 위치)', '')} 기준`, tone: 'info' },
+      impact: { value: '비교하기', sub: `${loc.label.replace(' (기본 위치)', '')} 기준`, tone: 'info' },
     },
   }
 
@@ -947,16 +943,14 @@ export default function App() {
         <SectionBoundary name="hero">{renderSection('hero')}</SectionBoundary>
         <section className="journal-flow card" aria-labelledby="flow-title">
           <header className="journal-heading">
-            <div><p className="journal-eyebrow">시간을 따라 읽는 날씨</p><h2 id="flow-title">오늘의 흐름</h2></div>
-            <span className="journal-index" aria-hidden="true">01</span>
+            <h2 id="flow-title">오늘의 흐름</h2>
           </header>
           <SectionBoundary name="hourly"><HourlyCard wx={wx} embedded /></SectionBoundary>
           <CommuteCompare wx={wx} prefs={commute} />
         </section>
         <section className="journal-outlook card" aria-labelledby="outlook-title">
           <header className="journal-heading">
-            <div><p className="journal-eyebrow">조금 더 멀리</p><h2 id="outlook-title">내일과 이번 주</h2></div>
-            <span className="journal-index" aria-hidden="true">02</span>
+            <h2 id="outlook-title">내일과 이번 주</h2>
           </header>
           <div className="journal-outlook-grid">
             <SectionBoundary name="tomorrow">{renderSection('tomorrow')}</SectionBoundary>
@@ -965,8 +959,7 @@ export default function App() {
         </section>
         <section className="journal-details card" aria-labelledby="details-title">
           <header className="journal-heading">
-            <div><p className="journal-eyebrow">필요한 것만 더 자세히</p><h2 id="details-title">날씨의 디테일</h2></div>
-            <span className="journal-index" aria-hidden="true">03</span>
+            <h2 id="details-title">날씨의 디테일</h2>
           </header>
           {sectionOrder.map((key) => {
             const info = cards[key]
@@ -976,7 +969,7 @@ export default function App() {
               <details key={key} className={`journal-detail tone-${info.impact.tone}`} data-detail={key} data-air-grade={key === 'air' ? air?.grade : undefined} data-trend={key === 'compare' ? wx.nowTemp - wx.yesterdaySameHour >= .5 ? 'warmer' : wx.nowTemp - wx.yesterdaySameHour <= -.5 ? 'cooler' : 'same' : undefined}>
                 <summary>
                   <Icon size={22} weight="regular" aria-hidden />
-                  <span className="journal-detail-copy"><b>{info.label}</b><small>{info.impact.sub}</small></span>
+                  <span className="journal-detail-copy"><b>{info.label}</b></span>
                   <span className="journal-detail-value">{info.impact.value}</span>
                   <CaretDown size={17} className="journal-detail-caret" aria-hidden />
                 </summary>

@@ -301,7 +301,7 @@ export function CommuteCompare({ wx, prefs }: { wx: WeatherData; prefs: CommuteP
               <Icon size={22} weight="duotone" className={`wi-${weatherTone(label)}`} aria-hidden />
               <strong className="commute-temp">{Math.round(s.temp)}°</strong>
               <span className="commute-diff">
-                하루 전보다 <Diff d={s.temp - s.prev} />
+                어제 <Diff d={s.temp - s.prev} />
               </span>
               {s.precip > 0 && <span className="commute-rain">{s.precip < 1 ? s.precip.toFixed(1) : Math.round(s.precip)}mm</span>}
             </li>

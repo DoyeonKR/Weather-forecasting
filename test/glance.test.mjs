@@ -20,8 +20,9 @@ test('맑고 선선한 날: 우산 필요 없음(회색), 옷 결론', () => {
   const g = buildGlance({ day: day(), airGrade: 0 })
   assert.equal(g.headline, '오늘은 니트·자켓 차림이면 돼요')
   assert.deepEqual([tile(g, 'umbrella').value, tile(g, 'umbrella').tone], ['필요 없음', 'ok'])
-  assert.equal(tile(g, 'umbrella').sub, '강수확률 10%')
-  assert.equal(tile(g, 'outfit').sub, '낮 14° · 아침 6°')
+  assert.equal(tile(g, 'umbrella').sub, '강수 10%')
+  assert.equal(tile(g, 'outfit').sub, '6° ~ 14°')
+  assert.equal(tile(g, 'air').sub, '')
   assert.deepEqual([tile(g, 'air').value, tile(g, 'air').tone], ['좋음', 'ok'])
 })
 
@@ -36,7 +37,7 @@ test('애매한 비는 작은 우산, 밤에는 내일 기준', () => {
   const g = buildGlance({ day: day({ tmax: 22, precipProbMax: 40 }), airGrade: 1, forTomorrow: true })
   assert.equal(g.headline, '내일은 가벼운 긴팔에 작은 우산 하나')
   assert.equal(tile(g, 'umbrella').value, '작은 우산')
-  assert.equal(tile(g, 'air').sub, '지금 기준')
+  assert.equal(tile(g, 'air').value, '보통')
 })
 
 test('눈, 폭염, 영하는 강조', () => {
