@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import {
   ArrowClockwise,
   ArrowUp,
@@ -469,6 +469,13 @@ export default function App() {
     ? partnerPicks({ today: wx.tomorrow, uvMax: wx.uvMaxTomorrow ?? null })
     : partnerPicks({ today: ahead, uvMax: wx.uvMaxToday })
   // 첫 화면 한눈에: 우산·옷·마스크 판정 + 한 줄 결론 (밤에는 내일 기준, 내일의 준비와 같은 기준)
+  // 메인 카드 뒤 하늘 사진 — 밤엔 밤하늘, 낮에 비·눈·뇌우면 흐린 풍경, 그 밖엔 아침 하늘 (장식이라 글자는 따로)
+  const nowTone = weatherTone(now.label)
+  const heroSky = !wx.nowIsDay
+    ? { kind: 'night', src: `${import.meta.env.BASE_URL}images/weather-journal/night-sky.webp` }
+    : nowTone === 'rain' || nowTone === 'snow' || nowTone === 'storm'
+      ? { kind: 'gloom', src: `${import.meta.env.BASE_URL}images/weather-brief/cooler.webp` }
+      : { kind: 'day', src: `${import.meta.env.BASE_URL}images/weather-journal/morning-sky.webp` }
   const showFallback = loc.isFallback && selectedId === 'current' && !detectInApp()
   const glance = buildGlance({
     day: prepTomorrow ? wx.tomorrow : tipToday,
@@ -488,7 +495,7 @@ export default function App() {
     <>
       {key === 'hero' && (
         <>
-          <section className="hero card">
+          <section className={`hero card has-sky sky-${heroSky.kind}`} style={{ '--hero-sky': `url(${heroSky.src})` } as CSSProperties}>
             <WarnBanner hits={warnHits} />
             <div className="hero-date">
               <span>

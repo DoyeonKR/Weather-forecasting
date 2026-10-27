@@ -5025,3 +5025,55 @@ summary:active {
     transition: none;
   }
 }
+
+/* ── 메인 카드 뒤 하늘 사진 (v1.0.78) ───────────────────────────
+   위쪽(날짜·기온)에만 깔고 아래로 갈수록 카드 바탕에 녹인다. 글자 대비를 위해 어둡게 덮는다 */
+.hero.has-sky {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.hero.has-sky::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: 400px;
+  background:
+    linear-gradient(180deg, rgba(5, 12, 30, var(--sky-dim-top, 0.3)) 0%, rgba(5, 12, 30, var(--sky-dim-mid, 0.5)) 60%, rgba(7, 21, 52, 0.85) 100%),
+    var(--hero-sky) center 40% / cover no-repeat;
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+  pointer-events: none;
+}
+
+/* 밝은 아침 하늘은 더 어둡게 덮어야 흰 글자가 읽힌다 */
+.hero.sky-day {
+  --sky-dim-top: 0.42;
+  --sky-dim-mid: 0.62;
+}
+
+.hero.sky-night {
+  --sky-dim-top: 0.12;
+  --sky-dim-mid: 0.4;
+}
+
+/* 흐린 풍경(브리핑 이미지)은 오른쪽에 풍경이 있다 */
+.hero.sky-gloom::before {
+  background-position: 0 0, right center;
+}
+
+.hero.has-sky .hero-date,
+.hero.has-sky .hero-condition {
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+}
+
+.hero.has-sky .hero-temp {
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+}
+
+/* 아침 하늘은 해가 오른쪽 아래 — 햇살이 카드에 들어오게 */
+.hero.sky-day::before {
+  background-position: 0 0, 72% 65%;
+}
