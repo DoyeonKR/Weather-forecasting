@@ -60,8 +60,8 @@ export default function Settings({
   visitors,
 }: Props) {
   const [open, setOpen] = useState(false)
-  // 메인(hero)은 늘 맨 위라 순서 목록에서 뺀다
-  const cardOrder = sectionOrder.filter((k) => k !== 'hero')
+  // 메인(hero)은 늘 맨 위, 레이더는 늘 맨 아래라 순서 목록에서 뺀다
+  const cardOrder = sectionOrder.filter((k) => k !== 'hero' && k !== 'radar')
   const [notify, setNotify] = useState<NotifyState | 'loading'>('loading')
   const [rain, setRain] = useState(false)
   const [inApp] = useState(() => detectInApp())
@@ -559,15 +559,15 @@ export default function Settings({
             <details className="settings-sec settings-group">
               <summary className="settings-sec-title"><PuzzlePiece size={19} weight="duotone" aria-hidden /> 화면 순서</summary>
               <p className="muted small notify-desc">
-                메인 아래 요약 카드 순서예요. 현재 날씨는 늘 맨 위에 있어요.
+                메인 아래 카드 순서예요. 현재 날씨는 늘 맨 위, 비구름 레이더는 늘 맨 아래에 있어요.
               </p>
               <ul className="order-list">
                 {cardOrder.map((k, i) => (
                   <li key={k}>
                     <span className="order-name">{SECTION_LABEL[k]}</span>
                     <span className="order-btns">
-                      <button type="button" aria-label="위로" disabled={i === 0} onClick={() => onSetOrder(['hero', ...moveItem(cardOrder, i, i - 1)])}>▲</button>
-                      <button type="button" aria-label="아래로" disabled={i === cardOrder.length - 1} onClick={() => onSetOrder(['hero', ...moveItem(cardOrder, i, i + 1)])}>▼</button>
+                      <button type="button" aria-label="위로" disabled={i === 0} onClick={() => onSetOrder(['hero', ...moveItem(cardOrder, i, i - 1), 'radar'])}>▲</button>
+                      <button type="button" aria-label="아래로" disabled={i === cardOrder.length - 1} onClick={() => onSetOrder(['hero', ...moveItem(cardOrder, i, i + 1), 'radar'])}>▼</button>
                     </span>
                   </li>
                 ))}

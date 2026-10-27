@@ -5,7 +5,6 @@ import {
   ArrowsLeftRight,
   Backpack,
   CalendarBlank,
-  CaretRight,
   CaretDown,
   CloudFog,
   Crosshair,
@@ -15,7 +14,6 @@ import {
   Hoodie,
   Leaf,
   MapPin,
-  MapTrifold,
   ShareNetwork,
   Star,
   Sun,
@@ -34,7 +32,6 @@ import { loadLast, saveLast } from './lib/lastWeather'
 import { todayAhead, yesterdaySameWindow } from './lib/ahead'
 import { buildGlance } from './lib/glance'
 import { compareImpact, hourlyImpact, sunImpact, tomorrowImpact, weekImpact, type Impact } from './lib/impact'
-import DetailSheet from './components/DetailSheet'
 import { detectInApp } from './lib/inapp'
 import { GRADE_LABEL, fetchAir, type AirNow } from './lib/air'
 import { answeredToday, loadFeel, resetFeel, voteFeel, type FeelVote } from './lib/feel'
@@ -365,9 +362,6 @@ export default function App() {
     saveOrder(next)
   }
 
-  // 요약 카드를 누르면 여는 상세 시트
-  const [openKey, setOpenKey] = useState<SectionKey | null>(null)
-  const closeSheet = useCallback(() => setOpenKey(null), [])
 
   // 큰 안내를 한 번 봤으면 다음 방문부터는 작게 (이번 방문 동안은 그대로 둔다)
   useEffect(() => {
@@ -490,7 +484,7 @@ export default function App() {
     ? `${import.meta.env.BASE_URL}images/weather-brief/${wx.tomorrow.tmax >= wx.today.tmax ? 'warmer' : 'cooler'}.webp`
     : null
 
-  // 섹션 상세 (예전 카드 그대로) — 메인은 화면에, 나머지는 시트 안에 그린다
+  // 섹션 내용 (예전 카드 그대로) — 메인은 맨 위, 나머지는 요약 머리 아래에 펼친다
   const renderSection = (key: SectionKey) => (
     <>
       {key === 'hero' && (
@@ -784,7 +778,6 @@ export default function App() {
     </>
   )
 
-  const observedRaining = kmaNow ? (kmaNow.pty ?? 0) > 0 || (kmaNow.rn1 ?? 0) > 0 : null
   const prepLead = prepTips.find((t) => t.kind !== 'clothes') ?? prepTips[0]
   const cards: Partial<Record<SectionKey, { label: string; Icon: UiIcon; impact: Impact | null; wide?: boolean }>> = {
     hourly: { label: '앞으로 12시간', Icon: Clock, impact: hourlyImpact(wx), wide: true },
@@ -806,7 +799,7 @@ export default function App() {
             Icon: Backpack,
             impact: {
               value: prepLead?.title ?? '추천 보기',
-              sub: prepTips.length > 1 ? `외 ${prepTips.length - 1}가지 더` : '자세히 보기',
+              sub: prepTomorrow ? '밤이라 내일 기준으로 골랐어요' : prepTips.length > 1 ? `외 ${prepTips.length - 1}가지 더` : '오늘 기준',
               tone: 'info',
             },
           }
@@ -815,14 +808,6 @@ export default function App() {
     tomorrow: { label: '내일', Icon: CloudSun, impact: tomorrowImpact(wx.tomorrow, wx.today, alerts) },
     week: { label: '이번 주', Icon: CalendarBlank, impact: weekImpact(wx.week) },
     sun: { label: '해', Icon: SunHorizon, impact: sunImpact(wx, Date.now(), -new Date().getTimezoneOffset() * 60) },
-    radar: {
-      label: '비구름 레이더',
-      Icon: MapTrifold,
-      impact: observedRaining
-        ? { value: '지금 비가 와요', sub: '비구름 움직임 보기', tone: 'rain' }
-        : { value: '비구름 지도', sub: '실시간 레이더로 확인', tone: 'info' },
-      wide: true,
-    },
     places: {
       label: '지역 비교',
       Icon: MapPin,
@@ -937,30 +922,31 @@ export default function App() {
       <div id="weather-main" tabIndex={-1} key={selectedId} className="switch-enter">
         {/* 메인: 한눈에 결론 — 늘 맨 위 */}
         <SectionBoundary name="hero">{renderSection('hero')}</SectionBoundary>
-        {/* 그 아래는 큰 값 하나 + 한 줄만 담은 요약 카드. 누르면 예전 상세 카드를 시트로 연다 */}
-        <div className="impact-grid">
+        {/* 그 아래 카드: 맨 위에 큰 값 하나 + 한 줄로 결론을 걸고, 바로 밑에 자세한 내용을 다 펼쳐 둔다 */}
+        <div className="isec-list">
           {sectionOrder.map((key) => {
-            const info = key === 'hero' ? undefined : cards[key]
+            if (key === 'hero' || key === 'radar') return null
+            const info = cards[key]
             if (!info?.impact) return null
             const Icon = info.Icon
             return (
-              <button
-                key={key}
-                type="button"
-                className={`impact-card tone-${info.impact.tone} ${info.wide ? 'wide' : ''}`}
-                onClick={() => setOpenKey(key)}
-                aria-haspopup="dialog"
-              >
-                <span className="impact-label">
-                  <Icon size={15} weight="bold" aria-hidden /> {info.label}
-                </span>
-                <b className="impact-value">{info.impact.value}</b>
-                <span className="impact-sub">{info.impact.sub}</span>
-                <CaretRight className="impact-go" size={14} weight="bold" aria-hidden />
-              </button>
+              <section key={key} className={`isec tone-${info.impact.tone}`} aria-label={SECTION_LABEL[key]}>
+                <header className="isec-head">
+                  <span className="isec-label">
+                    <Icon size={15} weight="bold" aria-hidden /> {info.label}
+                  </span>
+                  <b className="isec-value">{info.impact.value}</b>
+                  <span className="isec-sub">{info.impact.sub}</span>
+                </header>
+                <div className="isec-body">
+                  <SectionBoundary name={key}>{renderSection(key)}</SectionBoundary>
+                </div>
+              </section>
             )
           })}
         </div>
+        {/* 비구름 레이더는 요약 없이 지도 그대로, 맨 아래 */}
+        <SectionBoundary name="radar">{renderSection('radar')}</SectionBoundary>
         <CoupangBanner id={1020558} template="carousel" height={140} />
         <CoupangBanner id={1020557} template="banner" height={90} maxWidth={728} />
       </div>
@@ -1009,11 +995,6 @@ export default function App() {
           </a>
         </p>
       </footer>
-      {openKey && (
-        <DetailSheet title={SECTION_LABEL[openKey]} onClose={closeSheet}>
-          <SectionBoundary name={openKey}>{renderSection(openKey)}</SectionBoundary>
-        </DetailSheet>
-      )}
       {toast && (
         <div className="toast" role="status">
           {toast}
