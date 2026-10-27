@@ -1,13 +1,13 @@
 // 시간대별 기온·강수 — 지금부터 3시간 간격으로 받아 둔 예보 끝(약 7일)까지.
 // 한 화면에는 15시간쯤 보이고, 좌우로 밀면 뒷날이 이어진다.
-// 각 시각은 "하루 전 같은 시각"과 비교한다: 점선이 하루 전, 두 선 사이 면의 색이
-// 따뜻해졌는지(붉은색) 쌀쌀해졌는지(푸른색)를 보여주고, 칸마다 ▲▼ 차이를 적는다.
+// 각 시각을 하루 전 같은 시각과 비교한다. 실선/점선과 면/빗금으로 구별하여 색에 의존하지 않는다.
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import { CaretRight } from '@phosphor-icons/react'
 import { codeLabel } from '../lib/compare'
 import type { WeatherData } from '../lib/weather'
 import { weatherIcon, weatherTone } from '../lib/weatherIcon'
 import { trackEvent } from '../lib/track'
+import { TrendMark } from './WeatherArtwork'
 
 interface Props {
   wx: WeatherData
@@ -116,7 +116,7 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
   const line = (arr: number[]) =>
     arr.map((t, k) => `${k === 0 ? 'M' : 'L'}${x(k).toFixed(1)} ${y(t).toFixed(1)}`).join(' ')
 
-  // 두 선 사이 면 — 구간마다 따뜻해졌으면 붉게, 쌀쌀해졌으면 푸르게
+  // 두 선 사이 면 — 따뜻하면 회색 면, 쌀쌀하면 빗금
   const bands = tNow.slice(0, -1).map((_, k) => {
     const warmer = tNow[k] + tNow[k + 1] - (tPrev[k] + tPrev[k + 1])
     const d =
@@ -144,16 +144,17 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
     return `앞으로 ${firstSpanH}시간 ${main.startsWith('대체로') ? main : `대체로 ${main}`}`
   })()
   const days = dayStarts.filter(Boolean).length
+  const Heading = embedded ? 'h3' : 'h2'
 
   return (
     <section className={`${embedded ? 'hourly-embedded' : 'card'} hourly-card`}>
       <div className="hourly-head">
-        <h2 className="section-title">시간대별 기온·강수</h2>
+        <Heading className="section-title">시간대별 기온·강수</Heading>
         {!atEnd && (
           <button
             type="button"
             className="hs-more"
-            onClick={() => scrollRef.current?.scrollBy({ left: scrollRef.current.clientWidth * 0.9, behavior: 'smooth' })}
+            onClick={() => scrollRef.current?.scrollBy({ left: scrollRef.current.clientWidth * 0.9, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })}
           >
             {scrolled ? '다음' : `${days}일치 보기`} <CaretRight size={13} weight="bold" aria-hidden />
           </button>
@@ -200,7 +201,7 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
                         <Icon size={22} weight="duotone" className={`wi-${weatherTone(labels[k])}`} />
                         <strong className="hs-temp">{Math.round(tNow[k])}°</strong>
                         <span className={`hs-delta ${d > 0 ? 'warm' : d < 0 ? 'cold' : 'same'}`}>
-                          {d > 0 ? `▲${d}` : d < 0 ? `▼${-d}` : '='}
+                          <TrendMark delta={d} size={12} />{Math.abs(d)}°
                         </span>
                         {anyProb && (
                           <small className="hs-prob">{prob[k] !== null && prob[k]! >= 30 ? `${prob[k]}%` : '\u00a0'}</small>
@@ -214,6 +215,12 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
             ))}
           </div>
           <svg width={totalW} height={svgH} viewBox={`0 0 ${totalW} ${svgH}`} className="hs-svg" aria-hidden>
+            <defs>
+              <pattern id="journal-cold-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                <line x1="0" y1="0" x2="0" y2="5" stroke="#c5c5c0" strokeWidth="1.5" />
+              </pattern>
+            </defs>
+            {[0, .25, .5, .75, 1].map((f) => <line key={f} x1={0} x2={totalW} y1={PAD_Y + f * CHART_H} y2={PAD_Y + f * CHART_H} className="hs-grid" />)}
             {/* 날짜 경계 */}
             {dayStarts.map((s, k) =>
               s && k > 0 ? <line key={`dv${k}`} x1={k * COL} y1={0} x2={k * COL} y2={svgH} className="hs-daysep" /> : null,
@@ -244,6 +251,11 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
       </div>
 
       <div className="hourly-foot muted small">{summary}</div>
+      <table className="sr-only">
+        <caption>시간대별 예보. 화면의 검은 실선은 예보, 회색 점선은 하루 전 같은 시각입니다.</caption>
+        <thead><tr><th>시각</th><th>날씨</th><th>기온</th><th>하루 전</th><th>강수확률</th><th>강수량</th></tr></thead>
+        <tbody>{idx.map((i, k) => <tr key={i}><th>{time[i].replace('T', ' ')}</th><td>{labels[k]}</td><td>{Math.round(tNow[k])}도</td><td>{Math.round(tPrev[k])}도</td><td>{prob[k] === null ? '정보 없음' : `${prob[k]}%`}</td><td>{mm(pr[k])}</td></tr>)}</tbody>
+      </table>
     </section>
   )
 }

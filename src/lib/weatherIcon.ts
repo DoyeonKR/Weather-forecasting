@@ -18,7 +18,7 @@ export function weatherIcon(label: string, isDay = true): UiIcon {
   return isDay ? Sun : MoonStars
 }
 
-/** 아이콘 색 계열 — 해·달은 노랑, 구름은 회청, 비는 파랑, 눈은 흰색 */
+/** 날씨 계열 키 — 모노크롬 SVG 에셋과 장식 사진 선택에도 사용한다. */
 export function weatherTone(label: string): 'sun' | 'cloud' | 'rain' | 'snow' | 'storm' {
   if (label.includes('뇌우')) return 'storm'
   if (label.includes('눈')) return 'snow'

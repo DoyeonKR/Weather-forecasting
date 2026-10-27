@@ -1,15 +1,14 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import {
   ArrowClockwise,
   ArrowUp,
   ArrowsLeftRight,
   Backpack,
-  CalendarBlank,
+  CaretUp,
   CaretDown,
   CloudFog,
-  Crosshair,
-  Clock,
   CloudSun,
+  Crosshair,
   Drop,
   Hoodie,
   Leaf,
@@ -25,13 +24,17 @@ import {
   Warning,
   WifiSlash,
   Wind,
+  ChatCircleDots,
+  EnvelopeSimple,
+  Eye,
 } from '@phosphor-icons/react'
 import { locate, type Located } from './lib/geo'
 import { weatherIcon, weatherTone, type UiIcon } from './lib/weatherIcon'
 import { loadLast, saveLast } from './lib/lastWeather'
 import { todayAhead, yesterdaySameWindow } from './lib/ahead'
 import { buildGlance } from './lib/glance'
-import { compareImpact, hourlyImpact, sunImpact, tomorrowImpact, weekImpact, type Impact } from './lib/impact'
+import { skyAssetName } from './lib/journal'
+import { sunImpact, type Impact } from './lib/impact'
 import { detectInApp } from './lib/inapp'
 import { GRADE_LABEL, fetchAir, type AirNow } from './lib/air'
 import { answeredToday, loadFeel, resetFeel, voteFeel, type FeelVote } from './lib/feel'
@@ -61,8 +64,8 @@ const StatsPanel = lazy(() => import('./components/StatsPanel'))
 const ShareSheet = lazy(() => import('./components/ShareSheet'))
 import PlaceBar from './components/PlaceBar'
 import Settings from './components/Settings'
-import WeatherFx from './components/WeatherFx'
-import { PrecipCompare, TempRangeBars, WindCompare } from './components/CompareGraphic'
+import { DeltaHero, PrecipCompare, TempRangeBars, WindCompare } from './components/CompareGraphic'
+import WeatherArtwork from './components/WeatherArtwork'
 import ComparePlaces from './components/ComparePlaces'
 import CoupangBanner from './components/CoupangBanner'
 import { fetchTodayVisitors, trackEvent } from './lib/track'
@@ -71,6 +74,7 @@ import BriefBanner from './components/BriefBanner'
 import { SectionBoundary } from './components/ErrorBoundary'
 import { SECTION_LABEL, loadOrder, saveOrder, type SectionKey } from './lib/sections'
 import './App.css'
+import './journal.css'
 
 type Status = 'loading' | 'ready' | 'error'
 
@@ -382,7 +386,6 @@ export default function App() {
   if (status === 'loading' && (!wx || !loc)) {
     return (
       <div className={`shell center ${theme}`}>
-        <div className="neon-frame" aria-hidden />
         <div className="spinner" aria-hidden />
         <p className="muted" role="status">
           위치와 날씨를 확인하고 있어요…
@@ -394,7 +397,6 @@ export default function App() {
   if (!wx || !loc) {
     return (
       <div className="shell center bg-loading">
-        <div className="neon-frame" aria-hidden />
         <p>날씨를 불러오지 못했어요.</p>
         <button type="button" className="retry" onClick={() => selectPlace(selectedId)}>
           다시 시도
@@ -463,13 +465,10 @@ export default function App() {
     ? partnerPicks({ today: wx.tomorrow, uvMax: wx.uvMaxTomorrow ?? null })
     : partnerPicks({ today: ahead, uvMax: wx.uvMaxToday })
   // 첫 화면 한눈에: 우산·옷·마스크 판정 + 한 줄 결론 (밤에는 내일 기준, 내일의 준비와 같은 기준)
-  // 메인 카드 뒤 하늘 사진 — 밤엔 밤하늘, 낮에 비·눈·뇌우면 흐린 풍경, 그 밖엔 아침 하늘 (장식이라 글자는 따로)
+  // 하늘 사진은 글자 뒤가 아닌 별도 창. 비·눈을 우선하고, 맑은 날은 낮·밤으로 고른다.
   const nowTone = weatherTone(now.label)
-  const heroSky = !wx.nowIsDay
-    ? { kind: 'night', src: `${import.meta.env.BASE_URL}images/weather-journal/night-sky.webp` }
-    : nowTone === 'rain' || nowTone === 'snow' || nowTone === 'storm'
-      ? { kind: 'gloom', src: `${import.meta.env.BASE_URL}images/weather-brief/cooler.webp` }
-      : { kind: 'day', src: `${import.meta.env.BASE_URL}images/weather-journal/morning-sky.webp` }
+  const skyFile = skyAssetName(nowTone, wx.nowIsDay)
+  const heroSky = `${import.meta.env.BASE_URL}images/weather-journal/${skyFile}.webp`
   const showFallback = loc.isFallback && selectedId === 'current' && !detectInApp()
   const glance = buildGlance({
     day: prepTomorrow ? wx.tomorrow : tipToday,
@@ -480,16 +479,13 @@ export default function App() {
   const alerts = tomorrowAlerts(wx.tomorrow, wx.today)
   const tomorrowLabel = codeLabel(wx.tomorrow.code)
   const tomorrowTone = weatherTone(tomorrowLabel.label)
-  const tomorrowArt = tomorrowTone === 'sun' || tomorrowTone === 'cloud'
-    ? `${import.meta.env.BASE_URL}images/weather-brief/${wx.tomorrow.tmax >= wx.today.tmax ? 'warmer' : 'cooler'}.webp`
-    : null
 
-  // 섹션 내용 (예전 카드 그대로) — 메인은 맨 위, 나머지는 요약 머리 아래에 펼친다
+  // 데이터와 조작은 유지하고, 본문에서 시간 흐름별 묶음 또는 인라인 상세로 배치한다.
   const renderSection = (key: SectionKey) => (
     <>
       {key === 'hero' && (
         <>
-          <section className={`hero card has-sky sky-${heroSky.kind}`} style={{ '--hero-sky': `url(${heroSky.src})` } as CSSProperties}>
+          <section className="hero card journal-overview" aria-label="지금 날씨와 챙길 것">
             <WarnBanner hits={warnHits} />
             <div className="hero-date">
               <span>
@@ -516,25 +512,31 @@ export default function App() {
               </button>
               </span>
             </div>
-            <div className="hero-main">
-              {(() => {
-                const HeroIcon = weatherIcon(now.label, wx.nowIsDay)
-                return <HeroIcon size={112} weight="duotone" className={`wi-${weatherTone(now.label)}`} aria-hidden />
-              })()}
-              <div className="hero-info">
-                <div className="hero-temp">{round1(wx.nowTemp).toFixed(1)}°</div>
-                <div className="hero-condition">{now.label}</div>
+            <div className="hero-story">
+              <div className="hero-reading">
+                <p className="journal-eyebrow">지금 이곳의 날씨</p>
+                <div className="hero-main">
+                  <div className="hero-info">
+                    <div className="hero-temp">{round1(wx.nowTemp).toFixed(1)}<span>°</span></div>
+                    <div className="hero-condition">{now.label}</div>
+                  </div>
+                  <WeatherArtwork label={now.label} isDay={wx.nowIsDay} />
+                </div>
+                <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
               </div>
+              <figure className="hero-photo"><img src={heroSky} alt="" decoding="async" fetchPriority="high" /></figure>
             </div>
-            {/* 한 줄 결론 + 판정 3칸. "어제보다 몇 도"는 위 브리핑 띠가 말하므로 여기서는 빼서 겹치지 않게 */}
-            <p className="glance-head">{glance.headline}</p>
+            <div className="hero-decision">
+            <p className="journal-eyebrow">{prepTomorrow ? '내일 미리 챙기세요' : '오늘 챙길 것'}</p>
+            <h2 className="glance-head">{glance.headline}</h2>
             <ul className="glance" aria-label={prepTomorrow ? '내일 챙길 것' : '오늘 챙길 것'}>
               {glance.tiles.map((t) => {
                 const Icon = t.key === 'umbrella' ? Umbrella : t.key === 'air' ? Leaf : (prepTomorrow ? wx.tomorrow : wx.today).tmax < 17 ? Hoodie : TShirt
                 return (
                   <li key={t.key} className={`glance-tile tone-${t.tone}`}>
                     <span className="glance-label">
-                      <Icon size={15} weight="bold" aria-hidden /> {t.label}
+                      <Icon size={18} weight="regular" aria-hidden /> {t.label}
+                      <em>{t.key === 'air' ? '지금' : prepTomorrow ? '내일' : '오늘'}</em>
                     </span>
                     <b className="glance-value">{t.value}</b>
                     <span className="glance-sub">{t.sub}</span>
@@ -548,6 +550,7 @@ export default function App() {
                 <span>습도 <b>{Math.round(kmaNow?.reh ?? wx.nowHumidity)}%</b></span>
                 <span>바람 <b>{Math.round(wx.today.windMax ?? 0)}km/h</b></span>
               </p>
+            </div>
             </div>
           </section>
             </>
@@ -583,7 +586,7 @@ export default function App() {
                   aria-expanded={tipsOpen}
                   onClick={() => setTipsOpen((o) => !o)}
                 >
-                  {tipsOpen ? '접기 ▲' : '자세히 보기 ▼'}
+                  {tipsOpen ? '설명 접기' : '설명 더 보기'} {tipsOpen ? <CaretUp size={14} aria-hidden /> : <CaretDown size={14} aria-hidden />}
                 </button>
                 <FeelAsk
                   answered={answeredToday(feel)}
@@ -598,7 +601,7 @@ export default function App() {
               <div className="picks">
                 {picks.map((p) => (
                   <a key={p.url} className="pick-btn" href={p.url} target="_blank" rel="noreferrer">
-                    {p.emoji} {p.label}
+                    <Backpack size={17} aria-hidden /> {p.label}
                   </a>
                 ))}
               </div>
@@ -612,7 +615,6 @@ export default function App() {
           <section className="card">
             <h2 className="section-title">어제와 비교하면</h2>
             <p className="cmp-summary">{compareSummary(ahead, yestWindow)}</p>
-            <CommuteCompare wx={wx} prefs={commute} />
             <div className="cmp-sec">
               <h3 className="cmp-title">
                 <ThermometerSimple size={16} weight="duotone" className="warm-icon" aria-hidden /> 기온
@@ -642,16 +644,12 @@ export default function App() {
         <>
           <section className="card tomorrow-card">
             <div className="tomorrow-heading">
-              {tomorrowArt && <img className="tomorrow-art" src={tomorrowArt} alt="" loading="lazy" decoding="async" />}
               <div className="tomorrow-title">
                 <h2 className="section-title">내일은 오늘보다</h2>
                 <p>{tomorrowLabel.label}</p>
               </div>
               <span className={`tomorrow-emoji wi-${tomorrowTone}`} aria-hidden>
-                {(() => {
-                  const TomorrowIcon = weatherIcon(tomorrowLabel.label)
-                  return <TomorrowIcon size={40} weight="duotone" />
-                })()}
+                <WeatherArtwork label={tomorrowLabel.label} size={64} />
               </span>
             </div>
             <div className="tomorrow-stats">
@@ -779,8 +777,7 @@ export default function App() {
   )
 
   const prepLead = prepTips.find((t) => t.kind !== 'clothes') ?? prepTips[0]
-  const cards: Partial<Record<SectionKey, { label: string; Icon: UiIcon; impact: Impact | null; wide?: boolean }>> = {
-    hourly: { label: '앞으로 12시간', Icon: Clock, impact: hourlyImpact(wx), wide: true },
+  const cards: Partial<Record<SectionKey, { label: string; Icon: UiIcon; impact: Impact | null }>> = {
     air: air
       ? {
           label: '미세먼지',
@@ -804,15 +801,12 @@ export default function App() {
             },
           }
         : undefined,
-    compare: { label: '어제와 비교', Icon: ArrowsLeftRight, impact: compareImpact(wx.today, wx.yesterday) },
-    tomorrow: { label: '내일', Icon: CloudSun, impact: tomorrowImpact(wx.tomorrow, wx.today, alerts) },
-    week: { label: '이번 주', Icon: CalendarBlank, impact: weekImpact(wx.week) },
+    compare: { label: '어제와 비교', Icon: ArrowsLeftRight, impact: { value: deltaText(wx.nowTemp - wx.yesterdaySameHour), sub: '어제 같은 시각 기준 · 기온·강수·바람 자세히', tone: 'info' } },
     sun: { label: '해', Icon: SunHorizon, impact: sunImpact(wx, Date.now(), -new Date().getTimezoneOffset() * 60) },
     places: {
       label: '지역 비교',
       Icon: MapPin,
       impact: { value: '다른 지역과 비교', sub: `${loc.label.replace(' (기본 위치)', '')} 기준`, tone: 'info' },
-      wide: true,
     },
   }
 
@@ -820,24 +814,23 @@ export default function App() {
     <>
     {/* 상단 브리핑 띠: .shell(overflow: hidden) 바깥에 고정. 지역·날씨가 바뀌면 같이 바뀐다 */}
     <BriefBanner wx={wx} resetKey={`${selectedId}|${loc.label}`} />
-    <div className={`shell has-brief ${theme} ${status === 'loading' ? 'refreshing' : ''}`}>
-      <WeatherFx theme={theme} />
-      <div className="neon-frame" aria-hidden />
+    <div className={`shell journal-app has-brief ${theme} ${status === 'loading' ? 'refreshing' : ''}`}>
       <a className="skip-link" href="#weather-main">날씨 본문으로 건너뛰기</a>
       <header className="top">
         <div>
           <h1 className="brand">무능한 날씨예측기</h1>
           {/* 감싸는 요소를 고정으로 둬야 안쪽이 버튼과 문구로 교체돼도 읽어준다 */}
+          <span className="top-meta">
+            {visitors !== null && <span className="visitors"><Eye size={13} aria-hidden /> 오늘 {visitors}명 방문</span>}
           <span aria-live="polite">
             {status === 'loading' ? (
-              <span className="visitors">날씨 갱신 중…</span>
+              <span className="update-status">갱신 중…</span>
             ) : status === 'error' ? (
               <button type="button" className="visitors err" onClick={() => selectPlace(selectedId)}>
                 갱신 실패, 눌러서 다시 시도
               </button>
-            ) : (
-              visitors !== null && <span className="visitors">👀 오늘 {visitors}명</span>
-            )}
+            ) : null}
+          </span>
           </span>
         </div>
         <div className="top-right">
@@ -920,32 +913,49 @@ export default function App() {
 
       <main className="app-main">
       <div id="weather-main" tabIndex={-1} key={selectedId} className="switch-enter">
-        {/* 메인: 한눈에 결론 — 늘 맨 위 */}
         <SectionBoundary name="hero">{renderSection('hero')}</SectionBoundary>
-        {/* 그 아래 카드: 맨 위에 큰 값 하나 + 한 줄로 결론을 걸고, 바로 밑에 자세한 내용을 다 펼쳐 둔다 */}
-        <div className="isec-list">
+        <section className="journal-flow card" aria-labelledby="flow-title">
+          <header className="journal-heading">
+            <div><p className="journal-eyebrow">시간을 따라 읽는 날씨</p><h2 id="flow-title">오늘의 흐름</h2></div>
+            <span className="journal-index" aria-hidden="true">01</span>
+          </header>
+          <SectionBoundary name="hourly"><HourlyCard wx={wx} embedded /></SectionBoundary>
+          <CommuteCompare wx={wx} prefs={commute} />
+        </section>
+        <section className="journal-outlook card" aria-labelledby="outlook-title">
+          <header className="journal-heading">
+            <div><p className="journal-eyebrow">조금 더 멀리</p><h2 id="outlook-title">내일과 이번 주</h2></div>
+            <span className="journal-index" aria-hidden="true">02</span>
+          </header>
+          <div className="journal-outlook-grid">
+            <SectionBoundary name="tomorrow">{renderSection('tomorrow')}</SectionBoundary>
+            <SectionBoundary name="week">{renderSection('week')}</SectionBoundary>
+          </div>
+        </section>
+        <section className="journal-details card" aria-labelledby="details-title">
+          <header className="journal-heading">
+            <div><p className="journal-eyebrow">필요한 것만 더 자세히</p><h2 id="details-title">날씨의 디테일</h2></div>
+            <span className="journal-index" aria-hidden="true">03</span>
+          </header>
           {sectionOrder.map((key) => {
-            if (key === 'hero' || key === 'radar') return null
             const info = cards[key]
             if (!info?.impact) return null
             const Icon = info.Icon
             return (
-              <section key={key} className={`isec tone-${info.impact.tone}`} aria-label={SECTION_LABEL[key]}>
-                <header className="isec-head">
-                  <span className="isec-label">
-                    <Icon size={15} weight="bold" aria-hidden /> {info.label}
-                  </span>
-                  <b className="isec-value">{info.impact.value}</b>
-                  <span className="isec-sub">{info.impact.sub}</span>
-                </header>
-                <div className="isec-body">
+              <details key={key} className={`journal-detail tone-${info.impact.tone}`}>
+                <summary>
+                  <Icon size={22} weight="regular" aria-hidden />
+                  <span className="journal-detail-copy"><b>{info.label}</b><small>{info.impact.sub}</small></span>
+                  <span className="journal-detail-value">{info.impact.value}</span>
+                  <CaretDown size={17} className="journal-detail-caret" aria-hidden />
+                </summary>
+                <div className="journal-detail-body" aria-label={SECTION_LABEL[key]}>
                   <SectionBoundary name={key}>{renderSection(key)}</SectionBoundary>
                 </div>
-              </section>
+              </details>
             )
           })}
-        </div>
-        {/* 비구름 레이더는 요약 없이 지도 그대로, 맨 아래 */}
+        </section>
         <SectionBoundary name="radar">{renderSection('radar')}</SectionBoundary>
         <CoupangBanner id={1020558} template="carousel" height={140} />
         <CoupangBanner id={1020557} template="banner" height={90} maxWidth={728} />
@@ -959,14 +969,14 @@ export default function App() {
           target="_blank"
           rel="noreferrer"
         >
-          💬 오픈채팅으로 문의하기
+          <ChatCircleDots size={18} aria-hidden /> 오픈채팅으로 문의하기
         </a>
         <p className="muted small">오픈채팅으로 보내주시면 개선 의견을 실시간으로 반영해드려요.</p>
         <a
           className="feedback-btn"
           href={`mailto:kdy7854@naver.com?subject=${encodeURIComponent('[무능한 날씨예측기] 개선 의견')}&body=${encodeURIComponent('앱을 쓰다가 이런 점이 아쉬웠어요:\n\n')}`}
         >
-          ✉️ 메일로 보내기
+          <EnvelopeSimple size={18} aria-hidden /> 메일로 보내기
         </a>
         <p className="muted small">문의: kdy7854@naver.com</p>
         <p className="muted small">

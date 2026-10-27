@@ -1,7 +1,7 @@
-// 설정 패널 — 알림 온오프 + 색상 테마(포인트 컬러)
+// 설정 패널 — 알림·지역·상세 순서·모노크롬 화면 안내
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Bell, Clock, GearSix, House, Moon, Palette, PuzzlePiece, ShareFat, Sun, TShirt, Umbrella, X } from '@phosphor-icons/react'
+import { ArrowDown, ArrowUp, Bell, Clock, DeviceMobile, GearSix, House, MapPin, Moon, Palette, PuzzlePiece, ShareFat, Star, Sun, TShirt, Umbrella, X } from '@phosphor-icons/react'
 import { installHint, onInstallChange, promptInstall, type InstallHint } from '../lib/install'
 import { detectInApp, openInBrowser } from '../lib/inapp'
 import {
@@ -14,8 +14,8 @@ import {
   type NotifyState,
 } from '../lib/push'
 import type { Place } from '../lib/places'
-import { ACCENTS, ACCENT_KEY } from '../lib/accent'
-import { DEFAULT_ORDER, SECTION_LABEL, moveItem, type SectionKey } from '../lib/sections'
+import { DEFAULT_ORDER, SECTION_LABEL, type SectionKey } from '../lib/sections'
+import { DETAIL_KEYS, moveDetailSection } from '../lib/journal'
 import type { CommutePrefs } from '../lib/commute'
 import { feelLabel } from '../lib/feel'
 import { trackEvent } from '../lib/track'
@@ -60,8 +60,11 @@ export default function Settings({
   visitors,
 }: Props) {
   const [open, setOpen] = useState(false)
-  // 메인(hero)은 늘 맨 위, 레이더는 늘 맨 아래라 순서 목록에서 뺀다
-  const cardOrder = sectionOrder.filter((k) => k !== 'hero' && k !== 'radar')
+  // 핵심 흐름은 고정하고, 상세 정보 안에서만 사용자가 순서를 고른다.
+  const cardOrder = sectionOrder.filter((k) => DETAIL_KEYS.includes(k))
+  const moveDetail = (from: number, to: number) => {
+    onSetOrder(moveDetailSection(sectionOrder, from, to))
+  }
   const [notify, setNotify] = useState<NotifyState | 'loading'>('loading')
   const [rain, setRain] = useState(false)
   const [inApp] = useState(() => detectInApp())
@@ -71,13 +74,6 @@ export default function Settings({
   const [busy, setBusy] = useState(false)
   // alert 은 패널을 닫은 한참 뒤에 맥락 없이 뜬다. 패널 안에 남는 문구로 알린다.
   const [notice, setNotice] = useState<string | null>(null)
-  const [accent, setAccent] = useState<string>(() => {
-    try {
-      return localStorage.getItem(ACCENT_KEY) ?? 'blue'
-    } catch {
-      return 'blue'
-    }
-  })
   const [nightTime, setNightTime] = useState<string>(() => {
     try {
       return localStorage.getItem(NIGHT_KEY) ?? '2130'
@@ -187,17 +183,6 @@ export default function Settings({
       opener?.focus()
     }
   }, [open])
-
-  function pickAccent(id: string) {
-    setAccent(id)
-    try {
-      localStorage.setItem(ACCENT_KEY, id)
-    } catch {
-      // 무시
-    }
-    if (id === 'blue') delete document.documentElement.dataset.accent
-    else document.documentElement.dataset.accent = id
-  }
 
   async function toggleNotify() {
     if (
@@ -402,7 +387,7 @@ export default function Settings({
               </div>
               {notify === 'on' && (
                 <button type="button" className="order-reset test-push" onClick={testPush} disabled={busy}>
-                  🔔 테스트 알림 보내기
+                  <Bell size={16} aria-hidden /> 테스트 알림 보내기
                 </button>
               )}
               <div className="notify-row rain-row">
@@ -430,7 +415,7 @@ export default function Settings({
 
             {install !== 'installed' && install !== 'none' && (
               <div className="settings-sec install-sec">
-                <h3 className="settings-sec-title">📲 앱처럼 설치하기</h3>
+                <h3 className="settings-sec-title"><DeviceMobile size={19} aria-hidden /> 앱처럼 설치하기</h3>
                 {install === 'button' ? (
                   <>
                     <p className="muted small notify-desc">
@@ -540,7 +525,7 @@ export default function Settings({
                   aria-pressed={homeId === 'current'}
                   onClick={() => onSetHome('current')}
                 >
-                  📍 현재 위치
+                  <MapPin size={15} aria-hidden /> 현재 위치
                 </button>
                 {favorites.map((f) => (
                   <button
@@ -550,24 +535,24 @@ export default function Settings({
                     aria-pressed={homeId === f.id}
                     onClick={() => onSetHome(f.id)}
                   >
-                    ⭐ {f.name}
+                    <Star size={15} aria-hidden /> {f.name}
                   </button>
                 ))}
               </div>
             </details>
 
             <details className="settings-sec settings-group">
-              <summary className="settings-sec-title"><PuzzlePiece size={19} weight="duotone" aria-hidden /> 화면 순서</summary>
+              <summary className="settings-sec-title"><PuzzlePiece size={19} weight="duotone" aria-hidden /> 상세 정보 순서</summary>
               <p className="muted small notify-desc">
-                메인 아래 카드 순서예요. 현재 날씨는 늘 맨 위, 비구름 레이더는 늘 맨 아래에 있어요.
+                ‘날씨의 디테일’ 안의 순서를 바꿔요. 지금 날씨·시간별 흐름·주간 예보·레이더는 제자리를 유지해요.
               </p>
               <ul className="order-list">
                 {cardOrder.map((k, i) => (
                   <li key={k}>
                     <span className="order-name">{SECTION_LABEL[k]}</span>
                     <span className="order-btns">
-                      <button type="button" aria-label="위로" disabled={i === 0} onClick={() => onSetOrder(['hero', ...moveItem(cardOrder, i, i - 1), 'radar'])}>▲</button>
-                      <button type="button" aria-label="아래로" disabled={i === cardOrder.length - 1} onClick={() => onSetOrder(['hero', ...moveItem(cardOrder, i, i + 1), 'radar'])}>▼</button>
+                      <button type="button" aria-label={`${SECTION_LABEL[k]} 위로`} disabled={i === 0} onClick={() => moveDetail(i, i - 1)}><ArrowUp size={16} aria-hidden /></button>
+                      <button type="button" aria-label={`${SECTION_LABEL[k]} 아래로`} disabled={i === cardOrder.length - 1} onClick={() => moveDetail(i, i + 1)}><ArrowDown size={16} aria-hidden /></button>
                     </span>
                   </li>
                 ))}
@@ -576,21 +561,10 @@ export default function Settings({
             </details>
 
             <details className="settings-sec settings-group">
-              <summary className="settings-sec-title"><Palette size={19} weight="duotone" aria-hidden /> 색상 테마</summary>
-              <p className="muted small notify-desc">버튼과 강조색이 바뀌어요.</p>
-              <div className="accent-row">
-                {ACCENTS.map((a) => (
-                  <button
-                    key={a.id}
-                    type="button"
-                    className={`accent-dot ${accent === a.id ? 'on' : ''}`}
-                    style={{ background: a.color }}
-                    onClick={() => pickAccent(a.id)}
-                    aria-label={`${a.name} 테마`}
-                    aria-pressed={accent === a.id}
-                    title={a.name}
-                  />
-                ))}
+              <summary className="settings-sec-title"><Palette size={19} weight="duotone" aria-hidden /> 화면 스타일</summary>
+              <div className="settings-style-note">
+                <div className="settings-style-swatches" aria-hidden><i /><i /><i /></div>
+                모노크롬 날씨 저널. 흰색·회색·차콜로 정보를 읽고, 하늘 사진과 레이더 원본에서만 색을 만나요.
               </div>
             </details>
             <p className="muted small settings-foot">

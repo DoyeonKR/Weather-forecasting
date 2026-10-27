@@ -59,10 +59,28 @@ export default function ShareSheet({
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null
     panelRef.current?.focus()
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && closeRef.current()
+    const root = document.documentElement
+    const previousOverflow = root.style.overflow
+    root.style.overflow = 'hidden'
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeRef.current()
+      if (e.key !== 'Tab') return
+      const panel = panelRef.current
+      const items = Array.from(panel?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], textarea, [tabindex="0"]') ?? [])
+        .filter((el) => el.offsetParent !== null)
+      if (!items.length) return
+      if (e.shiftKey && (document.activeElement === items[0] || document.activeElement === panel)) {
+        e.preventDefault()
+        items[items.length - 1].focus()
+      } else if (!e.shiftKey && document.activeElement === items[items.length - 1]) {
+        e.preventDefault()
+        items[0].focus()
+      }
+    }
     window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('keydown', onKey)
+      root.style.overflow = previousOverflow
       opener?.focus?.()
     }
   }, [])

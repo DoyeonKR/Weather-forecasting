@@ -1,6 +1,6 @@
 // 위치 바 — 항상 보이는 동네 검색 + 현재 위치/즐겨찾기 칩
 import { useEffect, useRef, useState } from 'react'
-import { ArrowClockwise, Crosshair, MagnifyingGlass, MapPin, Star } from '@phosphor-icons/react'
+import { ArrowClockwise, CaretLeft, CaretRight, Crosshair, MagnifyingGlass, MapPin, Star, X } from '@phosphor-icons/react'
 import { searchPlaces, type Place } from '../lib/places'
 import { useLongPressReorder } from '../lib/reorder'
 import { trackEvent } from '../lib/track'
@@ -102,6 +102,7 @@ export default function PlaceBar({
 
   return (
     <div className="placebar">
+      <div className="placebar-toolbar">
       <div
         ref={chipReorder.setContainer}
         className={`chips ${chipReorder.active ? 'reorder-active' : ''}`}
@@ -135,10 +136,10 @@ export default function PlaceBar({
             {editMode && (
               <>
                 <button type="button" className="chip-x" aria-label="앞으로 이동" onClick={() => onMove(p.id, -1)}>
-                  ◀
+                  <CaretLeft size={13} aria-hidden />
                 </button>
                 <button type="button" className="chip-x" aria-label="뒤로 이동" onClick={() => onMove(p.id, 1)}>
-                  ▶
+                  <CaretRight size={13} aria-hidden />
                 </button>
               </>
             )}
@@ -151,7 +152,7 @@ export default function PlaceBar({
                   if (confirm(`'${p.name}' 을(를) 즐겨찾기에서 지울까요?`)) onRemove(p.id)
                 }}
               >
-                ✕
+                <X size={13} aria-hidden />
               </button>
             )}
           </span>
@@ -166,6 +167,7 @@ export default function PlaceBar({
             {editMode ? '완료' : '편집'}
           </button>
         )}
+      </div>
         <button
           ref={toggleRef}
           type="button"

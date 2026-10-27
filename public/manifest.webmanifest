@@ -6,8 +6,8 @@
   "scope": "/Weather-forecasting/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0e131a",
-  "theme_color": "#0e131a",
+  "background_color": "#f4f4f2",
+  "theme_color": "#f4f4f2",
   "icons": [
     {
       "src": "icon-192.png",

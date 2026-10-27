@@ -48,17 +48,15 @@ export async function drawShareCard(s: ShareInput): Promise<Blob | null> {
   } catch {
     // 글꼴을 못 기다려도 기본 글꼴로 그린다
   }
-  const warm = s.delta >= 0.5
-  const cold = s.delta <= -0.5
-  const accent = warm ? '#ff7a66' : cold ? '#5fb0ff' : '#c9d6ea'
+  const accent = '#292929'
 
   const bg = ctx.createLinearGradient(0, 0, 0, H)
-  bg.addColorStop(0, '#0f1f45')
-  bg.addColorStop(1, '#070d1c')
+  bg.addColorStop(0, '#ffffff')
+  bg.addColorStop(1, '#f4f4f2')
   ctx.fillStyle = bg
   ctx.fillRect(0, 0, W, H)
 
-  ctx.fillStyle = '#9fb3d4'
+  ctx.fillStyle = '#666666'
   ctx.font = `700 40px ${FONT}`
   ctx.fillText('무능한 날씨예측기', 80, 130)
   const date = new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date())
@@ -66,7 +64,7 @@ export async function drawShareCard(s: ShareInput): Promise<Blob | null> {
   ctx.fillText(`${s.place.slice(0, 18)} · ${date}`, 80, 190)
 
   // 핵심 한 줄
-  ctx.fillStyle = '#ffffff'
+  ctx.fillStyle = '#444444'
   ctx.font = `800 64px ${FONT}`
   ctx.fillText('지금', 80, 380)
   ctx.fillStyle = accent
@@ -85,7 +83,7 @@ export async function drawShareCard(s: ShareInput): Promise<Blob | null> {
   fit(words[0], 520)
   fit(words.slice(1).join(' '), 660)
 
-  ctx.fillStyle = '#dfe8f7'
+  ctx.fillStyle = '#444444'
   ctx.font = `700 54px ${FONT}`
   ctx.fillText(`${(Math.round(s.nowTemp * 10) / 10).toFixed(1)}° · ${s.condition}`, 80, 770)
 
@@ -97,31 +95,31 @@ export async function drawShareCard(s: ShareInput): Promise<Blob | null> {
   const xOf = (t: number) => bx + ((t - lo) / (hi - lo)) * bw
   const rows: [string, { tmin: number; tmax: number }, string][] = [
     ['오늘', s.today, accent],
-    ['어제', s.yesterday, '#8b98ad'],
+    ['어제', s.yesterday, '#aaaaaa'],
   ]
   rows.forEach(([name, r, color], k) => {
     const y = 900 + k * 120
-    ctx.fillStyle = '#b8c6dc'
+    ctx.fillStyle = '#555555'
     ctx.font = `700 42px ${FONT}`
     ctx.fillText(name, 80, y + 14)
-    ctx.fillStyle = 'rgba(255,255,255,0.12)'
+    ctx.fillStyle = '#e5e5e1'
     roundRect(ctx, bx, y - 18, bw, 36, 18)
     ctx.fill()
     ctx.fillStyle = color
     roundRect(ctx, xOf(r.tmin), y - 18, Math.max(xOf(r.tmax) - xOf(r.tmin), 36), 36, 18)
     ctx.fill()
-    ctx.fillStyle = '#ffffff'
+    ctx.fillStyle = '#444444'
     ctx.font = `700 38px ${FONT}`
     ctx.fillText(`${Math.round(r.tmin)}°~${Math.round(r.tmax)}°`, bx + bw + 24, y + 14)
   })
 
   if (s.air) {
-    ctx.fillStyle = '#b8c6dc'
+    ctx.fillStyle = '#555555'
     ctx.font = `600 38px ${FONT}`
     ctx.fillText(`미세먼지 ${s.air}`, 80, 1170)
   }
 
-  ctx.fillStyle = '#6f84a6'
+  ctx.fillStyle = '#666666'
   ctx.font = `500 32px ${FONT}`
   ctx.fillText('doyeonkr.github.io/Weather-forecasting', 80, 1270)
 

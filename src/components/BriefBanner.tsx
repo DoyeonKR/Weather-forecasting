@@ -31,6 +31,12 @@ function prefersReduced(): boolean {
 
 export default function BriefBanner({ wx, resetKey }: { wx: WeatherData; resetKey: string }) {
   const [idx, setIdx] = useState(0)
+  const [compact, setCompact] = useState(() => window.scrollY > 100)
+  useEffect(() => {
+    const onScroll = () => setCompact(window.scrollY > 100)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
   // "일몰까지 2시간 10분"이 멈춰 있지 않게 1분마다 다시 만든다 (탭이 보일 때만)
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [reduced] = useState(prefersReduced)
@@ -87,7 +93,7 @@ export default function BriefBanner({ wx, resetKey }: { wx: WeatherData; resetKe
   }
 
   return (
-    <div className="brief-bar">
+    <div className={`brief-bar ${compact ? 'compact' : ''}`}>
       <section
         className="brief"
         role="region"

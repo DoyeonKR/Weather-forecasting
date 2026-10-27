@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-10-27",
+  "generator": "OpenAI built-in image generation",
+  "assets": [
+    {
+      "key": "rain-sky",
+      "prompt": "Use case: photorealistic-natural.\nAsset type: production-ready color photographic weather panorama for an editorial monochrome Korean weather journal. ONE borderless wide 3:1 landscape image, ideally 1920 x 640. Natural photographic light, understated cinematic quality, quiet elegant atmosphere, actual cloud texture and depth, subtle natural grain. Main focal interest center-right; keep important atmospheric features in central vertical half for panoramic cropping. Broad quiet sky and a low distant ridge, no more than bottom 15%. No text, numbers, logos, icons, diagrams, graphics, UI, frames, collage or watermark. Full natural color ONLY within this image asset; the surrounding application will be white/gray/black.\nScene: a calm rainy afternoon over distant low Korean mountain ridges, layers of slate-blue rain clouds, realistic soft rain curtains dissolving the far horizon, diffused silver light breaking faintly through the clouds at center-right. Muted cool blue-gray and subtle green distant ridges. Beautiful atmospheric rain, not a dramatic storm, no sun disk, no moon, no lightning."
+    },
+    {
+      "key": "snow-sky",
+      "prompt": "Use case: photorealistic-natural.\nAsset type: production-ready color photographic weather panorama for an editorial monochrome Korean weather journal. ONE borderless wide 3:1 landscape image, ideally 1920 x 640. Natural photographic light, understated cinematic quality, quiet elegant atmosphere, actual cloud texture and depth, subtle natural grain. Main focal interest center-right; keep important atmospheric features in central vertical half for panoramic cropping. Broad quiet sky and a low distant ridge, no more than bottom 15%. No text, numbers, logos, icons, diagrams, graphics, UI, frames, collage or watermark. Full natural color ONLY within this image asset; the surrounding application will be white/gray/black.\nScene: a quiet overcast winter morning, soft pearl-gray clouds over a distant snow-dusted low mountain ridge, a few delicate naturally out-of-focus snowflakes in the near air, subtle pale blue and lavender ambient light, gentle photographic depth. Clearly snowy but calm, no Christmas objects, no sun disk, no moon, no mountains towering into most of the image."
+    }
+  ],
+  "delivery": {
+    "format": "WebP",
+    "width": 1440,
+    "height": 480,
+    "quality": 86,
+    "effort": 6
+  }
+}

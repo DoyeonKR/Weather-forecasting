@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { fetchWeather, type WeatherData } from '../lib/weather'
 import { searchPlaces, type Place } from '../lib/places'
 import { codeLabel, round1 } from '../lib/compare'
+import { MapPin } from '@phosphor-icons/react'
+import WeatherArtwork from './WeatherArtwork'
 
 interface Props {
   baseLabel: string
@@ -92,7 +94,8 @@ export default function ComparePlaces({ baseLabel, baseWx, favorites }: Props) {
           onKeyDown={(e) => {
             if (e.key === 'Enter') runSearch()
           }}
-          placeholder="🔍 비교할 지역 검색"
+          placeholder="비교할 지역 검색"
+          aria-label="비교할 지역 검색"
           className="search-input"
           enterKeyHint="search"
         />
@@ -108,7 +111,7 @@ export default function ComparePlaces({ baseLabel, baseWx, favorites }: Props) {
           {results.map((r) => (
             <li key={r.id}>
               <button type="button" onClick={() => pick(r)}>
-                📍 {r.name}
+                <MapPin size={16} aria-hidden /> {r.name}
               </button>
             </li>
           ))}
@@ -126,7 +129,7 @@ export default function ComparePlaces({ baseLabel, baseWx, favorites }: Props) {
             <div className="vs-col">
               <span className="vs-name a">{shortBase}</span>
               <span className="vs-emoji" aria-hidden>
-                {codeLabel(baseWx.nowCode).emoji}
+                <WeatherArtwork label={codeLabel(baseWx.nowCode).label} isDay={baseWx.nowIsDay} size={56} />
               </span>
               <span className="vs-temp">{round1(baseWx.nowTemp)}°</span>
               <span className="muted small">
@@ -148,7 +151,7 @@ export default function ComparePlaces({ baseLabel, baseWx, favorites }: Props) {
             <div className="vs-col">
               <span className="vs-name b">{other.name}</span>
               <span className="vs-emoji" aria-hidden>
-                {codeLabel(otherWx.nowCode).emoji}
+                <WeatherArtwork label={codeLabel(otherWx.nowCode).label} isDay={otherWx.nowIsDay} size={56} />
               </span>
               <span className="vs-temp">{round1(otherWx.nowTemp)}°</span>
               <span className="muted small">

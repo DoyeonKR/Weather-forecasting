@@ -14,7 +14,7 @@ export const SECTION_LABEL: Record<SectionKey, string> = {
   places: '지역 비교',
 }
 
-// 메인(hero)은 늘 맨 위. 나머지는 메인 아래 2열 요약 카드 순서 (넓은 카드: 시간별·레이더·지역 비교)
+// 예전 전체 순서를 호환해 읽고 저장한다. 현재 화면에서는 상세 정보의 상대 순서만 사용한다.
 export const DEFAULT_ORDER: SectionKey[] = ['hero', 'hourly', 'air', 'prep', 'compare', 'tomorrow', 'week', 'sun', 'radar', 'places']
 
 const KEY = 'eojeboda:sections'

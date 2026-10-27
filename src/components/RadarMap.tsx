@@ -346,7 +346,7 @@ export default function RadarMap({ lat, lon, tempC, observedRaining = null }: Pr
       radius: 7,
       color: '#fff',
       weight: 2,
-      fillColor: '#2f81f7',
+      fillColor: '#333333',
       fillOpacity: 1,
     }).addTo(map)
     mapRef.current = map

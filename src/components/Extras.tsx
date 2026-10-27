@@ -1,6 +1,7 @@
 // 메인·비교 카드에 붙는 작은 조각들 — 미세먼지 줄, 체감 질문, 출퇴근 비교, 평년 비교, 특보 배너
 import { useEffect, useState } from 'react'
-import { DeviceMobile, PersonSimpleWalk, SunHorizon, Warning, X } from '@phosphor-icons/react'
+import { ArrowRight, DeviceMobile, PersonSimpleWalk, SunHorizon, Warning, X } from '@phosphor-icons/react'
+import { TrendMark } from './WeatherArtwork'
 import { detectInApp, openInBrowser } from '../lib/inapp'
 import { uvLabel } from '../lib/uv'
 import { GRADE_LABEL, gradePm10, gradePm25, type AirNow } from '../lib/air'
@@ -16,7 +17,7 @@ import { weatherIcon, weatherTone } from '../lib/weatherIcon'
 function Diff({ d, unit = '°' }: { d: number; unit?: string }) {
   const r = Math.round(d)
   if (r === 0) return <b className="range-diff same">비슷</b>
-  return <b className={`range-diff ${r > 0 ? 'warm' : 'cold'}`}>{r > 0 ? `▲${r}${unit}` : `▼${-r}${unit}`}</b>
+  return <b className={`range-diff ${r > 0 ? 'warm' : 'cold'}`} aria-label={`${Math.abs(r)}${unit} ${r > 0 ? '높음' : '낮음'}`}><TrendMark delta={r} />{Math.abs(r)}{unit}</b>
 }
 
 // ── 앱 안 브라우저 안내 ───────────────────────────────
@@ -193,7 +194,7 @@ export function AirCard({ air }: { air: AirNow }) {
           {cmp && (
             <span className={`air-cmp ${cmp}`}>
               {cmp === 'same' ? '어제 이맘때와 비슷해요' : `어제 이맘때보다 ${cmp === 'better' ? '맑아요' : '탁해요'}`}
-              {air.pm25Yest !== null && <small> (초미세 어제 {air.pm25Yest} → 지금 {air.pm25})</small>}
+              {air.pm25Yest !== null && <small> (초미세 어제 {air.pm25Yest} <ArrowRight size={12} aria-label="에서" /> 지금 {air.pm25})</small>}
             </span>
           )}
           {air.worse && (

@@ -1,6 +1,8 @@
 // 오늘 vs 어제 그래픽 비교 — 텍스트 대신 시각 요소로
 import type { DayStats } from '../lib/compare'
 import { round1 } from '../lib/compare'
+import { ArrowRight } from '@phosphor-icons/react'
+import { TrendMark } from './WeatherArtwork'
 
 /**
  * 지금 vs 어제 같은 시각 — 이 앱의 핵심 질문이라 숫자 배지가 아니라 문장으로 말한다.
@@ -13,12 +15,12 @@ export function DeltaHero({ nowTemp, yesterdaySameHour }: { nowTemp: number; yes
   return (
     <div className={`delta-line ${mood}`}>
       <span className="delta-line-arrow" aria-hidden>
-        {same ? '≈' : d > 0 ? '▲' : '▼'}
+        <TrendMark delta={d} size={19} />
       </span>
       <span className="delta-line-text">
         <b>{same ? '어제 이 시간과 비슷해요' : `어제 이 시간보다 ${Math.abs(d).toFixed(1)}° ${d > 0 ? '따뜻해요' : '추워요'}`}</b>
         <small>
-          어제 {round1(yesterdaySameHour).toFixed(1)}° → 지금 {round1(nowTemp).toFixed(1)}°
+          어제 {round1(yesterdaySameHour).toFixed(1)}° <ArrowRight size={13} aria-label="에서" /> 지금 {round1(nowTemp).toFixed(1)}°
         </small>
       </span>
     </div>
@@ -29,7 +31,7 @@ export function DeltaHero({ nowTemp, yesterdaySameHour }: { nowTemp: number; yes
 function diffChip(d: number) {
   const r = Math.round(d)
   if (r === 0) return <b className="range-diff same">비슷</b>
-  return <b className={`range-diff ${r > 0 ? 'warm' : 'cold'}`}>{r > 0 ? `▲${r}°` : `▼${-r}°`}</b>
+  return <b className={`range-diff ${r > 0 ? 'warm' : 'cold'}`} aria-label={`${Math.abs(r)}도 ${r > 0 ? '높음' : '낮음'}`}><TrendMark delta={r} />{Math.abs(r)}°</b>
 }
 
 /**
