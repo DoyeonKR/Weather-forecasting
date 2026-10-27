@@ -4824,3 +4824,204 @@ summary:active {
   display: inline;
   margin: 0 0 0 6px;
 }
+
+/* ── 메인 아래 요약 카드 그리드 + 상세 시트 (v1.0.77) ──────────
+   카드 하나 = 라벨 · 큰 값 하나 · 한 줄. 신경 쓸 것만 색, 나머지는 차분하게 */
+.impact-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.impact-card {
+  --tone: #8a97b0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  min-height: 116px;
+  padding: 14px 14px 13px;
+  border: 1px solid color-mix(in srgb, var(--tone) 30%, var(--line));
+  border-radius: 18px;
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--tone) 16%, transparent), transparent 70%),
+    rgba(9, 18, 38, 0.82);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease;
+}
+
+.impact-card:active {
+  transform: scale(0.98);
+}
+
+.impact-card.wide {
+  grid-column: 1 / -1;
+  min-height: 96px;
+}
+
+.impact-card.tone-ok { --tone: #8a97b0; }
+.impact-card.tone-info { --tone: #b59bff; }
+.impact-card.tone-rain { --tone: #4fa3ff; }
+.impact-card.tone-warn { --tone: #ffb547; }
+.impact-card.tone-alert { --tone: #ff5f5f; }
+.impact-card.tone-warm { --tone: #ff8a5c; }
+.impact-card.tone-cold { --tone: #5cc8ff; }
+
+.impact-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--tone);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.impact-card.tone-ok .impact-label {
+  color: var(--sub);
+}
+
+.impact-value {
+  max-width: 100%;
+  color: var(--text);
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  word-break: keep-all;
+  font-variant-numeric: tabular-nums;
+}
+
+.impact-sub {
+  margin-top: auto;
+  max-width: calc(100% - 14px);
+  color: var(--sub);
+  font-size: 12px;
+  line-height: 1.35;
+  word-break: keep-all;
+}
+
+.impact-go {
+  position: absolute;
+  right: 12px;
+  bottom: 14px;
+  color: var(--sub);
+  opacity: 0.7;
+}
+
+@media (max-width: 359px) {
+  .impact-grid {
+    gap: 8px;
+  }
+
+  .impact-card {
+    padding: 12px 11px 11px;
+  }
+
+  .impact-value {
+    font-size: 19px;
+  }
+}
+
+/* 상세 시트 — 아래에서 올라온다. 브리핑 띠(1700)보다 위, 토스트(2500)보다 아래 */
+.dsheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(2, 6, 16, 0.6);
+  animation: dsheet-fade 0.18s ease;
+}
+
+.dsheet {
+  width: 100%;
+  max-width: 560px;
+  max-height: 88dvh;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: 22px 22px 0 0;
+  background: #0a1430;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
+  outline: none;
+  animation: dsheet-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dsheet-bar {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding: 10px 12px 4px;
+}
+
+.dsheet-grip {
+  width: 40px;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.dsheet-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.dsheet-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 16px calc(20px + env(safe-area-inset-bottom));
+}
+
+/* 시트 안의 예전 카드는 테두리·배경 없이 내용만 */
+.dsheet-body .card {
+  margin: 0;
+  padding: 6px 0 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.dsheet-body .section-title {
+  padding-right: 40px;
+}
+
+@keyframes dsheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes dsheet-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dsheet,
+  .dsheet-backdrop {
+    animation: none;
+  }
+
+  .impact-card {
+    transition: none;
+  }
+}

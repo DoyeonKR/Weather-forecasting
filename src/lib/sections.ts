@@ -1,18 +1,21 @@
 // 메인 화면 섹션 순서 — 사용자 커스터마이즈 (localStorage)
-export type SectionKey = 'hero' | 'air' | 'prep' | 'compare' | 'tomorrow' | 'week' | 'radar' | 'places'
+export type SectionKey = 'hero' | 'hourly' | 'air' | 'prep' | 'compare' | 'tomorrow' | 'week' | 'sun' | 'radar' | 'places'
 
 export const SECTION_LABEL: Record<SectionKey, string> = {
   hero: '메인 (현재 날씨)',
+  hourly: '시간별 기온·강수',
   air: '미세먼지',
   prep: '오늘의 준비',
   compare: '어제와 비교하면',
   tomorrow: '내일은 오늘보다',
   week: '이번 주 날씨',
+  sun: '해·자외선',
   radar: '비구름 레이더',
   places: '지역 비교',
 }
 
-export const DEFAULT_ORDER: SectionKey[] = ['hero', 'air', 'prep', 'compare', 'tomorrow', 'week', 'radar', 'places']
+// 메인(hero)은 늘 맨 위. 나머지는 메인 아래 2열 요약 카드 순서 (넓은 카드: 시간별·레이더·지역 비교)
+export const DEFAULT_ORDER: SectionKey[] = ['hero', 'hourly', 'air', 'prep', 'compare', 'tomorrow', 'week', 'sun', 'radar', 'places']
 
 const KEY = 'eojeboda:sections'
 

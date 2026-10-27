@@ -2,17 +2,24 @@ import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import {
   ArrowClockwise,
   ArrowUp,
+  ArrowsLeftRight,
+  Backpack,
+  CalendarBlank,
+  CaretRight,
   CaretDown,
   CloudFog,
   Crosshair,
+  Clock,
   CloudSun,
   Drop,
   Hoodie,
   Leaf,
   MapPin,
+  MapTrifold,
   ShareNetwork,
   Star,
   Sun,
+  SunHorizon,
   Sunglasses,
   ThermometerSimple,
   TShirt,
@@ -26,6 +33,8 @@ import { weatherIcon, weatherTone, type UiIcon } from './lib/weatherIcon'
 import { loadLast, saveLast } from './lib/lastWeather'
 import { todayAhead, yesterdaySameWindow } from './lib/ahead'
 import { buildGlance } from './lib/glance'
+import { compareImpact, hourlyImpact, sunImpact, tomorrowImpact, weekImpact, type Impact } from './lib/impact'
+import DetailSheet from './components/DetailSheet'
 import { detectInApp } from './lib/inapp'
 import { GRADE_LABEL, fetchAir, type AirNow } from './lib/air'
 import { answeredToday, loadFeel, resetFeel, voteFeel, type FeelVote } from './lib/feel'
@@ -63,8 +72,7 @@ import { fetchTodayVisitors, trackEvent } from './lib/track'
 import HourlyCard from './components/HourlyCard'
 import BriefBanner from './components/BriefBanner'
 import { SectionBoundary } from './components/ErrorBoundary'
-import { loadOrder, saveOrder, type SectionKey } from './lib/sections'
-import { useLongPressReorder } from './lib/reorder'
+import { SECTION_LABEL, loadOrder, saveOrder, type SectionKey } from './lib/sections'
 import './App.css'
 
 type Status = 'loading' | 'ready' | 'error'
@@ -357,7 +365,9 @@ export default function App() {
     saveOrder(next)
   }
 
-  const reorder = useLongPressReorder<SectionKey>({ order: sectionOrder, onChange: applyOrder, axis: 'y' })
+  // 요약 카드를 누르면 여는 상세 시트
+  const [openKey, setOpenKey] = useState<SectionKey | null>(null)
+  const closeSheet = useCallback(() => setOpenKey(null), [])
 
   // 큰 안내를 한 번 봤으면 다음 방문부터는 작게 (이번 방문 동안은 그대로 둔다)
   useEffect(() => {
@@ -473,132 +483,9 @@ export default function App() {
     ? `${import.meta.env.BASE_URL}images/weather-brief/${wx.tomorrow.tmax >= wx.today.tmax ? 'warmer' : 'cooler'}.webp`
     : null
 
-  return (
+  // 섹션 상세 (예전 카드 그대로) — 메인은 화면에, 나머지는 시트 안에 그린다
+  const renderSection = (key: SectionKey) => (
     <>
-    {/* 상단 브리핑 띠: .shell(overflow: hidden) 바깥에 고정. 지역·날씨가 바뀌면 같이 바뀐다 */}
-    <BriefBanner wx={wx} resetKey={`${selectedId}|${loc.label}`} />
-    <div className={`shell has-brief ${theme} ${status === 'loading' ? 'refreshing' : ''}`}>
-      <WeatherFx theme={theme} />
-      <div className="neon-frame" aria-hidden />
-      <a className="skip-link" href="#weather-main">날씨 본문으로 건너뛰기</a>
-      <header className="top">
-        <div>
-          <h1 className="brand">무능한 날씨예측기</h1>
-          {/* 감싸는 요소를 고정으로 둬야 안쪽이 버튼과 문구로 교체돼도 읽어준다 */}
-          <span aria-live="polite">
-            {status === 'loading' ? (
-              <span className="visitors">날씨 갱신 중…</span>
-            ) : status === 'error' ? (
-              <button type="button" className="visitors err" onClick={() => selectPlace(selectedId)}>
-                갱신 실패, 눌러서 다시 시도
-              </button>
-            ) : (
-              visitors !== null && <span className="visitors">👀 오늘 {visitors}명</span>
-            )}
-          </span>
-        </div>
-        <div className="top-right">
-          {/* 위치 칩은 "다른 지역 보기" 하나만 한다. 새로고침은 날씨 카드의 기준 시각 버튼. */}
-          <button
-            type="button"
-            className="loc"
-            onClick={() => setSearchSignal((n) => n + 1)}
-            aria-label={`지역 바꾸기, 지금 ${loc.label}`}
-          >
-            <MapPin size={17} weight="fill" aria-hidden />
-            <span className="loc-name">{loc.label.replace(' (기본 위치)', '(기본)')}</span>
-            <CaretDown size={13} weight="bold" aria-hidden />
-          </button>
-          <Settings
-            loc={{ lat: loc.lat, lon: loc.lon, label: loc.label }}
-            favorites={favorites}
-            homeId={homeId}
-            onSetHome={setHome}
-            sectionOrder={sectionOrder}
-            onSetOrder={applyOrder}
-            commute={commute}
-            onSetCommute={onSetCommute}
-            feelOffset={feel.offset}
-            onResetFeel={() => setFeel(resetFeel())}
-            visitors={visitors}
-          />
-        </div>
-      </header>
-
-      <InAppBanner />
-
-      {!online && (
-        <div className="offline-note" role="status">
-          <WifiSlash size={18} weight="bold" aria-hidden />
-          <span>
-            인터넷에 연결되어 있지 않아요
-            <small>마지막으로 받은 날씨({hhmm(wx.fetchedAt)} 기준)를 보여드리고 있어요</small>
-          </span>
-        </div>
-      )}
-
-      {/* 랜드마크: 스크린리더가 "지역 선택 / 본문 / 바닥글"로 건너뛸 수 있게. 화면 배치는 그대로(display: contents) */}
-      <div role="region" aria-label="지역 선택" className="loc-region">
-      <PlaceBar
-        favorites={favorites}
-        selectedId={selectedId}
-        onSelect={selectPlace}
-        onView={viewPlace}
-        onRemove={removeFavorite}
-        onMove={moveFavorite}
-        openSearchSignal={searchSignal}
-        onReorder={(ids) => {
-          setFavorites((prev) => {
-            const map = new Map(prev.map((f) => [f.id, f]))
-            const next = ids.map((id) => map.get(id)!).filter(Boolean)
-            saveFavorites(next)
-            return next
-          })
-        }}
-      />
-
-      {/* 앱 안 브라우저에서는 위치가 원래 안 된다 — 위쪽 안내 배너가 이유를 말하니 이 줄까지 겹쳐 쌓지 않는다 */}
-      {showFallback && (
-        <button type="button" className={`fallback-note ${fallbackSeen ? 'compact' : ''}`} onClick={() => selectPlace('current')}>
-          <Crosshair size={18} weight="bold" aria-hidden />
-          <span>
-            <b>서울</b> 기준으로 보고 있어요
-            <small>{fallbackSeen ? '내 위치로 ›' : '내 위치로 바꾸려면 눌러주세요'}</small>
-          </span>
-        </button>
-      )}
-
-      {tempPlace?.id === selectedId && !favorites.some((f) => f.id === selectedId) && (
-        <button type="button" className="star-add" onClick={() => addFavorite(tempPlace)}>
-          <Star size={16} weight="fill" aria-hidden /> {tempPlace.name} 즐겨찾기에 추가
-        </button>
-      )}
-      </div>
-
-      <main className="app-main">
-      <div
-        id="weather-main"
-        tabIndex={-1}
-        key={selectedId}
-        ref={reorder.setContainer}
-        className={`switch-enter ${reorder.active ? 'reorder-active' : ''}`}
-        {...reorder.handlers}
-      >
-        {reorder.active && (
-          <div className="reorder-bar">
-            <span>카드를 끌어서 순서를 바꾸세요</span>
-            <button type="button" data-reorder-exit onClick={reorder.exit}>
-              완료
-            </button>
-          </div>
-        )}
-        {sectionOrder.map((key, i) => (
-          <div
-            key={key}
-            data-reorder-id={key}
-            className={`section-wrap ${reorder.dragId === key ? 'dragging' : ''}`}
-          >
-            <SectionBoundary name={key}>
       {key === 'hero' && (
         <>
           <section className="hero card">
@@ -660,10 +547,7 @@ export default function App() {
                 <span>습도 <b>{Math.round(kmaNow?.reh ?? wx.nowHumidity)}%</b></span>
                 <span>바람 <b>{Math.round(wx.today.windMax ?? 0)}km/h</b></span>
               </p>
-              <SunRow sun={wx.sun} uv={wx.uvMaxToday} />
-
             </div>
-            <HourlyCard wx={wx} embedded />
           </section>
             </>
       )}
@@ -883,11 +767,194 @@ export default function App() {
             {key === 'places' && (
               <ComparePlaces baseLabel={loc.label} baseWx={wx} favorites={favorites} />
                     )}
-            </SectionBoundary>
-            {/* 기본 순서에서 '이번 주' 바로 아래 (카드가 늘 때마다 함께 옮긴다) */}
-            {i === 5 && <CoupangBanner id={1020558} template="carousel" height={140} />}
-          </div>
-        ))}
+      {key === 'hourly' && <HourlyCard wx={wx} />}
+      {key === 'sun' && (
+        <section className="card">
+          <h2 className="section-title">해·자외선</h2>
+          <SunRow sun={wx.sun} uv={wx.uvMaxToday} />
+        </section>
+      )}
+    </>
+  )
+
+  const observedRaining = kmaNow ? (kmaNow.pty ?? 0) > 0 || (kmaNow.rn1 ?? 0) > 0 : null
+  const prepLead = prepTips.find((t) => t.kind !== 'clothes') ?? prepTips[0]
+  const cards: Partial<Record<SectionKey, { label: string; Icon: UiIcon; impact: Impact | null; wide?: boolean }>> = {
+    hourly: { label: '앞으로 12시간', Icon: Clock, impact: hourlyImpact(wx), wide: true },
+    air: air
+      ? {
+          label: '미세먼지',
+          Icon: Leaf,
+          impact: {
+            value: GRADE_LABEL[air.grade],
+            sub: `초미세 ${Math.round(air.pm25)} · 미세 ${Math.round(air.pm10)}㎍`,
+            tone: air.grade === 3 ? 'alert' : air.grade === 2 ? 'warn' : 'ok',
+          },
+        }
+      : undefined,
+    prep:
+      prepTips.length > 0 || picks.length > 0
+        ? {
+            label: prepTomorrow ? '내일의 준비' : '오늘의 준비',
+            Icon: Backpack,
+            impact: {
+              value: prepLead?.title ?? '추천 보기',
+              sub: prepTips.length > 1 ? `외 ${prepTips.length - 1}가지 더` : '자세히 보기',
+              tone: 'info',
+            },
+          }
+        : undefined,
+    compare: { label: '어제와 비교', Icon: ArrowsLeftRight, impact: compareImpact(wx.today, wx.yesterday) },
+    tomorrow: { label: '내일', Icon: CloudSun, impact: tomorrowImpact(wx.tomorrow, wx.today, alerts) },
+    week: { label: '이번 주', Icon: CalendarBlank, impact: weekImpact(wx.week) },
+    sun: { label: '해', Icon: SunHorizon, impact: sunImpact(wx, Date.now(), -new Date().getTimezoneOffset() * 60) },
+    radar: {
+      label: '비구름 레이더',
+      Icon: MapTrifold,
+      impact: observedRaining
+        ? { value: '지금 비가 와요', sub: '비구름 움직임 보기', tone: 'rain' }
+        : { value: '비구름 지도', sub: '실시간 레이더로 확인', tone: 'info' },
+      wide: true,
+    },
+    places: {
+      label: '지역 비교',
+      Icon: MapPin,
+      impact: { value: '다른 지역과 비교', sub: `${loc.label.replace(' (기본 위치)', '')} 기준`, tone: 'info' },
+      wide: true,
+    },
+  }
+
+  return (
+    <>
+    {/* 상단 브리핑 띠: .shell(overflow: hidden) 바깥에 고정. 지역·날씨가 바뀌면 같이 바뀐다 */}
+    <BriefBanner wx={wx} resetKey={`${selectedId}|${loc.label}`} />
+    <div className={`shell has-brief ${theme} ${status === 'loading' ? 'refreshing' : ''}`}>
+      <WeatherFx theme={theme} />
+      <div className="neon-frame" aria-hidden />
+      <a className="skip-link" href="#weather-main">날씨 본문으로 건너뛰기</a>
+      <header className="top">
+        <div>
+          <h1 className="brand">무능한 날씨예측기</h1>
+          {/* 감싸는 요소를 고정으로 둬야 안쪽이 버튼과 문구로 교체돼도 읽어준다 */}
+          <span aria-live="polite">
+            {status === 'loading' ? (
+              <span className="visitors">날씨 갱신 중…</span>
+            ) : status === 'error' ? (
+              <button type="button" className="visitors err" onClick={() => selectPlace(selectedId)}>
+                갱신 실패, 눌러서 다시 시도
+              </button>
+            ) : (
+              visitors !== null && <span className="visitors">👀 오늘 {visitors}명</span>
+            )}
+          </span>
+        </div>
+        <div className="top-right">
+          {/* 위치 칩은 "다른 지역 보기" 하나만 한다. 새로고침은 날씨 카드의 기준 시각 버튼. */}
+          <button
+            type="button"
+            className="loc"
+            onClick={() => setSearchSignal((n) => n + 1)}
+            aria-label={`지역 바꾸기, 지금 ${loc.label}`}
+          >
+            <MapPin size={17} weight="fill" aria-hidden />
+            <span className="loc-name">{loc.label.replace(' (기본 위치)', '(기본)')}</span>
+            <CaretDown size={13} weight="bold" aria-hidden />
+          </button>
+          <Settings
+            loc={{ lat: loc.lat, lon: loc.lon, label: loc.label }}
+            favorites={favorites}
+            homeId={homeId}
+            onSetHome={setHome}
+            sectionOrder={sectionOrder}
+            onSetOrder={applyOrder}
+            commute={commute}
+            onSetCommute={onSetCommute}
+            feelOffset={feel.offset}
+            onResetFeel={() => setFeel(resetFeel())}
+            visitors={visitors}
+          />
+        </div>
+      </header>
+
+      <InAppBanner />
+
+      {!online && (
+        <div className="offline-note" role="status">
+          <WifiSlash size={18} weight="bold" aria-hidden />
+          <span>
+            인터넷에 연결되어 있지 않아요
+            <small>마지막으로 받은 날씨({hhmm(wx.fetchedAt)} 기준)를 보여드리고 있어요</small>
+          </span>
+        </div>
+      )}
+
+      {/* 랜드마크: 스크린리더가 "지역 선택 / 본문 / 바닥글"로 건너뛸 수 있게. 화면 배치는 그대로(display: contents) */}
+      <div role="region" aria-label="지역 선택" className="loc-region">
+      <PlaceBar
+        favorites={favorites}
+        selectedId={selectedId}
+        onSelect={selectPlace}
+        onView={viewPlace}
+        onRemove={removeFavorite}
+        onMove={moveFavorite}
+        openSearchSignal={searchSignal}
+        onReorder={(ids) => {
+          setFavorites((prev) => {
+            const map = new Map(prev.map((f) => [f.id, f]))
+            const next = ids.map((id) => map.get(id)!).filter(Boolean)
+            saveFavorites(next)
+            return next
+          })
+        }}
+      />
+
+      {/* 앱 안 브라우저에서는 위치가 원래 안 된다 — 위쪽 안내 배너가 이유를 말하니 이 줄까지 겹쳐 쌓지 않는다 */}
+      {showFallback && (
+        <button type="button" className={`fallback-note ${fallbackSeen ? 'compact' : ''}`} onClick={() => selectPlace('current')}>
+          <Crosshair size={18} weight="bold" aria-hidden />
+          <span>
+            <b>서울</b> 기준으로 보고 있어요
+            <small>{fallbackSeen ? '내 위치로 ›' : '내 위치로 바꾸려면 눌러주세요'}</small>
+          </span>
+        </button>
+      )}
+
+      {tempPlace?.id === selectedId && !favorites.some((f) => f.id === selectedId) && (
+        <button type="button" className="star-add" onClick={() => addFavorite(tempPlace)}>
+          <Star size={16} weight="fill" aria-hidden /> {tempPlace.name} 즐겨찾기에 추가
+        </button>
+      )}
+      </div>
+
+      <main className="app-main">
+      <div id="weather-main" tabIndex={-1} key={selectedId} className="switch-enter">
+        {/* 메인: 한눈에 결론 — 늘 맨 위 */}
+        <SectionBoundary name="hero">{renderSection('hero')}</SectionBoundary>
+        {/* 그 아래는 큰 값 하나 + 한 줄만 담은 요약 카드. 누르면 예전 상세 카드를 시트로 연다 */}
+        <div className="impact-grid">
+          {sectionOrder.map((key) => {
+            const info = key === 'hero' ? undefined : cards[key]
+            if (!info?.impact) return null
+            const Icon = info.Icon
+            return (
+              <button
+                key={key}
+                type="button"
+                className={`impact-card tone-${info.impact.tone} ${info.wide ? 'wide' : ''}`}
+                onClick={() => setOpenKey(key)}
+                aria-haspopup="dialog"
+              >
+                <span className="impact-label">
+                  <Icon size={15} weight="bold" aria-hidden /> {info.label}
+                </span>
+                <b className="impact-value">{info.impact.value}</b>
+                <span className="impact-sub">{info.impact.sub}</span>
+                <CaretRight className="impact-go" size={14} weight="bold" aria-hidden />
+              </button>
+            )
+          })}
+        </div>
+        <CoupangBanner id={1020558} template="carousel" height={140} />
         <CoupangBanner id={1020557} template="banner" height={90} maxWidth={728} />
       </div>
       </main>
@@ -935,6 +1002,11 @@ export default function App() {
           </a>
         </p>
       </footer>
+      {openKey && (
+        <DetailSheet title={SECTION_LABEL[openKey]} onClose={closeSheet}>
+          <SectionBoundary name={openKey}>{renderSection(openKey)}</SectionBoundary>
+        </DetailSheet>
+      )}
       {toast && (
         <div className="toast" role="status">
           {toast}
