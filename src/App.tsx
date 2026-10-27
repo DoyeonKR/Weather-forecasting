@@ -503,6 +503,10 @@ export default function App() {
       {key === 'hero' && (
         <>
           <section className={`hero card journal-overview hero-immersive scene-${scene.kind} sky-${scene.sky}`} aria-label="지금 날씨와 챙길 것">
+            <figure className="hero-photo">
+              <img src={heroSky} alt="" decoding="async" fetchPriority="high" />
+            </figure>
+            <WeatherFx scene={scene} paused={motionPaused} scope="hero" />
             <WarnBanner hits={warnHits} />
             <div className="hero-date">
               <span>
@@ -553,10 +557,6 @@ export default function App() {
                 </div>
                 <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
               </div>
-              <figure className="hero-photo">
-                <img src={heroSky} alt="" decoding="async" fetchPriority="high" />
-                <WeatherFx scene={scene} paused={motionPaused} scope="hero" />
-              </figure>
             </div>
             <div className="hero-decision">
             <p className="journal-eyebrow">{prepTomorrow ? '내일 미리 챙기세요' : '오늘 챙길 것'}</p>
@@ -577,6 +577,7 @@ export default function App() {
               })}
             </ul>
             <div className="hero-subs">
+              {reducedMotion && <p className="weather-motion-note">기기의 동작 줄이기 설정으로 배경 효과가 꺼져 있어요.</p>}
               <p className="hero-line">
                 <span>체감 <b>{round1(wx.nowApparent).toFixed(1)}°</b></span>
                 <span>습도 <b>{Math.round(kmaNow?.reh ?? wx.nowHumidity)}%</b></span>
