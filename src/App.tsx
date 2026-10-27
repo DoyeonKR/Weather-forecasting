@@ -7,6 +7,8 @@ import {
   Crosshair,
   CloudSun,
   Drop,
+  Hoodie,
+  Leaf,
   MapPin,
   ShareNetwork,
   Star,
@@ -23,6 +25,7 @@ import { locate, type Located } from './lib/geo'
 import { weatherIcon, weatherTone, type UiIcon } from './lib/weatherIcon'
 import { loadLast, saveLast } from './lib/lastWeather'
 import { todayAhead, yesterdaySameWindow } from './lib/ahead'
+import { buildGlance } from './lib/glance'
 import { detectInApp } from './lib/inapp'
 import { GRADE_LABEL, fetchAir, type AirNow } from './lib/air'
 import { answeredToday, loadFeel, resetFeel, voteFeel, type FeelVote } from './lib/feel'
@@ -53,7 +56,7 @@ const ShareSheet = lazy(() => import('./components/ShareSheet'))
 import PlaceBar from './components/PlaceBar'
 import Settings from './components/Settings'
 import WeatherFx from './components/WeatherFx'
-import { DeltaHero, PrecipCompare, TempRangeBars, WindCompare } from './components/CompareGraphic'
+import { PrecipCompare, TempRangeBars, WindCompare } from './components/CompareGraphic'
 import ComparePlaces from './components/ComparePlaces'
 import CoupangBanner from './components/CoupangBanner'
 import { fetchTodayVisitors, trackEvent } from './lib/track'
@@ -105,6 +108,14 @@ export default function App() {
   const [searchSignal, setSearchSignal] = useState(0)
   const [air, setAir] = useState<AirNow | null>(boot?.air ?? null)
   const [feel, setFeel] = useState(loadFeel)
+  // "서울 기준으로 보고 있어요" 안내는 처음 한 번만 크게, 그다음부터는 한 줄로 작게
+  const [fallbackSeen] = useState(() => {
+    try {
+      return localStorage.getItem('eojeboda.fallbackSeen') === '1'
+    } catch {
+      return false
+    }
+  })
   const [commute, setCommute] = useState<CommutePrefs>(loadCommute)
   const [normal, setNormal] = useState<Normal | null>(null)
   const [warnItems, setWarnItems] = useState<WarnItem[] | null>(null)
@@ -348,6 +359,16 @@ export default function App() {
 
   const reorder = useLongPressReorder<SectionKey>({ order: sectionOrder, onChange: applyOrder, axis: 'y' })
 
+  // 큰 안내를 한 번 봤으면 다음 방문부터는 작게 (이번 방문 동안은 그대로 둔다)
+  useEffect(() => {
+    if (!wx || !loc?.isFallback || selectedId !== 'current') return
+    try {
+      localStorage.setItem('eojeboda.fallbackSeen', '1')
+    } catch {
+      // 저장이 막혀 있으면 매번 크게 보일 뿐
+    }
+  }, [wx, loc, selectedId])
+
   // 배경 테마: 기상청 관측(PTY)이 강수를 잡으면 관측 기준으로 (비=61, 눈·진눈깨비=73)
   const effCode =
     kmaNow?.pty && kmaNow.pty > 0 ? (kmaNow.pty === 1 || kmaNow.pty === 5 ? 61 : 73) : wx?.nowCode
@@ -437,6 +458,14 @@ export default function App() {
   const picks = prepTomorrow
     ? partnerPicks({ today: wx.tomorrow, uvMax: wx.uvMaxTomorrow ?? null })
     : partnerPicks({ today: ahead, uvMax: wx.uvMaxToday })
+  // 첫 화면 한눈에: 우산·옷·마스크 판정 + 한 줄 결론 (밤에는 내일 기준, 내일의 준비와 같은 기준)
+  const showFallback = loc.isFallback && selectedId === 'current' && !detectInApp()
+  const glance = buildGlance({
+    day: prepTomorrow ? wx.tomorrow : tipToday,
+    forTomorrow: prepTomorrow,
+    airGrade: air?.grade ?? null,
+    feelOffset: feel.offset,
+  })
   const alerts = tomorrowAlerts(wx.tomorrow, wx.today)
   const tomorrowLabel = codeLabel(wx.tomorrow.code)
   const tomorrowTone = weatherTone(tomorrowLabel.label)
@@ -529,12 +558,12 @@ export default function App() {
       />
 
       {/* 앱 안 브라우저에서는 위치가 원래 안 된다 — 위쪽 안내 배너가 이유를 말하니 이 줄까지 겹쳐 쌓지 않는다 */}
-      {loc.isFallback && selectedId === 'current' && !detectInApp() && (
-        <button type="button" className="fallback-note" onClick={() => selectPlace('current')}>
+      {showFallback && (
+        <button type="button" className={`fallback-note ${fallbackSeen ? 'compact' : ''}`} onClick={() => selectPlace('current')}>
           <Crosshair size={18} weight="bold" aria-hidden />
           <span>
             <b>서울</b> 기준으로 보고 있어요
-            <small>내 위치로 바꾸려면 눌러주세요</small>
+            <small>{fallbackSeen ? '내 위치로 ›' : '내 위치로 바꾸려면 눌러주세요'}</small>
           </span>
         </button>
       )}
@@ -609,32 +638,28 @@ export default function App() {
                 <div className="hero-condition">{now.label}</div>
               </div>
             </div>
-            <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
+            {/* 한 줄 결론 + 판정 3칸. "어제보다 몇 도"는 위 브리핑 띠가 말하므로 여기서는 빼서 겹치지 않게 */}
+            <p className="glance-head">{glance.headline}</p>
+            <ul className="glance" aria-label={prepTomorrow ? '내일 챙길 것' : '오늘 챙길 것'}>
+              {glance.tiles.map((t) => {
+                const Icon = t.key === 'umbrella' ? Umbrella : t.key === 'air' ? Leaf : (prepTomorrow ? wx.tomorrow : wx.today).tmax < 17 ? Hoodie : TShirt
+                return (
+                  <li key={t.key} className={`glance-tile tone-${t.tone}`}>
+                    <span className="glance-label">
+                      <Icon size={15} weight="bold" aria-hidden /> {t.label}
+                    </span>
+                    <b className="glance-value">{t.value}</b>
+                    <span className="glance-sub">{t.sub}</span>
+                  </li>
+                )
+              })}
+            </ul>
             <div className="hero-subs">
-              <div className="stat-chips">
-                <div className="stat-chip">
-                  <ThermometerSimple className="stat-chip-icon warm-icon" size={25} weight="duotone" aria-hidden />
-                  <span className="stat-chip-label">체감</span>
-                  <span className="stat-chip-value">{round1(wx.nowApparent).toFixed(1)}°</span>
-                </div>
-                <div className="stat-chip">
-                  <Drop className="stat-chip-icon cold-icon" size={25} weight="duotone" aria-hidden />
-                  <span className="stat-chip-label">습도</span>
-                  <span className="stat-chip-value">{Math.round(kmaNow?.reh ?? wx.nowHumidity)}%</span>
-                </div>
-                <div className="stat-chip">
-                  <Umbrella className="stat-chip-icon rain-icon" size={25} weight="duotone" aria-hidden />
-                  <span className="stat-chip-label">강수확률</span>
-                  <span className="stat-chip-value">{ahead.precipProbMax ?? '?'}%</span>
-                </div>
-                <div className="stat-chip">
-                  <Wind className="stat-chip-icon wind-icon" size={25} weight="duotone" aria-hidden />
-                  <span className="stat-chip-label">바람</span>
-                  <span className="stat-chip-value">
-                    {Math.round(wx.today.windMax ?? 0)}km/h
-                  </span>
-                </div>
-              </div>
+              <p className="hero-line">
+                <span>체감 <b>{round1(wx.nowApparent).toFixed(1)}°</b></span>
+                <span>습도 <b>{Math.round(kmaNow?.reh ?? wx.nowHumidity)}%</b></span>
+                <span>바람 <b>{Math.round(wx.today.windMax ?? 0)}km/h</b></span>
+              </p>
               <SunRow sun={wx.sun} uv={wx.uvMaxToday} />
 
             </div>
