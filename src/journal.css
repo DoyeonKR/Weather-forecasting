@@ -270,15 +270,15 @@ button:disabled { cursor: default; }
 .to-top { background: #fff; color: #333; border: 1px solid #ccc; box-shadow: 0 3px 12px #0001; }
 .brief-bar { padding: calc(var(--brief-top) + env(safe-area-inset-top)) max(16px, calc((100vw - 1040px) / 2)) 8px; background: linear-gradient(#f4f4f2 85%, #f4f4f200); }
 .brief { max-width: 1040px; background: #fff; border: 1px solid #dadad6; border-radius: 12px; box-shadow: 0 3px 12px #00000006; transition: height .2s ease; }
-.brief-slide { background-color: #fff; background-size: 160px 100%; padding: 0 190px 0 18px; }
-.brief-slide::before { display: none; }
-.brief-title { color: #333; font-size: 16px; font-weight: 650; white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.4; }
-.brief-sub { color: #737373; font-size: 12px; margin-top: 3px; }
+.brief-slide { background-color: #333; background-size: cover; background-position: center; padding: 0 128px 0 18px; }
+.brief-slide::before { display: block; background: linear-gradient(90deg, #000b 0%, #0009 72%, #0007 100%); }
+.brief-title { color: #fff; font-size: 16px; font-weight: 650; white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.4; }
+.brief-sub { color: #fff; font-size: 12px; margin-top: 3px; }
 .brief-ctrl { right: 10px; bottom: 9px; height: 30px; background: #fffffff2; border: 1px solid #deded8; backdrop-filter: none; }
 .brief-ctrl button { color: #333; width: 30px; height: 30px; }
 .brief-count { color: #666; }
 .brief-bar.compact .brief { height: 44px; }
-.brief-bar.compact .brief-slide { background-size: 110px 100%; padding-right: 135px; }
+.brief-bar.compact .brief-slide { padding-right: 112px; }
 .brief-bar.compact .brief-title { font-size: 13px; -webkit-line-clamp: 1; }
 .brief-bar.compact .brief-sub { display: none; }
 .brief-bar.compact .brief-ctrl { bottom: 6px; height: 30px; }
@@ -316,7 +316,7 @@ button:disabled { cursor: default; }
   .journal-detail > summary { gap: 11px; }
   .journal-detail-body { padding-left: 0; }
   .journal-details { padding-bottom: 4px; }
-  .brief-slide { background-size: 100px 100%; padding: 0 112px 0 13px; }
+  .brief-slide { padding: 0 108px 0 13px; }
   .brief-title { font-size: 14px; }
   .brief-sub { font-size: 11px; }
   .brief-ctrl { right: 6px; bottom: 6px; }
@@ -344,7 +344,7 @@ button:disabled { cursor: default; }
   .glance-sub { font-size: 10px; }
   .hs-legend { gap: 10px; }
   .brief-bar { padding-inline: 12px; }
-  .brief-slide { padding-right: 102px; background-size: 90px 100%; }
+  .brief-slide { padding-right: 102px; }
   .brief-title { font-size: 13px; }
   .brief-ctrl { right: 4px; }
 }
