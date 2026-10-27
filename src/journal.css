@@ -366,3 +366,63 @@ button:disabled { cursor: default; }
   /* 디테일 줄: 설명 대신 값 하나 */
   .journal-detail-value { display: block; max-width: 46%; font-size: 15px; font-weight: 650; }
 }
+
+/* ── 온도 차이 배지 · 내일 경고 칩 (v1.0.87) ─────────────────────
+   글자 기호(▲▼↘) 대신 아이콘 + 숫자를 옅은 색 알약에 */
+.delta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  width: max-content;
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  background: #f0f0ed;
+  color: #555;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.delta-pill.warm { background: #fdeee3; color: #b4471c; }
+.delta-pill.cold { background: #e6effa; color: #1f5fa6; }
+.delta-pill.same { padding: 2px 8px; }
+
+.delta-pill.compact {
+  gap: 1px;
+  padding: 1px 5px 1px 4px;
+  font-size: 10.5px;
+}
+
+.delta-pill.compact.same { padding: 1px 6px; }
+
+/* 시간별 칸은 배지가 칸 가운데 */
+.hs-delta { justify-content: center; }
+
+/* 내일 카드 경고: 수치 아래에 카드 폭 그대로, 왼쪽 정렬 */
+.journal-outlook .tomorrow-card .alerts {
+  margin: 18px 0 0;
+  padding: 0;
+}
+
+.journal-outlook .tomorrow-card .alerts li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #f3d6c6;
+  border-radius: 12px;
+  background: #fdf3ec;
+  color: #6b3a22;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.journal-outlook .tomorrow-card .alerts li svg {
+  margin: 0;
+  color: #c2531f;
+}

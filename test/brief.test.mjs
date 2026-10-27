@@ -34,7 +34,7 @@ test('밤: 지금 비교·내일 낮·지난 일몰(과거형)·내일 일출', 
   assert.equal(c.now.image, 'cooler')
   assert.match(c.now.sub, /지금 14\.0° · 어제 이맘때 15\.2°/)
   assert.equal(c.tomorrow.title, '내일 낮은 3.4° 쌀쌀해요')
-  assert.match(c.tomorrow.sub, /^낮 19° → 16° · 아침 ▼7\.8°$/)
+  assert.equal(c.tomorrow.sub, '아침은 7.8° 더 추워요')
   assert.equal(c.sunset.title, '오늘 해는 오후 5:41에 졌어요')
   assert.equal(c.sunset.sub, '내일은 오후 5:40에 져요')
   assert.equal(c.sunrise.title, '내일 해는 오전 6:51에 떠요')
@@ -57,7 +57,7 @@ test('차이가 거의 없으면 "비슷해요", 따뜻하면 warmer', () => {
   assert.equal(c.now.title, '어제 이맘때와 비슷해요')
   assert.equal(c.tomorrow.title, '내일 낮은 2.5° 따뜻해요')
   assert.equal(c.tomorrow.image, 'warmer')
-  assert.doesNotMatch(c.tomorrow.sub, /아침/) // 아침 차이 3° 미만이면 덧붙이지 않음
+  assert.equal(c.tomorrow.sub, '낮 최고 22° · 아침 최저 13°') // 아침 차이 3° 미만이면 내일 기온만
 })
 
 test('옛 캐시: 내일 일출·오프셋 없음 → 내일 일출 카드는 건너뛰고 기기 시간대로', () => {

@@ -50,7 +50,7 @@ export function compareImpact(today: DayStats, yesterday: DayStats): Impact {
   const d = round1(today.tmax - yesterday.tmax)
   if (Math.abs(d) < 0.5) return { value: '비슷해요', sub: `낮 최고 ${Math.round(today.tmax)}° · 어제와 같아요`, tone: 'ok' }
   return {
-    value: `${d > 0 ? '▲' : '▼'}${Math.abs(d)}°`,
+    value: `${Math.abs(d)}° ${d > 0 ? '높아요' : '낮아요'}`,
     sub: `낮 최고가 어제보다 ${d > 0 ? '높아요' : '낮아요'}`,
     tone: d > 0 ? 'warm' : 'cold',
   }

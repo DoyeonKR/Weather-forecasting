@@ -7,7 +7,7 @@ import { codeLabel } from '../lib/compare'
 import type { WeatherData } from '../lib/weather'
 import { weatherIcon, weatherTone } from '../lib/weatherIcon'
 import { trackEvent } from '../lib/track'
-import { TrendMark } from './WeatherArtwork'
+import DeltaPill from './DeltaPill'
 
 interface Props {
   wx: WeatherData
@@ -201,7 +201,7 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
                         <Icon size={22} weight="duotone" className={`wi-${weatherTone(labels[k])}`} />
                         <strong className="hs-temp">{Math.round(tNow[k])}°</strong>
                         <span className={`hs-delta ${d > 0 ? 'warm' : d < 0 ? 'cold' : 'same'}`}>
-                          <TrendMark delta={d} size={12} />{Math.abs(d)}°
+                          <DeltaPill delta={d} compact sameText="0°" />
                         </span>
                         {anyProb && (
                           <small className="hs-prob">{prob[k] !== null && prob[k]! >= 30 ? `${prob[k]}%` : '\u00a0'}</small>

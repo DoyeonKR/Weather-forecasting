@@ -1,7 +1,7 @@
 // 메인·비교 카드에 붙는 작은 조각들 — 미세먼지 줄, 체감 질문, 출퇴근 비교, 평년 비교, 특보 배너
 import { useEffect, useState } from 'react'
 import { ArrowRight, DeviceMobile, PersonSimpleWalk, Sun, SunHorizon, Warning, X } from '@phosphor-icons/react'
-import { TrendMark } from './WeatherArtwork'
+import DeltaPill from './DeltaPill'
 import { detectInApp, openInBrowser } from '../lib/inapp'
 import { uvLabel } from '../lib/uv'
 import { GRADE_LABEL, gradePm10, gradePm25, type AirNow } from '../lib/air'
@@ -13,11 +13,9 @@ import type { WarnHit } from '../lib/warn'
 import type { WeatherData } from '../lib/weather'
 import { weatherIcon, weatherTone } from '../lib/weatherIcon'
 
-/** 차이 한 마디: ▲3° / ▼2° / 비슷 */
+/** 차이 한 마디: 아이콘 배지 (3° 높음 / 2° 낮음 / 비슷) */
 function Diff({ d, unit = '°' }: { d: number; unit?: string }) {
-  const r = Math.round(d)
-  if (r === 0) return <b className="range-diff same">비슷</b>
-  return <b className={`range-diff ${r > 0 ? 'warm' : 'cold'}`} aria-label={`${Math.abs(r)}${unit} ${r > 0 ? '높음' : '낮음'}`}><TrendMark delta={r} />{Math.abs(r)}{unit}</b>
+  return <DeltaPill delta={d} unit={unit} />
 }
 
 // ── 앱 안 브라우저 안내 ───────────────────────────────

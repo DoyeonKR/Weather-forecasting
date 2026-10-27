@@ -3,10 +3,11 @@ import type { DayStats } from '../lib/compare'
 import { round1 } from '../lib/compare'
 import { ArrowRight } from '@phosphor-icons/react'
 import { TrendMark } from './WeatherArtwork'
+import DeltaPill from './DeltaPill'
 
 /**
  * 지금 vs 어제 같은 시각 — 이 앱의 핵심 질문이라 숫자 배지가 아니라 문장으로 말한다.
- * (예전에는 ▼2.3° 와 8~11px 캡션이 오른쪽 구석에 있어서 무슨 숫자인지 알기 어려웠다)
+ * (예전에는 2.3° 낮음 배지와 8~11px 캡션이 오른쪽 구석에 있어서 무슨 숫자인지 알기 어려웠다)
  */
 export function DeltaHero({ nowTemp, yesterdaySameHour }: { nowTemp: number; yesterdaySameHour: number }) {
   const d = round1(nowTemp - yesterdaySameHour)
@@ -27,11 +28,9 @@ export function DeltaHero({ nowTemp, yesterdaySameHour }: { nowTemp: number; yes
   )
 }
 
-/** 차이 한 마디: ▲3° / ▼2° / 비슷 */
+/** 차이 한 마디: 아이콘 배지 (3° 높음 / 2° 낮음 / 비슷) */
 function diffChip(d: number) {
-  const r = Math.round(d)
-  if (r === 0) return <b className="range-diff same">비슷</b>
-  return <b className={`range-diff ${r > 0 ? 'warm' : 'cold'}`} aria-label={`${Math.abs(r)}도 ${r > 0 ? '높음' : '낮음'}`}><TrendMark delta={r} />{Math.abs(r)}°</b>
+  return <DeltaPill delta={d} />
 }
 
 /**

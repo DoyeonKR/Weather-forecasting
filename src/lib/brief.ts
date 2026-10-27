@@ -83,9 +83,11 @@ export function buildBriefs(wx: Input, nowMs: number, deviceOffsetSec: number): 
   if (sameDay && Number.isFinite(wx.tomorrow?.tmax) && Number.isFinite(wx.today?.tmax)) {
     const d = wx.tomorrow.tmax - wx.today.tmax
     const dMin = wx.tomorrow.tmin - wx.today.tmin
-    // 제목이 이미 "내일 낮은"이라 오늘→내일 순서만 보이면 된다 (320px 에서 한 줄에 들어가게)
-    let sub = `낮 ${fmt(wx.today.tmax)} → ${fmt(wx.tomorrow.tmax)}`
-    if (Number.isFinite(dMin) && Math.abs(dMin) >= 3) sub += ` · 아침 ${dMin > 0 ? '▲' : '▼'}${deg(dMin)}`
+    // 기호(▲▼→) 대신 말로. 아침 차이가 크면 그게 더 쓸모 있는 정보라 그걸 말한다 (320px 한 줄)
+    const sub =
+      Number.isFinite(dMin) && Math.abs(dMin) >= 3
+        ? `아침은 ${deg(dMin)} 더 ${dMin > 0 ? '포근해요' : '추워요'}`
+        : `낮 최고 ${fmt(wx.tomorrow.tmax)} · 아침 최저 ${fmt(wx.tomorrow.tmin)}`
     cards.push(
       Math.abs(d) < SAME
         ? { id: 'tomorrow', image: 'warmer', title: '내일 낮은 오늘과 비슷해요', sub }

@@ -34,7 +34,7 @@ test('12시간: 비가 있으면 언제부터, 없으면 기온 폭과 가장 �
 })
 
 test('어제 비교·내일', () => {
-  assert.deepEqual(compareImpact(day({ tmax: 10 }), day({ tmax: 14.3 })), { value: '▼4.3°', sub: '낮 최고가 어제보다 낮아요', tone: 'cold' })
+  assert.deepEqual(compareImpact(day({ tmax: 10 }), day({ tmax: 14.3 })), { value: '4.3° 낮아요', sub: '낮 최고가 어제보다 낮아요', tone: 'cold' })
   assert.equal(compareImpact(day(), day({ tmax: 14.2 })).value, '비슷해요')
   const t = tomorrowImpact(day({ tmax: 18, code: 0 }), day({ tmax: 14 }), [])
   assert.deepEqual([t.value, t.sub, t.tone], ['18° 맑음', '오늘보다 4° 높아요', 'warm'])

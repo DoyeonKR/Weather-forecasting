@@ -66,6 +66,7 @@ const StatsPanel = lazy(() => import('./components/StatsPanel'))
 const ShareSheet = lazy(() => import('./components/ShareSheet'))
 import PlaceBar from './components/PlaceBar'
 import Settings from './components/Settings'
+import DeltaPill from './components/DeltaPill'
 import { PrecipCompare, TempRangeBars, WindCompare } from './components/CompareGraphic'
 import WeatherArtwork from './components/WeatherArtwork'
 import WeatherFx from './components/WeatherFx'
@@ -687,7 +688,7 @@ export default function App() {
                   <span>{label}</span>
                   <strong>{round1(temp).toFixed(1)}°</strong>
                   <small className={Math.abs(round1(diff)) < 0.5 ? 'muted' : diff > 0 ? 'warm-icon' : 'cold-icon'}>
-                    {Math.abs(round1(diff)) < 0.5 ? '오늘과 비슷' : `${diff > 0 ? '▲' : '▼'}${Math.abs(round1(diff))}°`}
+                    <DeltaPill delta={diff} digits={1} sameText="오늘과 비슷" />
                   </small>
                 </div>
               ))}
