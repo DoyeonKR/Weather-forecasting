@@ -2,10 +2,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { particleBudget, type WeatherScene } from '../lib/weatherScene'
 
-interface Props { scene: WeatherScene; paused: boolean; scope?: 'page' | 'hero' }
+interface Props { scene: WeatherScene; paused: boolean; scope?: 'page' | 'hero'; onAnimatedChange?: (animated: boolean) => void }
 interface Particle { x: number; y: number; speed: number; size: number; phase: number }
 
-export default function WeatherFx({ scene, paused, scope = 'page' }: Props) {
+export default function WeatherFx({ scene, paused, scope = 'page', onAnimatedChange }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [animated, setAnimated] = useState(false)
@@ -107,6 +107,7 @@ export default function WeatherFx({ scene, paused, scope = 'page' }: Props) {
     function sync() {
       const next = !paused && !media.matches && !document.hidden && visible
       setAnimated(next)
+      onAnimatedChange?.(next)
       if (next === running) return
       running = next; cancelAnimationFrame(raf)
       if (running) { last = performance.now(); nextBolt = last + 4500; raf = requestAnimationFrame(frame) }
@@ -138,7 +139,7 @@ export default function WeatherFx({ scene, paused, scope = 'page' }: Props) {
       if (media.removeEventListener) media.removeEventListener('change', sync)
       else media.removeListener(sync)
     }
-  }, [kind, windLevel, intensity, sky, scope, paused])
+  }, [kind, windLevel, intensity, sky, scope, paused, onAnimatedChange])
 
   return (
     <div ref={wrapRef} className={`weather-atmosphere atmosphere-${scope} scene-${kind} sky-${sky} wind-${windLevel} ${animated ? 'is-animated' : 'is-still'}`} data-kind={kind} data-wind={windLevel} data-animated={animated} aria-hidden="true">

@@ -69,6 +69,7 @@ import Settings from './components/Settings'
 import { DeltaHero, PrecipCompare, TempRangeBars, WindCompare } from './components/CompareGraphic'
 import WeatherArtwork from './components/WeatherArtwork'
 import WeatherFx from './components/WeatherFx'
+import WeatherBackdrop from './components/WeatherBackdrop'
 import ComparePlaces from './components/ComparePlaces'
 import CoupangBanner from './components/CoupangBanner'
 import { fetchTodayVisitors, trackEvent } from './lib/track'
@@ -485,7 +486,6 @@ export default function App() {
   // 첫 요약은 컬러 하늘과 날씨 효과. 현재 풍속을 우선하고 이전 캐시는 안전하게 보완한다.
   const windNow = kmaNow?.wsd != null ? kmaNow.wsd * 3.6 : wx.nowWind
   const scene = buildWeatherScene(effCode ?? wx.nowCode, wx.nowIsDay, windNow, wx.nowGust)
-  const heroSky = `${import.meta.env.BASE_URL}images/weather-journal/${scene.sky}.webp`
   const showFallback = loc.isFallback && selectedId === 'current' && !detectInApp()
   const glance = buildGlance({
     day: prepTomorrow ? wx.tomorrow : tipToday,
@@ -503,10 +503,7 @@ export default function App() {
       {key === 'hero' && (
         <>
           <section className={`hero card journal-overview hero-immersive scene-${scene.kind} sky-${scene.sky}`} aria-label="지금 날씨와 챙길 것">
-            <figure className="hero-photo">
-              <img src={heroSky} alt="" decoding="async" fetchPriority="high" />
-            </figure>
-            <WeatherFx scene={scene} paused={motionPaused} scope="hero" />
+            <WeatherBackdrop scene={scene} paused={motionPaused} />
             <WarnBanner hits={warnHits} />
             <div className="hero-date">
               <span>

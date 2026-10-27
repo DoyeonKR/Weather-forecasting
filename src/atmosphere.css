@@ -58,7 +58,21 @@
   border-color: #ffffff70; box-shadow: 0 16px 45px #102b4426; padding: 30px;
 }
 .hero-immersive .hero-photo { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; margin: 0; border-radius: 0; background: #193e5c; }
-.hero-immersive .hero-photo > img { display: block; width: 100%; height: 100%; min-height: 0; max-height: none; object-fit: cover; object-position: center 52%; }
+.hero-immersive .hero-photo { --sky-duration: 16s; }
+.hero-immersive .hero-photo[data-wind='1'] { --sky-duration: 12s; }
+.hero-immersive .hero-photo[data-wind='2'] { --sky-duration: 10s; }
+.hero-immersive .hero-photo[data-wind='3'] { --sky-duration: 8s; }
+.hero-immersive .hero-photo > img {
+  display: block; width: 100%; height: 100%; min-height: 0; max-height: none; object-fit: cover; object-position: center 52%;
+  transform: translate3d(-7%, 1%, 0) scale(1.24);
+  animation: hero-sky-pan var(--sky-duration) ease-in-out infinite alternate;
+  animation-delay: calc(var(--sky-duration) * -.24); animation-play-state: paused; will-change: transform;
+}
+.hero-immersive .hero-photo.is-animated > img { animation-play-state: running; }
+@keyframes hero-sky-pan {
+  from { transform: translate3d(-7%, 1%, 0) scale(1.24); }
+  to { transform: translate3d(7%, -2%, 0) scale(1.32); }
+}
 .hero-immersive::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(110deg, #07192dcc 0%, #102c408c 55%, #102a3b66 100%), linear-gradient(0deg, #081f37b8, transparent 65%); }
 .hero-immersive.sky-night-sky::before { background: linear-gradient(110deg, #06132ec9, #09264573 65%, #0b234455), linear-gradient(0deg, #061b38cc, transparent 75%); }
 .hero-immersive.scene-thunder::before { background: linear-gradient(110deg, #171d3cd9, #242b5299), linear-gradient(0deg, #0b143ac9, transparent); }
@@ -122,4 +136,5 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .weather-atmosphere *, .weather-atmosphere *::before { animation: none !important; }
+  .hero-immersive .hero-photo > img { animation: none; transform: none; will-change: auto; }
 }
