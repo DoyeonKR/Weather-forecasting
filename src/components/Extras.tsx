@@ -1,6 +1,6 @@
 // 메인·비교 카드에 붙는 작은 조각들 — 미세먼지 줄, 체감 질문, 출퇴근 비교, 평년 비교, 특보 배너
 import { useEffect, useState } from 'react'
-import { ArrowRight, DeviceMobile, PersonSimpleWalk, SunHorizon, Warning, X } from '@phosphor-icons/react'
+import { ArrowRight, DeviceMobile, PersonSimpleWalk, Sun, SunHorizon, Warning, X } from '@phosphor-icons/react'
 import { TrendMark } from './WeatherArtwork'
 import { detectInApp, openInBrowser } from '../lib/inapp'
 import { uvLabel } from '../lib/uv'
@@ -93,16 +93,16 @@ export function SunRow({ sun, uv }: { sun?: { rise: string; set: string }; uv: n
       {sun && (
         <>
           <span>
-            <SunHorizon size={16} weight="duotone" className="wi-sun" aria-hidden /> 일출 <b>{hm(sun.rise)}</b>
+            <SunHorizon size={16} weight="duotone" className="sunrise-icon" aria-hidden /> 일출 <b>{hm(sun.rise)}</b>
           </span>
           <span>
-            <SunHorizon size={16} weight="duotone" className="wi-rain" aria-hidden /> 일몰 <b>{hm(sun.set)}</b>
+            <SunHorizon size={16} weight="duotone" className="sunset-icon" aria-hidden /> 일몰 <b>{hm(sun.set)}</b>
           </span>
         </>
       )}
       {uv !== null && (
         <span>
-          자외선 <b>{Math.round(uv)}</b> <small>({uvLabel(Math.round(uv))}, 오늘 최고)</small>
+          <Sun size={16} weight="duotone" className="uv-icon" aria-hidden /> 자외선 <b>{Math.round(uv)}</b> <small>({uvLabel(Math.round(uv))}, 오늘 최고)</small>
         </span>
       )}
     </div>

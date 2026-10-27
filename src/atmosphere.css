@@ -64,7 +64,7 @@
 .hero-immersive .hero-date { color: #fff; margin-bottom: 24px; }
 .hero-immersive .journal-eyebrow, .hero-immersive .hero-condition { color: #fff; }
 .hero-immersive .hero-temp { color: #fff; text-shadow: 0 3px 30px #0c223330; }
-.hero-immersive .hero-main > .weather-artwork { filter: brightness(0) invert(1) drop-shadow(0 3px 12px #102b4433); }
+.hero-immersive .hero-main > .weather-artwork--line { filter: brightness(0) invert(1) drop-shadow(0 3px 12px #102b4433); }
 .hero-immersive .hero-updated { color: #fff; background: #071b3a66; border: 1px solid #ffffff55; }
 .hero-immersive .hero-updated.stale { border-color: #ffffffa0; }
 .hero-immersive .hero-updated:disabled { opacity: .6; }

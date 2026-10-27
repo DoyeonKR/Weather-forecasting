@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 const require = createRequire(import.meta.url)
@@ -12,7 +12,21 @@ const built = esbuild.buildSync({
 })
 const mod = { exports: {} }
 new Function('module', 'exports', 'require', built.outputFiles[0].text)(mod, mod.exports, require)
-const { artworkName, skyAssetName, moveDetailSection, DETAIL_KEYS } = mod.exports
+const { artworkName, artworkFile, WEATHER_ARTWORK_NAMES, skyAssetName, moveDetailSection, DETAIL_KEYS } = mod.exports
+
+test('8종 일러스트와 경량 SVG 대체 에셋이 모두 존재하며 하위 경로를 보존한다', () => {
+  assert.equal(WEATHER_ARTWORK_NAMES.length, 8)
+  assert.equal(new Set(WEATHER_ARTWORK_NAMES).size, 8)
+  for (const name of WEATHER_ARTWORK_NAMES) {
+    assert.equal(artworkFile(name, true), `images/weather-icons-v2/${name}.webp`)
+    assert.equal(artworkFile(name, false), `icons/journal/${name}.svg`)
+    const data = readFileSync(new URL(`../public/${artworkFile(name, true)}`, import.meta.url))
+    assert.equal(data.toString('ascii', 0, 4), 'RIFF')
+    assert.equal(data.toString('ascii', 8, 12), 'WEBP')
+    assert.ok(data.length < 50_000, `${name} should stay light enough for mobile`)
+    assert.ok(existsSync(new URL(`../public/${artworkFile(name, false)}`, import.meta.url)))
+  }
+})
 
 test('낮·밤·흐림·비·눈·안개를 실제 SVG 에셋으로 연결한다', () => {
   const cases = [

@@ -79,6 +79,7 @@ import { SECTION_LABEL, loadOrder, saveOrder, type SectionKey } from './lib/sect
 import './App.css'
 import './journal.css'
 import './atmosphere.css'
+import './artwork.css'
 
 type Status = 'loading' | 'ready' | 'error'
 
@@ -545,10 +546,10 @@ export default function App() {
                 <p className="journal-eyebrow">지금 이곳의 날씨</p>
                 <div className="hero-main">
                   <div className="hero-info">
-                    <div className="hero-temp">{round1(wx.nowTemp).toFixed(1)}<span>°</span></div>
+                    <div className={`hero-temp ${round1(wx.nowTemp).toFixed(1).length > 4 ? 'hero-temp-wide' : ''}`}>{round1(wx.nowTemp).toFixed(1)}<span>°</span></div>
                     <div className="hero-condition">{now.label}</div>
                   </div>
-                  <WeatherArtwork label={now.label} isDay={wx.nowIsDay} />
+                  <WeatherArtwork label={now.label} isDay={wx.nowIsDay} size={144} variant="illustrated" priority />
                 </div>
                 <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
               </div>
@@ -680,7 +681,7 @@ export default function App() {
                 <p>{tomorrowLabel.label}</p>
               </div>
               <span className={`tomorrow-emoji wi-${tomorrowTone}`} aria-hidden>
-                <WeatherArtwork label={tomorrowLabel.label} size={64} />
+                <WeatherArtwork label={tomorrowLabel.label} size={72} variant="illustrated" />
               </span>
             </div>
             <div className="tomorrow-stats">
@@ -774,7 +775,7 @@ export default function App() {
       {key === 'radar' && (
         <>
           <section className="card radar-card">
-            <h2 className="section-title">비구름 레이더</h2>
+            <h2 className="section-title radar-title"><Drop size={18} weight="duotone" className="rain-icon" aria-hidden /> 비구름 레이더</h2>
             <WhenVisible minHeight={320}>
               <Suspense
                 fallback={
@@ -974,7 +975,7 @@ export default function App() {
             if (!info?.impact) return null
             const Icon = info.Icon
             return (
-              <details key={key} className={`journal-detail tone-${info.impact.tone}`}>
+              <details key={key} className={`journal-detail tone-${info.impact.tone}`} data-detail={key} data-air-grade={key === 'air' ? air?.grade : undefined} data-trend={key === 'compare' ? wx.nowTemp - wx.yesterdaySameHour >= .5 ? 'warmer' : wx.nowTemp - wx.yesterdaySameHour <= -.5 ? 'cooler' : 'same' : undefined}>
                 <summary>
                   <Icon size={22} weight="regular" aria-hidden />
                   <span className="journal-detail-copy"><b>{info.label}</b><small>{info.impact.sub}</small></span>

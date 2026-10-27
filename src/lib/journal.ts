@@ -1,6 +1,12 @@
 import { moveItem, type SectionKey } from './sections'
 
 export const DETAIL_KEYS: readonly SectionKey[] = ['air', 'prep', 'compare', 'sun', 'places']
+export const WEATHER_ARTWORK_NAMES = ['sun', 'moon', 'partly-cloudy', 'cloud', 'rain', 'snow', 'storm', 'fog'] as const
+
+/** BASE_URL은 호출 지점에서 붙여 GitHub Pages의 하위 경로에서도 동작한다. */
+export function artworkFile(name: string, illustrated: boolean): string {
+  return illustrated ? `images/weather-icons-v2/${name}.webp` : `icons/journal/${name}.svg`
+}
 
 export function artworkName(tone: string, label: string, isDay: boolean): string {
   if (label.includes('안개')) return 'fog'

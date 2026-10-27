@@ -1,0 +1,38 @@
+/* Editorial accents: only key icons gain color; copy, values and charts remain monochrome. */
+.weather-artwork--illustrated { object-fit: contain; filter: drop-shadow(0 5px 9px #1e3a5014); }
+.hero-immersive .hero-main > .weather-artwork--illustrated { width: 144px; height: 144px; filter: drop-shadow(0 8px 16px #1022382b); }
+.hero-immersive .hero-info { min-width: 0; }
+.tomorrow-heading .weather-artwork--illustrated { width: 72px; height: 72px; }
+
+.journal-detail[data-detail='air'] > summary > svg:first-child,
+.journal-detail[data-detail='compare'] > summary > svg:first-child,
+.journal-detail[data-detail='sun'] > summary > svg:first-child { width: 38px; height: 38px; padding: 8px; border-radius: 12px; }
+.journal-detail[data-detail='air'] > summary > svg:first-child { color: #278168; background: #edf5f0; }
+.journal-detail[data-detail='air'][data-air-grade='1'] > summary > svg:first-child { color: #607b67; background: #f0f3ef; }
+.journal-detail[data-detail='air'][data-air-grade='2'] > summary > svg:first-child { color: #a76a27; background: #fbf3e6; }
+.journal-detail[data-detail='air'][data-air-grade='3'] > summary > svg:first-child { color: #b95447; background: #fbeeea; }
+.journal-detail[data-detail='compare'] > summary > svg:first-child { color: #666; background: #f2f2ef; }
+.journal-detail[data-detail='compare'][data-trend='cooler'] > summary > svg:first-child { color: #377cad; background: #edf3fa; }
+.journal-detail[data-detail='compare'][data-trend='warmer'] > summary > svg:first-child { color: #b95e4c; background: #fbf0e9; }
+.journal-detail[data-detail='sun'] > summary > svg:first-child { color: #b67c25; background: #faf3e2; }
+
+.cmp-title svg.warm-icon { color: #bf604e; }
+.cmp-title svg.cold-icon, .radar-title svg.rain-icon { color: #347db3; }
+.cmp-title svg.wind-icon { color: #368381; }
+.radar-title { display: flex; align-items: center; gap: 7px; }
+.sun-row svg.sunrise-icon, .sun-row svg.uv-icon { color: #b97f26; }
+.sun-row svg.sunset-icon { color: #b56551; }
+.hs-current > svg.wi-sun, .week-today .wi-sun { color: #b98623; }
+.hs-current > svg.wi-rain, .week-today .wi-rain { color: #377fba; }
+.hs-current > svg.wi-cloud, .week-today .wi-cloud { color: #637e94; }
+.hs-current > svg.wi-snow, .week-today .wi-snow { color: #4b879e; }
+.hs-current > svg.wi-storm, .week-today .wi-storm { color: #7963a9; }
+
+@media (max-width: 859px) {
+  .hero-immersive .hero-main > .weather-artwork--illustrated { width: 112px; height: 112px; }
+  .hero-immersive .hero-temp-wide { font-size: 76px; }
+}
+@media (max-width: 359px) {
+  .hero-immersive .hero-main > .weather-artwork--illustrated { width: 96px; height: 96px; }
+  .hero-immersive .hero-temp-wide { font-size: 66px; }
+}

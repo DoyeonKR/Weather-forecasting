@@ -564,7 +564,7 @@ export default function Settings({
               <summary className="settings-sec-title"><Palette size={19} weight="duotone" aria-hidden /> 화면 스타일</summary>
               <div className="settings-style-note">
                 <div className="settings-style-swatches" aria-hidden><i /><i /><i /></div>
-                첫 요약 화면과 배경은 날씨에 맞는 컬러 하늘로, 상세 정보는 흰색·회색·차콜로 보여드려요.
+                첫 요약 화면과 배경은 날씨에 맞는 컬러 하늘로, 상세 정보는 모노크롬을 바탕으로 핵심 아이콘에만 포인트 색을 더해요.
                 구름·비·눈·별·번개·바람 효과는 요약 화면의 ‘배경 효과’ 버튼으로 멈출 수 있어요. 기기의 동작 줄이기 설정도 따릅니다.
               </div>
             </details>

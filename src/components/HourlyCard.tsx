@@ -196,7 +196,7 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
                     const Icon = weatherIcon(labels[k], hours[k] >= 6 && hours[k] < 19)
                     const d = Math.round(tNow[k] - tPrev[k])
                     return (
-                      <div className="hs-col" key={idx[k]} style={{ width: COL }}>
+                      <div className={`hs-col ${k === 0 ? 'hs-current' : ''}`} key={idx[k]} style={{ width: COL }}>
                         <span className="hs-hour">{k === 0 ? '지금' : `${hours[k]}시`}</span>
                         <Icon size={22} weight="duotone" className={`wi-${weatherTone(labels[k])}`} />
                         <strong className="hs-temp">{Math.round(tNow[k])}°</strong>
