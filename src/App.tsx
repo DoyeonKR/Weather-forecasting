@@ -13,6 +13,8 @@ import {
   Hoodie,
   Leaf,
   MapPin,
+  Pause,
+  Play,
   ShareNetwork,
   Star,
   Sun,
@@ -33,7 +35,7 @@ import { weatherIcon, weatherTone, type UiIcon } from './lib/weatherIcon'
 import { loadLast, saveLast } from './lib/lastWeather'
 import { todayAhead, yesterdaySameWindow } from './lib/ahead'
 import { buildGlance } from './lib/glance'
-import { skyAssetName } from './lib/journal'
+import { buildWeatherScene, loadWeatherMotion, observedSceneCode, saveWeatherMotion } from './lib/weatherScene'
 import { sunImpact, type Impact } from './lib/impact'
 import { detectInApp } from './lib/inapp'
 import { GRADE_LABEL, fetchAir, type AirNow } from './lib/air'
@@ -66,6 +68,7 @@ import PlaceBar from './components/PlaceBar'
 import Settings from './components/Settings'
 import { DeltaHero, PrecipCompare, TempRangeBars, WindCompare } from './components/CompareGraphic'
 import WeatherArtwork from './components/WeatherArtwork'
+import WeatherFx from './components/WeatherFx'
 import ComparePlaces from './components/ComparePlaces'
 import CoupangBanner from './components/CoupangBanner'
 import { fetchTodayVisitors, trackEvent } from './lib/track'
@@ -75,6 +78,7 @@ import { SectionBoundary } from './components/ErrorBoundary'
 import { SECTION_LABEL, loadOrder, saveOrder, type SectionKey } from './lib/sections'
 import './App.css'
 import './journal.css'
+import './atmosphere.css'
 
 type Status = 'loading' | 'ready' | 'error'
 
@@ -111,6 +115,19 @@ export default function App() {
   const [wx, setWx] = useState<WeatherData | null>(boot?.wx ?? null)
   const [kmaNow, setKmaNow] = useState<KmaNow | null>(boot?.kmaNow ?? null)
   const [visitors, setVisitors] = useState<number | null>(null)
+  const [motionEnabled, setMotionEnabled] = useState(loadWeatherMotion)
+  const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const sync = () => setReducedMotion(media.matches)
+    if (media.addEventListener) media.addEventListener('change', sync)
+    else media.addListener(sync)
+    return () => {
+      if (media.removeEventListener) media.removeEventListener('change', sync)
+      else media.removeListener(sync)
+    }
+  }, [])
+  const motionPaused = !motionEnabled || reducedMotion
   const [tipsOpen, setTipsOpen] = useState(true)
   const [sectionOrder, setSectionOrder] = useState<SectionKey[]>(loadOrder)
   /** 헤더의 지역 버튼을 누를 때마다 올려서 검색창을 연다 */
@@ -378,8 +395,7 @@ export default function App() {
   }, [wx, loc, selectedId])
 
   // 배경 테마: 기상청 관측(PTY)이 강수를 잡으면 관측 기준으로 (비=61, 눈·진눈깨비=73)
-  const effCode =
-    kmaNow?.pty && kmaNow.pty > 0 ? (kmaNow.pty === 1 || kmaNow.pty === 5 ? 61 : 73) : wx?.nowCode
+  const effCode = wx ? observedSceneCode(wx.nowCode, kmaNow?.pty) : undefined
   const theme = wx ? themeClass(effCode ?? wx.nowCode, wx.nowIsDay) : 'bg-loading'
 
   // 첫 로딩에만 전체 화면 스피너. 지역 전환 등 갱신 중에는 기존 화면을 유지한다.
@@ -465,10 +481,10 @@ export default function App() {
     ? partnerPicks({ today: wx.tomorrow, uvMax: wx.uvMaxTomorrow ?? null })
     : partnerPicks({ today: ahead, uvMax: wx.uvMaxToday })
   // 첫 화면 한눈에: 우산·옷·마스크 판정 + 한 줄 결론 (밤에는 내일 기준, 내일의 준비와 같은 기준)
-  // 하늘 사진은 글자 뒤가 아닌 별도 창. 비·눈을 우선하고, 맑은 날은 낮·밤으로 고른다.
-  const nowTone = weatherTone(now.label)
-  const skyFile = skyAssetName(nowTone, wx.nowIsDay)
-  const heroSky = `${import.meta.env.BASE_URL}images/weather-journal/${skyFile}.webp`
+  // 첫 요약은 컬러 하늘과 날씨 효과. 현재 풍속을 우선하고 이전 캐시는 안전하게 보완한다.
+  const windNow = kmaNow?.wsd != null ? kmaNow.wsd * 3.6 : wx.nowWind
+  const scene = buildWeatherScene(effCode ?? wx.nowCode, wx.nowIsDay, windNow, wx.nowGust)
+  const heroSky = `${import.meta.env.BASE_URL}images/weather-journal/${scene.sky}.webp`
   const showFallback = loc.isFallback && selectedId === 'current' && !detectInApp()
   const glance = buildGlance({
     day: prepTomorrow ? wx.tomorrow : tipToday,
@@ -485,13 +501,25 @@ export default function App() {
     <>
       {key === 'hero' && (
         <>
-          <section className="hero card journal-overview" aria-label="지금 날씨와 챙길 것">
+          <section className={`hero card journal-overview hero-immersive scene-${scene.kind} sky-${scene.sky}`} aria-label="지금 날씨와 챙길 것">
             <WarnBanner hits={warnHits} />
             <div className="hero-date">
               <span>
                 {new Intl.DateTimeFormat('ko-KR', { month: '2-digit', day: '2-digit', weekday: 'long' }).format(new Date())}
               </span>
               <span className="hero-actions">
+              <button
+                type="button"
+                className="hero-updated weather-motion-toggle"
+                aria-label={reducedMotion ? '기기 동작 줄이기 설정으로 배경 효과가 꺼져 있어요' : motionEnabled ? '날씨 배경 효과 멈추기' : '날씨 배경 효과 재생하기'}
+                aria-pressed={!motionPaused}
+                disabled={reducedMotion}
+                onClick={() => { const next = !motionEnabled; setMotionEnabled(next); saveWeatherMotion(next) }}
+                title={reducedMotion ? '기기의 동작 줄이기 설정을 따릅니다' : motionPaused ? '날씨 배경 효과 켜기' : '날씨 배경 효과 끄기'}
+              >
+                {motionPaused ? <Play size={14} aria-hidden /> : <Pause size={14} aria-hidden />}
+                <span className="motion-label">배경 효과</span>
+              </button>
               <button type="button" className="hero-updated" onClick={onShare} aria-label="어제와 비교한 오늘 날씨 공유하기">
                 <ShareNetwork size={14} weight="bold" aria-hidden /> <span className="hero-share-label">공유</span>
               </button>
@@ -524,7 +552,10 @@ export default function App() {
                 </div>
                 <DeltaHero nowTemp={wx.nowTemp} yesterdaySameHour={wx.yesterdaySameHour} />
               </div>
-              <figure className="hero-photo"><img src={heroSky} alt="" decoding="async" fetchPriority="high" /></figure>
+              <figure className="hero-photo">
+                <img src={heroSky} alt="" decoding="async" fetchPriority="high" />
+                <WeatherFx scene={scene} paused={motionPaused} scope="hero" />
+              </figure>
             </div>
             <div className="hero-decision">
             <p className="journal-eyebrow">{prepTomorrow ? '내일 미리 챙기세요' : '오늘 챙길 것'}</p>
@@ -548,7 +579,7 @@ export default function App() {
               <p className="hero-line">
                 <span>체감 <b>{round1(wx.nowApparent).toFixed(1)}°</b></span>
                 <span>습도 <b>{Math.round(kmaNow?.reh ?? wx.nowHumidity)}%</b></span>
-                <span>바람 <b>{Math.round(wx.today.windMax ?? 0)}km/h</b></span>
+                <span>{windNow != null ? '바람' : '오늘 최대 바람'} <b>{Math.round(windNow ?? wx.today.windMax ?? 0)}km/h</b>{scene.windLevel >= 2 && <em className="hero-wind-tag">{scene.windLevel === 3 ? '매우 강함' : '다소 강함'}</em>}</span>
               </p>
             </div>
             </div>
@@ -814,6 +845,7 @@ export default function App() {
     <>
     {/* 상단 브리핑 띠: .shell(overflow: hidden) 바깥에 고정. 지역·날씨가 바뀌면 같이 바뀐다 */}
     <BriefBanner wx={wx} resetKey={`${selectedId}|${loc.label}`} />
+    <WeatherFx scene={scene} paused={motionPaused} />
     <div className={`shell journal-app has-brief ${theme} ${status === 'loading' ? 'refreshing' : ''}`}>
       <a className="skip-link" href="#weather-main">날씨 본문으로 건너뛰기</a>
       <header className="top">
@@ -826,8 +858,8 @@ export default function App() {
             {status === 'loading' ? (
               <span className="update-status">갱신 중…</span>
             ) : status === 'error' ? (
-              <button type="button" className="visitors err" onClick={() => selectPlace(selectedId)}>
-                갱신 실패, 눌러서 다시 시도
+              <button type="button" className="visitors err" aria-label="날씨 갱신 실패, 눌러서 다시 시도" onClick={() => selectPlace(selectedId)}>
+                갱신 실패 · 다시 시도
               </button>
             ) : null}
           </span>

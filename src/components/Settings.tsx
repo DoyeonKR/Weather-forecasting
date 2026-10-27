@@ -564,7 +564,8 @@ export default function Settings({
               <summary className="settings-sec-title"><Palette size={19} weight="duotone" aria-hidden /> 화면 스타일</summary>
               <div className="settings-style-note">
                 <div className="settings-style-swatches" aria-hidden><i /><i /><i /></div>
-                모노크롬 날씨 저널. 흰색·회색·차콜로 정보를 읽고, 하늘 사진과 레이더 원본에서만 색을 만나요.
+                첫 요약 화면과 배경은 날씨에 맞는 컬러 하늘로, 상세 정보는 흰색·회색·차콜로 보여드려요.
+                구름·비·눈·별·번개·바람 효과는 요약 화면의 ‘배경 효과’ 버튼으로 멈출 수 있어요. 기기의 동작 줄이기 설정도 따릅니다.
               </div>
             </details>
             <p className="muted small settings-foot">

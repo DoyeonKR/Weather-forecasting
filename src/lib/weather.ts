@@ -8,6 +8,9 @@ export interface WeatherData {
   nowApparent: number
   /** 현재 습도 % */
   nowHumidity: number
+  /** 현재 풍속·돌풍(km/h). 이전 저장 데이터에는 없다. */
+  nowWind?: number | null
+  nowGust?: number | null
   /** 해당 지역 현지 기준 현재 시(0-23) */
   nowHourLocal: number
   /** 현재 날씨 코드 */
@@ -52,6 +55,8 @@ interface OpenMeteoResponse {
     relative_humidity_2m: number
     weather_code: number
     is_day: number
+    wind_speed_10m?: number | null
+    wind_gusts_10m?: number | null
   }
   hourly: {
     time: string[]
@@ -96,9 +101,10 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
   url.searchParams.set('forecast_days', '8')
   url.searchParams.set(
     'current',
-    'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day',
+    'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m,wind_gusts_10m',
   )
   url.searchParams.set('hourly', 'temperature_2m,precipitation,weather_code,precipitation_probability')
+  url.searchParams.set('wind_speed_unit', 'kmh')
   url.searchParams.set(
     'daily',
     'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,uv_index_max,wind_speed_10m_max,wind_gusts_10m_max,sunrise,sunset',
@@ -115,6 +121,8 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     nowTemp: data.current.temperature_2m,
     nowApparent: data.current.apparent_temperature,
     nowHumidity: data.current.relative_humidity_2m,
+    nowWind: data.current.wind_speed_10m ?? null,
+    nowGust: data.current.wind_gusts_10m ?? null,
     nowHourLocal: nowHour,
     nowCode: data.current.weather_code,
     nowIsDay: data.current.is_day === 1,
