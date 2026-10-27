@@ -4220,7 +4220,7 @@ summary:active {
   font-variant-numeric: tabular-nums;
 }
 
-/* 이전 · 1/4 · 다음 · 멈춤 — 풍경 위 오른쪽 아래 작은 알약 */
+/* 이전 · 1/4 · 다음 — 풍경 위 오른쪽 아래 작은 알약 */
 .brief-ctrl {
   position: absolute;
   right: 8px;
@@ -4348,11 +4348,15 @@ summary:active {
   color: var(--bg);
   font-size: 14px;
   font-weight: 700;
-  transform: translateY(-180%);
+  /* 아이폰은 top 에 노치 높이(47~59px)가 더해지므로 -180% 로는 다 숨지 않아 배너 위로 하얗게 삐져나왔다.
+     안전 영역만큼 더 올리고, 포커스 전에는 투명하게 둔다 */
+  transform: translateY(calc(-100% - 20px - env(safe-area-inset-top)));
+  opacity: 0;
 }
 
 .skip-link:focus {
   transform: translateY(0);
+  opacity: 1;
 }
 
 #weather-main {

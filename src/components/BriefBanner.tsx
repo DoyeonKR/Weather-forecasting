@@ -3,26 +3,22 @@
 // 본문은 .shell.has-brief 가 배너 높이 + 안전 영역만큼 내려간다 (App.css).
 //
 // 자동 전환을 멈추는 경우
-//  · 사용자가 일시정지 — 기억해서 다음에 열어도 다시 돌지 않는다
-//  · prefers-reduced-motion — 기본 정지(사용자가 재생을 누르면 그 선택을 따른다)
+//  · prefers-reduced-motion — 자동으로 넘기지 않는다(이전·다음으로만)
 //  · 탭이 숨겨졌을 때, 마우스를 올렸거나 키보드 포커스가 배너 안에 있을 때 (WCAG 2.2.2)
 // 자동으로 넘어가는 동안에는 낭독하지 않는다(aria-live off). 손으로 넘기면 polite 로 읽는다.
 import { useEffect, useRef, useState, type TouchEvent } from 'react'
-import { CaretLeft, CaretRight, Pause, Play } from '@phosphor-icons/react'
+import { CaretLeft, CaretRight } from '@phosphor-icons/react'
 import { buildBriefs } from '../lib/brief'
 import type { WeatherData } from '../lib/weather'
 
 const INTERVAL = 6000
-const PAUSE_KEY = 'eojeboda.brief.paused'
 const IMG_BASE = `${import.meta.env.BASE_URL}images/weather-brief/`
 
-function readPaused(): boolean | null {
-  try {
-    const v = localStorage.getItem(PAUSE_KEY)
-    return v === null ? null : v === '1'
-  } catch {
-    return null
-  }
+// 예전(v1.0.74)의 멈춤 버튼이 남긴 기록 — 버튼이 없어졌으니 남아 있으면 영영 멈춰 있게 된다. 한 번 지운다.
+try {
+  localStorage.removeItem('eojeboda.brief.paused')
+} catch {
+  // 저장소가 막혀 있으면 원래 없었던 것
 }
 
 function prefersReduced(): boolean {
@@ -37,8 +33,7 @@ export default function BriefBanner({ wx, resetKey }: { wx: WeatherData; resetKe
   const [idx, setIdx] = useState(0)
   // "일몰까지 2시간 10분"이 멈춰 있지 않게 1분마다 다시 만든다 (탭이 보일 때만)
   const [nowMs, setNowMs] = useState(() => Date.now())
-  // 사용자가 정한 적이 있으면 그 값, 아니면 동작 줄이기 설정을 따른다
-  const [paused, setPaused] = useState<boolean>(() => readPaused() ?? prefersReduced())
+  const [reduced] = useState(prefersReduced)
   const [tabHidden, setTabHidden] = useState(() => document.visibilityState === 'hidden')
   const [holding, setHolding] = useState(false)
   const [manual, setManual] = useState(false)
@@ -66,7 +61,7 @@ export default function BriefBanner({ wx, resetKey }: { wx: WeatherData; resetKe
   const cards = buildBriefs(wx, nowMs, -new Date(nowMs).getTimezoneOffset() * 60)
   const n = cards.length
   const cur = n ? idx % n : 0
-  const auto = n > 1 && !paused && !tabHidden && !holding
+  const auto = n > 1 && !reduced && !tabHidden && !holding
 
   useEffect(() => {
     if (!auto) return
@@ -79,15 +74,6 @@ export default function BriefBanner({ wx, resetKey }: { wx: WeatherData; resetKe
   const go = (d: number) => {
     setManual(true)
     setIdx((i) => (((i % n) + d) % n + n) % n)
-  }
-  const togglePause = () => {
-    const next = !paused
-    setPaused(next)
-    try {
-      localStorage.setItem(PAUSE_KEY, next ? '1' : '0')
-    } catch {
-      // 저장이 막혀도 이번 화면에서는 따른다
-    }
   }
   const onTouchStart = (e: TouchEvent) => {
     touchX.current = e.touches[0]?.clientX ?? null
@@ -142,9 +128,6 @@ export default function BriefBanner({ wx, resetKey }: { wx: WeatherData; resetKe
             </span>
             <button type="button" onClick={() => go(1)} aria-label="다음 브리핑">
               <CaretRight size={14} weight="bold" aria-hidden />
-            </button>
-            <button type="button" onClick={togglePause} aria-label={paused ? '자동 넘김 다시 시작' : '자동 넘김 멈춤'}>
-              {paused ? <Play size={13} weight="fill" aria-hidden /> : <Pause size={13} weight="fill" aria-hidden />}
             </button>
           </div>
         )}
