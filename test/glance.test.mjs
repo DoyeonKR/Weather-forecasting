@@ -53,3 +53,11 @@ test('추위 타는 편이면 옷을 한 단계 따뜻하게, 미세먼지 모�
   assert.equal(tile(g, 'outfit').value, '코트·패딩')
   assert.equal(tile(g, 'air').value, '정보 없음')
 })
+
+test('말투를 고르면 값이 확 달라진다, 기본은 그대로', () => {
+  const calm = { day: day(), airGrade: 2 }
+  assert.equal(buildGlance({ ...calm, persona: 'default' }).headline, buildGlance(calm).headline)
+  const rain = { day: day({ precipProbMax: 80, precipSum: 3, code: 61 }), airGrade: 0 }
+  assert.equal(tile(buildGlance({ ...rain, persona: 'community' }), 'umbrella').value, '필수템')
+  assert.equal(tile(buildGlance({ ...rain, persona: 'community' }), 'air').value, '개꿀')
+})

@@ -252,7 +252,12 @@ export default function Settings({
       } else {
         const r = await enableNotify(loc, nightTime, morningTime)
         setNotify(r === 'ok' ? 'on' : await getNotifyState())
-        if (r === 'ok') trackEvent('notify_on')
+        if (r === 'ok') {
+          trackEvent('notify_on')
+          // 새로 켜면 조건 알림도 함께 켜진다 → 스위치에 바로 보여준다
+          getRainAlert().then(setRain)
+          getPushAlerts().then((a) => setAlerts({ air: a.air, temp: a.temp }))
+        }
         if (r === 'denied')
           setNotice('알림 권한이 필요해요. 브라우저 설정에서 알림을 허용해주세요.')
         else if (r === 'no-sw')

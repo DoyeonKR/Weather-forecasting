@@ -10,6 +10,8 @@ const NOT_ENDING = /(필요|중요|주요|수요|개요|소요|강요|월요|화
 const TAIL_MIN = 12
 
 const GRANDMA_TAILS = ['이놈아', '이 화상아', '이 썩을 놈아', '이 육시랄 놈아', '이 염병할 놈아']
+const BRO_TAILS = ['진짜다', '알겠냐', '형 말 들어', '명심해라']
+const COMMUNITY_TAILS = ['ㅋㅋ', 'ㄹㅇ', 'ㅇㅈ?', 'ㄷㄷ']
 
 function hash(s: string): number {
   let h = 0
@@ -100,6 +102,6 @@ export function voice(persona: Persona, text: string): string {
   const body = out.slice(0, out.length - end.length)
   if (/[?…]$/.test(body)) return out
   if (persona === 'grandma') return `${body} ${GRANDMA_TAILS[hash(text) % GRANDMA_TAILS.length]}!${end.slice(end.trimEnd().length)}`
-  if (persona === 'community' && hash(text) % 3 === 0) return `${body} ㅋㅋ`
-  return out
+  const tails = persona === 'bro' ? BRO_TAILS : COMMUNITY_TAILS
+  return `${body} ${tails[hash(text) % tails.length]}`
 }

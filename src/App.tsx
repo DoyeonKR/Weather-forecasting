@@ -503,6 +503,9 @@ export default function App() {
   const scene = buildWeatherScene(effCode ?? wx.nowCode, wx.nowIsDay, windNow, wx.nowGust)
   const showFallback = loc.isFallback && selectedId === 'current' && !detectInApp()
   const glance = buildGlance({
+    persona,
+    seed: `${wx.week[0]?.date ?? ''}|${loc.label}`,
+    uvMax: prepTomorrow ? wx.uvMaxTomorrow ?? null : wx.uvMaxToday,
     day: prepTomorrow ? wx.tomorrow : tipToday,
     forTomorrow: prepTomorrow,
     airGrade: air?.grade ?? null,
@@ -606,6 +609,7 @@ export default function App() {
             </div>
             <div className="hero-decision">
             <h2 className="glance-head">{glance.headline}</h2>
+            {glance.note && <p className="glance-note">{glance.note}</p>}
             {/* 요약 8칸: 아래 섹션을 한 칸씩 대표한다. 스크롤하지 않아도 다 보이고, 누르면 그 섹션으로 내려간다 */}
             <nav className="summary-grid" aria-label="날씨 요약, 누르면 해당 정보로 이동">
               {summary.map((t) => {

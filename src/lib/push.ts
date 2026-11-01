@@ -346,8 +346,18 @@ export async function enableNotify(
     }
     await savePrefs(body)
     // 알림을 껐다 켜거나 시간을 바꿔도 비 알림 선택은 유지한다 (새 구독이면 서버 값이 꺼짐이라서)
-    if (await getRainAlert()) await setRainOnServer(j.endpoint, true)
-    await setAlertsOnServer(j.endpoint, await getPushAlerts())
+    if (created) {
+      // 새로 켠 알림은 날씨 조건 알림까지 모두 켠 채로 시작한다 (설정에서 하나씩 끌 수 있다)
+      const alerts = { ...(await getPushAlerts()), air: true, temp: true }
+      await saveRainFlag(true)
+      await saveAlerts(alerts)
+      await setRainOnServer(j.endpoint, true)
+      await setAlertsOnServer(j.endpoint, alerts)
+    } else {
+      // 시간·지역만 바꾼 경우: 고른 값을 그대로 둔다
+      if (await getRainAlert()) await setRainOnServer(j.endpoint, true)
+      await setAlertsOnServer(j.endpoint, await getPushAlerts())
+    }
     return 'ok'
   } catch {
     if (created) await created.unsubscribe().catch(() => {})

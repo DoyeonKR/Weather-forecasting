@@ -1,6 +1,8 @@
 // 첫 화면 "한눈에" 판정 — 날씨 앱을 여는 세 가지 질문(우산? 옷? 마스크?)에 바로 답한다.
 // 순수 함수(테스트 가능). 옷차림 온도 구간은 실용 팁(funTips 의 clothingTip)과 같게 맞춘다.
 import { isSnowCode, round1, type DayStats } from './compare'
+import { personaAir, personaScript, personaUmbrella, type ScriptKind, type UmbrellaState } from './personaCopy'
+import type { Persona } from '../../supabase/functions/_shared/persona.ts'
 
 /** ok: 신경 안 써도 됨(회색) · info: 참고 · rain: 비 · warn: 주의 · alert: 위험 */
 export type GlanceTone = 'ok' | 'info' | 'rain' | 'warn' | 'alert'
@@ -15,6 +17,8 @@ export interface GlanceTile {
 
 export interface Glance {
   headline: string
+  /** 말투 대사에서 겹친 다음 상황 (없으면 생략) */
+  note?: string
   tiles: GlanceTile[]
 }
 
@@ -39,8 +43,14 @@ export function buildGlance(opts: {
   /** 대기질 종합 등급 0~3, 모르면 null */
   airGrade: number | null
   feelOffset?: number
+  /** 고른 말투 — 결론과 값을 말투별 대사로 바꾼다 */
+  persona?: Persona
+  /** 대사 고르는 기준(날짜·지역). 같으면 같은 대사 */
+  seed?: string
+  /** 그날 자외선 최고 */
+  uvMax?: number | null
 }): Glance {
-  const { day, forTomorrow = false, airGrade } = opts
+  const { day, forTomorrow = false, airGrade, persona = 'default', seed = '', uvMax = null } = opts
   const when = forTomorrow ? '내일' : '오늘'
   const feel = Math.max(-4, Math.min(4, opts.feelOffset ?? 0))
   const prob = day.precipProbMax
@@ -58,6 +68,9 @@ export function buildGlance(opts: {
       : maybe
         ? { key: 'umbrella', label: '우산', value: '작은 우산', sub: probText, tone: 'info' }
         : { key: 'umbrella', label: '우산', value: '필요 없음', sub: probText, tone: 'ok' }
+
+  const umbrellaState: UmbrellaState = snow ? 'snow' : rainy ? 'must' : maybe ? 'small' : 'none'
+  umbrella.value = personaUmbrella(persona, umbrellaState) ?? umbrella.value
 
   // 옷차림 — 낮 최고 기준, 내 체감 보정은 옷 단계에만 (funTips 와 같은 규칙)
   const t = day.tmax
@@ -81,7 +94,7 @@ export function buildGlance(opts: {
       : {
           key: 'air',
           label: '미세먼지',
-          value: AIR_VALUE[g],
+          value: personaAir(persona, g) ?? AIR_VALUE[g],
           sub: g >= 2 ? '마스크 챙기기' : '',
           tone: g === 3 ? 'alert' : g === 2 ? 'warn' : 'ok',
         }
@@ -96,5 +109,34 @@ export function buildGlance(opts: {
   else if (maybe) headline = `${when}은 ${clothes}에 작은 우산 하나`
   else headline = `${when}은 ${clothes} 차림이면 돼요`
 
-  return { headline, tiles: [umbrella, outfit, air] }
+  // 말투 대사: 급한 순서로 지금 해당하는 상황을 모은다. 맨 앞이 결론, 그다음이 작은 줄
+  const wind = Math.max(day.windMax ?? 0, (day.gustMax ?? 0) * 0.6)
+  const gap = day.tmax - day.tmin
+  const freezing = day.tmin <= -5 || t < 0
+  const situations: ScriptKind[] = []
+  if (snow) situations.push('snow')
+  if (rainy) situations.push('rain')
+  if (hot) situations.push('hot')
+  if (freezing) situations.push('cold')
+  if (g !== null && g >= 2) situations.push('air')
+  if (wind >= 25) situations.push('wind')
+  if (maybe) situations.push('maybe')
+  if (gap >= 10) situations.push('gap')
+  if ((uvMax ?? 0) >= 8) situations.push('uv')
+  const calm: ScriptKind = tc >= 25 ? 'warm' : tc >= 17 ? 'mild' : tc >= 5 ? 'cool' : 'freezing'
+  const vars = {
+    when,
+    clothes,
+    prob: prob ?? 0,
+    wind: Math.round(day.windMax ?? day.gustMax ?? 0),
+    tmax: Math.round(day.tmax),
+    tmin: Math.round(day.tmin),
+    gap: Math.round(gap),
+    uv: Math.round(uvMax ?? 0),
+  }
+  const first = personaScript(persona, situations[0] ?? calm, vars, seed)
+  const note = situations[1] ? personaScript(persona, situations[1], vars, seed) : null
+  if (first) headline = first
+
+  return { headline, ...(note ? { note } : {}), tiles: [umbrella, outfit, air] }
 }

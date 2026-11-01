@@ -49,7 +49,7 @@ test('커뮤니티: 음슴체', () => {
   assert.equal(voice('community', '같은 시각입니다.'), '같은 시각임.')
   assert.equal(voice('community', '꼭 확인합니다'), '꼭 확인함')
   assert.equal(voice('community', '충분히 젖습니다'), '충분히 젖음')
-  assert.match(voice('community', '비가 확실해요(확률 90%)'), /^비가 확실함\(확률 90%\)( ㅋㅋ)?$/)
+  assert.match(voice('community', '비가 확실해요(확률 90%)'), /^비가 확실함\(확률 90%\) (ㅋㅋ|ㄹㅇ|ㅇㅈ\?|ㄷㄷ)$/)
 })
 
 test('욕쟁이 할머니: 긴 문장에만 꼬리말, 숫자는 그대로', () => {
