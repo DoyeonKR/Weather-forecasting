@@ -124,6 +124,20 @@ async function resubscribe(oldSub) {
       body: JSON.stringify({ p_endpoint: j.endpoint, p_on: true }),
     }).catch(() => {})
   }
+  // 말투·날씨 조건도 마찬가지
+  const alerts = await readAlerts()
+  if (alerts) {
+    await fetch(SB_URL + '/rest/v1/rpc/weather_push_set_prefs', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        p_endpoint: j.endpoint,
+        p_persona: alerts.persona || 'default',
+        p_alert_air: alerts.air === true,
+        p_alert_temp: alerts.temp === true,
+      }),
+    }).catch(() => {})
+  }
   // 옛 endpoint 로 남은 행은 지운다 (그대로 두면 하루에 두 번 온다)
   if (oldSub && oldSub.endpoint && oldSub.endpoint !== j.endpoint) {
     await fetch(SB_URL + '/rest/v1/rpc/weather_push_remove', {
@@ -134,6 +148,16 @@ async function resubscribe(oldSub) {
   }
   const c = await caches.open(PREFS_CACHE)
   await c.put(PREFS_URL, new Response(JSON.stringify(next)))
+}
+
+async function readAlerts() {
+  try {
+    const c = await caches.open(PREFS_CACHE)
+    const hit = await c.match('https://eojeboda.local/push-alerts')
+    return hit ? await hit.json() : null
+  } catch {
+    return null
+  }
 }
 
 self.addEventListener('pushsubscriptionchange', (e) => {

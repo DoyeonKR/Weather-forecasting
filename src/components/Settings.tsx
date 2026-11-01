@@ -1,7 +1,7 @@
 // 설정 패널 — 알림·지역·상세 순서·모노크롬 화면 안내
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ArrowDown, ArrowUp, Bell, Clock, DeviceMobile, GearSix, House, MapPin, Moon, Palette, PuzzlePiece, ShareFat, Star, Sun, TShirt, Umbrella, X } from '@phosphor-icons/react'
+import { ArrowDown, ArrowUp, Bell, ChatCircleText, Clock, DeviceMobile, GearSix, House, Leaf, MapPin, Moon, Palette, PuzzlePiece, ShareFat, Star, Sun, ThermometerHot, TShirt, Umbrella, X } from '@phosphor-icons/react'
 import { installHint, onInstallChange, promptInstall, type InstallHint } from '../lib/install'
 import { detectInApp, openInBrowser } from '../lib/inapp'
 import {
@@ -11,10 +11,14 @@ import {
   getRainAlert,
   sendTestPush,
   setRainAlert,
+  getPushAlerts,
+  setPushAlerts,
+  type PushAlerts,
   type NotifyState,
 } from '../lib/push'
 import type { Place } from '../lib/places'
 import { DEFAULT_ORDER, SECTION_LABEL, type SectionKey } from '../lib/sections'
+import { PERSONAS, say, type Persona } from '../../supabase/functions/_shared/persona.ts'
 import { DETAIL_KEYS, moveDetailSection } from '../lib/journal'
 import type { CommutePrefs } from '../lib/commute'
 import { feelLabel } from '../lib/feel'
@@ -36,6 +40,8 @@ interface Props {
   homeId: string
   onSetHome: (id: string) => void
   sectionOrder: SectionKey[]
+  persona: Persona
+  onSetPersona: (p: Persona) => void
   onSetOrder: (next: SectionKey[]) => void
   commute: CommutePrefs
   onSetCommute: (next: CommutePrefs) => void
@@ -53,6 +59,8 @@ export default function Settings({
   onSetHome,
   sectionOrder,
   onSetOrder,
+  persona,
+  onSetPersona,
   commute,
   onSetCommute,
   feelOffset,
@@ -67,6 +75,7 @@ export default function Settings({
   }
   const [notify, setNotify] = useState<NotifyState | 'loading'>('loading')
   const [rain, setRain] = useState(false)
+  const [alerts, setAlerts] = useState<Pick<PushAlerts, 'air' | 'temp'>>({ air: false, temp: false })
   const [inApp] = useState(() => detectInApp())
   // 설치 버튼은 브라우저가 나중에 이벤트를 줘야 생긴다 → 바뀌면 다시 읽는다
   const [install, setInstall] = useState<InstallHint>(installHint)
@@ -92,6 +101,7 @@ export default function Settings({
   useEffect(() => {
     getNotifyState().then(setNotify)
     getRainAlert().then(setRain)
+    getPushAlerts().then((a) => setAlerts({ air: a.air, temp: a.temp }))
   }, [])
 
   async function testPush() {
@@ -129,6 +139,33 @@ export default function Settings({
     } finally {
       setBusy(false)
     }
+  }
+
+  /** 말투·날씨 조건 저장. 알림을 안 켠 기기에서 말투만 바꾸는 것은 정상이다 */
+  async function saveAlerts(next: PushAlerts): Promise<boolean> {
+    setBusy(true)
+    setNotice(null)
+    try {
+      const r = await setPushAlerts(next)
+      if (r === 'failed') {
+        setNotice('설정을 저장하지 못했어요. 잠시 후 다시 시도해주세요.')
+        return false
+      }
+      return true
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function pickPersona(p: Persona) {
+    if (busy || p === persona) return
+    if (await saveAlerts({ persona: p, ...alerts })) onSetPersona(p)
+  }
+
+  async function toggleAlert(key: 'air' | 'temp') {
+    if (busy || notify !== 'on') return
+    const next = { ...alerts, [key]: !alerts[key] }
+    if (await saveAlerts({ persona, ...next })) setAlerts(next)
   }
 
   const panelRef = useRef<HTMLDivElement>(null)
@@ -202,6 +239,7 @@ export default function Settings({
         setNotify(off ? 'off' : await getNotifyState())
         if (off) {
           setRain(false)
+          setAlerts({ air: false, temp: false })
           trackEvent('notify_off')
         }
         if (!off) setNotice('알림을 끄지 못했어요. 잠시 후 다시 시도해주세요.')
@@ -410,6 +448,60 @@ export default function Settings({
                 >
                   <span className="notify-knob" />
                 </button>
+              </div>
+              <div className="notify-row rain-row">
+                <div>
+                  <h4 className="settings-sub-title"><Leaf size={18} weight="duotone" aria-hidden /> 미세먼지 나쁨 알림</h4>
+                  <p className="muted small notify-desc">지금 나쁨 이상이면 하루 한 번.</p>
+                </div>
+                <button
+                  type="button"
+                  className={`notify-toggle ${alerts.air && notify === 'on' ? 'on' : ''}`}
+                  onClick={() => toggleAlert('air')}
+                  disabled={busy || notify !== 'on'}
+                  aria-label={alerts.air ? '미세먼지 나쁨 알림 끄기' : '미세먼지 나쁨 알림 켜기'}
+                  role="switch"
+                  aria-checked={alerts.air && notify === 'on'}
+                >
+                  <span className="notify-knob" />
+                </button>
+              </div>
+              <div className="notify-row rain-row">
+                <div>
+                  <h4 className="settings-sub-title"><ThermometerHot size={18} weight="duotone" aria-hidden /> 폭염·한파 알림</h4>
+                  <p className="muted small notify-desc">낮 최고 33° 이상이나 아침 최저 -5° 이하면 하루 한 번.</p>
+                </div>
+                <button
+                  type="button"
+                  className={`notify-toggle ${alerts.temp && notify === 'on' ? 'on' : ''}`}
+                  onClick={() => toggleAlert('temp')}
+                  disabled={busy || notify !== 'on'}
+                  aria-label={alerts.temp ? '폭염·한파 알림 끄기' : '폭염·한파 알림 켜기'}
+                  role="switch"
+                  aria-checked={alerts.temp && notify === 'on'}
+                >
+                  <span className="notify-knob" />
+                </button>
+              </div>
+              <div className="persona-sec">
+                <h4 className="settings-sub-title"><ChatCircleText size={18} weight="duotone" aria-hidden /> 알림 말투</h4>
+                <div className="persona-row" role="radiogroup" aria-label="알림 말투">
+                  {PERSONAS.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={persona === p.id}
+                      className={`persona-chip ${persona === p.id ? 'on' : ''}`}
+                      onClick={() => pickPersona(p.id)}
+                      disabled={busy}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="persona-preview">“{say(persona, 'umbrella')}”</p>
+                {persona === 'grandma' && <p className="muted small notify-desc">거친 말이 섞여 있어요. 화면 위쪽 안내에도 같은 말투로 나와요.</p>}
               </div>
             </div>
 

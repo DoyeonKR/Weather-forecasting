@@ -2,6 +2,8 @@
 // 시간·온도는 받은 데이터에서만 만든다. 값이 없으면 그 카드는 건너뛴다(지어내지 않는다).
 // 시각은 모두 "선택한 지역의 현지 시각"이다: Open-Meteo 의 일출·일몰은 현지 시각 문자열
 // ('YYYY-MM-DDTHH:MM')이고, 지금 현지 시각은 utc_offset_seconds 로 만든다.
+import { isSnowCode, type DayStats } from './compare'
+import { say, type Persona, type PersonaLine } from '../../supabase/functions/_shared/persona.ts'
 import type { WeatherData } from './weather'
 
 export type BriefImage = 'sunrise' | 'sunset' | 'warmer' | 'cooler'
@@ -52,6 +54,27 @@ function span(min: number): string {
 
 const deg = (d: number) => `${Math.abs(Math.round(d * 10) / 10).toFixed(1)}°`
 const fmt = (t: number) => `${Math.round(t)}°`
+
+/**
+ * 오늘(밤 8시부터는 내일) 신경 쓸 날씨가 있으면 맨 앞에 거는 카드. 고른 말투로 말한다.
+ * 급한 순서: 눈 > 비 > 폭염 > 한파 > 미세먼지. 기준은 푸시와 같다.
+ */
+export function alertBrief(
+  day: Pick<DayStats, 'tmax' | 'tmin' | 'precipSum' | 'precipProbMax' | 'code'>,
+  forTomorrow: boolean,
+  airGrade: number | null,
+  persona: Persona,
+): BriefCard | null {
+  const when = forTomorrow ? '내일' : '오늘'
+  const prob = day.precipProbMax ?? 0
+  const pick = (image: BriefCard['image'], line: PersonaLine, sub: string): BriefCard => ({ id: 'alert', image, title: say(persona, line), sub })
+  if (isSnowCode(day.code) || [56, 57, 66, 67].includes(day.code)) return pick('cooler', 'snow', `${when} 눈 소식`)
+  if (prob >= 60 || day.precipSum >= 1) return pick('cooler', 'umbrella', `${when} 강수확률 ${prob}%`)
+  if (day.tmax >= 33) return pick('warmer', 'hot', `${when} 낮 최고 ${fmt(day.tmax)}`)
+  if (day.tmin <= -5) return pick('cooler', 'cold', `${when} 아침 최저 ${fmt(day.tmin)}`)
+  if (airGrade !== null && airGrade >= 2) return pick('cooler', 'mask', `지금 미세먼지 ${airGrade >= 3 ? '매우 나쁨' : '나쁨'}`)
+  return null
+}
 
 export function buildBriefs(wx: Input, nowMs: number, deviceOffsetSec: number): BriefCard[] {
   const cards: BriefCard[] = []

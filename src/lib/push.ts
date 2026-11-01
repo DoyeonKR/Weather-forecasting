@@ -3,6 +3,7 @@
 // (테이블을 열어두면 endpoint 를 아는 쪽이 남의 알림 지역을 덮어쓰거나 통째로 지울 수 있다.
 //  스키마와 함수 정의는 supabase/sql/weather_push_subs.sql 참고)
 import { SB_ANON, SB_URL } from './track'
+import { isPersona, type Persona } from '../../supabase/functions/_shared/persona.ts'
 
 const VAPID_PUBLIC =
   'BPoiXRatsIBxTbpFwTPoZ87skWs4-qKJsX3VVbZn1OS-8QigkrTI7FfZeN5Uq-SDWJaykFUdPXey0GfBdDrMU5g'
@@ -12,6 +13,16 @@ const PREFS_CACHE = 'eojeboda-push'
 const PREFS_URL = 'https://eojeboda.local/push-prefs'
 /** 비 시작 알림 여부 — 서비스워커가 구독을 재발급할 때도 읽는다 (public/sw.js) */
 const RAIN_URL = 'https://eojeboda.local/push-rain'
+/** 말투·날씨 조건 — 서비스워커도 읽는다 (public/sw.js) */
+const ALERTS_URL = 'https://eojeboda.local/push-alerts'
+
+export interface PushAlerts {
+  persona: Persona
+  /** 지금 미세먼지 나쁨 */
+  air: boolean
+  /** 오늘 폭염·한파 */
+  temp: boolean
+}
 
 function urlBase64ToUint8Array(base64: string): Uint8Array {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4)
@@ -153,6 +164,67 @@ async function clearPrefs(): Promise<void> {
   } catch {
     // 무시
   }
+  // 말투는 배너에도 쓰니 남기고, 조건만 끈다 (서버 행은 이미 지워졌다)
+  const a = await getPushAlerts()
+  await saveAlerts({ ...a, air: false, temp: false })
+}
+
+/** 이 기기에 저장된 말투·날씨 조건 */
+export async function getPushAlerts(): Promise<PushAlerts> {
+  try {
+    const c = await caches.open(PREFS_CACHE)
+    const hit = await c.match(ALERTS_URL)
+    const j = hit ? await hit.json() : null
+    return { persona: isPersona(j?.persona) ? j.persona : 'default', air: j?.air === true, temp: j?.temp === true }
+  } catch {
+    return { persona: 'default', air: false, temp: false }
+  }
+}
+
+async function saveAlerts(a: PushAlerts) {
+  try {
+    const c = await caches.open(PREFS_CACHE)
+    await c.put(ALERTS_URL, new Response(JSON.stringify(a)))
+  } catch {
+    // 무시
+  }
+}
+
+async function setAlertsOnServer(endpoint: string, a: PushAlerts): Promise<boolean> {
+  try {
+    const res = await fetch(`${SB_URL}/rest/v1/rpc/weather_push_set_prefs`, {
+      method: 'POST',
+      headers: {
+        apikey: SB_ANON,
+        Authorization: `Bearer ${SB_ANON}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ p_endpoint: endpoint, p_persona: a.persona, p_alert_air: a.air, p_alert_temp: a.temp }),
+    })
+    return res.ok && (await res.json()) === true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * 말투·날씨 조건 저장. 알림을 안 켠 기기면 말투만 기억해 두고 'no-sub'
+ * (알림을 켤 때 서버로 올린다).
+ */
+export async function setPushAlerts(a: PushAlerts): Promise<'ok' | 'no-sub' | 'failed'> {
+  try {
+    const reg = 'serviceWorker' in navigator ? await readyWithTimeout(1500) : null
+    const sub = reg ? await reg.pushManager.getSubscription() : null
+    if (!sub) {
+      await saveAlerts(a)
+      return 'no-sub'
+    }
+    if (!(await setAlertsOnServer(sub.endpoint, a))) return 'failed'
+    await saveAlerts(a)
+    return 'ok'
+  } catch {
+    return 'failed'
+  }
 }
 
 /** 비 시작 알림을 켜 두었는지 (이 기기 기준) */
@@ -275,6 +347,7 @@ export async function enableNotify(
     await savePrefs(body)
     // 알림을 껐다 켜거나 시간을 바꿔도 비 알림 선택은 유지한다 (새 구독이면 서버 값이 꺼짐이라서)
     if (await getRainAlert()) await setRainOnServer(j.endpoint, true)
+    await setAlertsOnServer(j.endpoint, await getPushAlerts())
     return 'ok'
   } catch {
     if (created) await created.unsubscribe().catch(() => {})

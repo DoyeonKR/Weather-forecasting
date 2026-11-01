@@ -37,6 +37,8 @@ import { weatherIcon, weatherTone, type UiIcon } from './lib/weatherIcon'
 import { loadLast, saveLast } from './lib/lastWeather'
 import { todayAhead, yesterdaySameWindow } from './lib/ahead'
 import { buildGlance } from './lib/glance'
+import { getPushAlerts } from './lib/push'
+import type { Persona } from '../supabase/functions/_shared/persona.ts'
 import { buildSummary, type SummaryTarget } from './lib/summary'
 import { buildWeatherScene, loadWeatherMotion, observedSceneCode, saveWeatherMotion } from './lib/weatherScene'
 import { sunImpact, type Impact } from './lib/impact'
@@ -140,6 +142,11 @@ export default function App() {
   const [searchSignal, setSearchSignal] = useState(0)
   const [air, setAir] = useState<AirNow | null>(boot?.air ?? null)
   const [feel, setFeel] = useState(loadFeel)
+  // 알림·배너 말투 (서버 저장은 설정 화면에서)
+  const [persona, setPersona] = useState<Persona>('default')
+  useEffect(() => {
+    getPushAlerts().then((a) => setPersona(a.persona))
+  }, [])
   // "서울 기준으로 보고 있어요" 안내는 처음 한 번만 크게, 그다음부터는 한 줄로 작게
   const [fallbackSeen] = useState(() => {
     try {
@@ -885,7 +892,7 @@ export default function App() {
   return (
     <>
     {/* 상단 브리핑 띠: .shell(overflow: hidden) 바깥에 고정. 지역·날씨가 바뀌면 같이 바뀐다 */}
-    <BriefBanner wx={wx} resetKey={`${selectedId}|${loc.label}`} />
+    <BriefBanner wx={wx} resetKey={`${selectedId}|${loc.label}`} airGrade={air?.grade ?? null} persona={persona} />
     <WeatherFx scene={scene} paused={motionPaused} />
     <div className={`shell journal-app has-brief ${theme} ${status === 'loading' ? 'refreshing' : ''}`}>
       <a className="skip-link" href="#weather-main">날씨 본문으로 건너뛰기</a>
@@ -925,6 +932,8 @@ export default function App() {
             onSetHome={setHome}
             sectionOrder={sectionOrder}
             onSetOrder={applyOrder}
+            persona={persona}
+            onSetPersona={setPersona}
             commute={commute}
             onSetCommute={onSetCommute}
             feelOffset={feel.offset}

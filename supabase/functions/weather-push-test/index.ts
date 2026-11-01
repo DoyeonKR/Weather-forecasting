@@ -2,6 +2,7 @@
 // POST { endpoint } → 200 sent / 404 구독 없음 / 429 1분 안에 이미 보냄
 // 구독 행이 있는 endpoint 에만 보내므로, 남의 기기로는 보낼 수 없다(endpoint 는 그 기기만 안다).
 import webpush from 'npm:web-push@3.6.7'
+import { say } from '../_shared/persona.ts'
 
 const VAPID_PUBLIC = Deno.env.get('WEATHER_VAPID_PUBLIC')!
 const VAPID_PRIVATE = Deno.env.get('WEATHER_VAPID_PRIVATE')!
@@ -39,7 +40,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const auth = { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` }
-  const q = `${SB_URL}/rest/v1/weather_push_subs?select=id,endpoint,p256dh,auth,label,morning_time,night_time,rain_alert,last_test_sent&endpoint=eq.${encodeURIComponent(endpoint)}`
+  const q = `${SB_URL}/rest/v1/weather_push_subs?select=id,endpoint,p256dh,auth,label,morning_time,night_time,rain_alert,persona,last_test_sent&endpoint=eq.${encodeURIComponent(endpoint)}`
   const res = await fetch(q, { headers: auth })
   if (!res.ok) return json({ error: 'lookup-failed' }, 502)
   const rows = await res.json()
@@ -53,7 +54,7 @@ Deno.serve(async (req: Request) => {
   const msg = {
     title: '🔔 테스트 알림',
     body:
-      `알림이 잘 도착해요. ${s.label || '우리 동네'} 기준으로 아침 ${fmt(s.morning_time)} 브리핑, ` +
+      `${say(s.persona, 'umbrella')} 알림이 잘 도착해요. ${s.label || '우리 동네'} 기준으로 아침 ${fmt(s.morning_time)} 브리핑, ` +
       `밤 ${fmt(s.night_time)} 내일 준비 알림` +
       (s.rain_alert ? ', 비 시작 알림을 보내드려요.' : '을 보내드려요.'),
   }

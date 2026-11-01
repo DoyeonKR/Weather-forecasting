@@ -263,3 +263,11 @@
   .summary-tile { transition: none; }
   .jump-flash { animation: none; }
 }
+
+/* 알림 말투 (v1.0.89) */
+.persona-sec { margin-top: 14px; }
+.persona-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.persona-chip { min-height: 36px; padding: 6px 12px; border: 1px solid #d9d9d6; border-radius: 999px; background: #fff; color: #444; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.persona-chip.on { border-color: #2a2a2a; background: #2a2a2a; color: #fff; }
+.persona-chip:disabled { cursor: default; }
+.persona-preview { margin: 10px 0 0; color: #333; font-size: 14px; font-weight: 650; }

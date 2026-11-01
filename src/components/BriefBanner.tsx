@@ -8,7 +8,9 @@
 // 자동으로 넘어가는 동안에는 낭독하지 않는다(aria-live off). 손으로 넘기면 polite 로 읽는다.
 import { useEffect, useRef, useState, type TouchEvent } from 'react'
 import { CaretLeft, CaretRight } from '@phosphor-icons/react'
-import { buildBriefs } from '../lib/brief'
+import { alertBrief, buildBriefs } from '../lib/brief'
+import { todayAhead } from '../lib/ahead'
+import type { Persona } from '../../supabase/functions/_shared/persona.ts'
 import type { WeatherData } from '../lib/weather'
 
 const INTERVAL = 6000
@@ -29,7 +31,17 @@ function prefersReduced(): boolean {
   }
 }
 
-export default function BriefBanner({ wx, resetKey }: { wx: WeatherData; resetKey: string }) {
+export default function BriefBanner({
+  wx,
+  resetKey,
+  airGrade,
+  persona,
+}: {
+  wx: WeatherData
+  resetKey: string
+  airGrade: number | null
+  persona: Persona
+}) {
   const [idx, setIdx] = useState(0)
   const [compact, setCompact] = useState(() => window.scrollY > 100)
   useEffect(() => {
@@ -64,7 +76,10 @@ export default function BriefBanner({ wx, resetKey }: { wx: WeatherData; resetKe
     return () => window.clearInterval(t)
   }, [tabHidden])
 
-  const cards = buildBriefs(wx, nowMs, -new Date(nowMs).getTimezoneOffset() * 60)
+  // 밤 8시부터는 내일 기준 (메인 카드의 "내일의 준비"와 같다)
+  const forTomorrow = wx.nowHourLocal >= 20
+  const alert = alertBrief(forTomorrow ? wx.tomorrow : todayAhead(wx), forTomorrow, airGrade, persona)
+  const cards = [...(alert ? [alert] : []), ...buildBriefs(wx, nowMs, -new Date(nowMs).getTimezoneOffset() * 60)]
   const n = cards.length
   const cur = n ? idx % n : 0
   const auto = n > 1 && !reduced && !tabHidden && !holding

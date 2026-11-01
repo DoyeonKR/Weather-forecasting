@@ -131,3 +131,38 @@ grant execute on function public.weather_push_set_rain(text, boolean) to anon;
 -- ── 테스트 알림 (v1.0.64) ─────────────────────────────────
 -- weather-push-test 함수가 같은 구독에 1분에 한 번만 보내도록 기록한다.
 alter table public.weather_push_subs add column if not exists last_test_sent timestamptz;
+
+-- ── 말투·날씨 조건 알림 (v1.0.89, 2026-11-01 적용) ─────────────
+-- 기본값은 기본 말투·꺼짐이라 기존 구독자에게는 아무것도 바뀌지 않는다.
+alter table public.weather_push_subs add column if not exists persona text not null default 'default';
+alter table public.weather_push_subs drop constraint if exists weather_push_subs_persona_check;
+alter table public.weather_push_subs add constraint weather_push_subs_persona_check check (persona in ('default','grandma','bro','community'));
+alter table public.weather_push_subs add column if not exists alert_air boolean not null default false;
+alter table public.weather_push_subs add column if not exists alert_temp boolean not null default false;
+alter table public.weather_push_subs add column if not exists last_air_alert date;
+alter table public.weather_push_subs add column if not exists last_temp_alert date;
+
+-- 자기 endpoint 의 말투·조건만 바꾼다. 해당 구독이 없으면 false.
+create or replace function public.weather_push_set_prefs(p_endpoint text, p_persona text, p_alert_air boolean, p_alert_temp boolean)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  if p_endpoint is null or length(p_endpoint) < 20 or p_alert_air is null or p_alert_temp is null then
+    raise exception 'invalid input';
+  end if;
+  if p_persona is null or p_persona not in ('default','grandma','bro','community') then
+    raise exception 'invalid persona';
+  end if;
+  update public.weather_push_subs
+    set persona = p_persona, alert_air = p_alert_air, alert_temp = p_alert_temp
+    where endpoint = p_endpoint;
+  return found;
+end
+$$;
+
+revoke all on function public.weather_push_set_prefs(text, text, boolean, boolean) from public;
+grant execute on function public.weather_push_set_prefs(text, text, boolean, boolean) to anon;
+-- 발송은 기존 weather-rain 크론(mode=rain)이 함께 처리한다.

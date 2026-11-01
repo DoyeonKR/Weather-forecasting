@@ -1,8 +1,11 @@
 // 무능한 날씨예측기 푸시 발송기
 // mode=morning: 오늘 브리핑(어제 비교 + 미세먼지), mode=night: 내일 대비 알림
-// mode=rain: 비 시작 알림 (켠 사람만, 07~22시, 기상청 초단기예보로 1시간 안에 비가 시작될 때)
+// mode=rain: 날씨 조건 알림 (켠 사람만, 07~22시). 비 시작(기상청 초단기예보, 6시간에 한 번),
+//            지금 미세먼지 나쁨(하루 한 번), 오늘 폭염·한파(하루 한 번)
+// 문구는 구독자가 고른 말투로 (_shared/persona.ts)
 // pg_cron 이 호출. key 파라미터로 무단 호출 차단.
 import webpush from 'npm:web-push@3.6.7'
+import { say } from '../_shared/persona.ts'
 
 const VAPID_PUBLIC = Deno.env.get('WEATHER_VAPID_PUBLIC')!
 const VAPID_PRIVATE = Deno.env.get('WEATHER_VAPID_PRIVATE')!
@@ -28,7 +31,16 @@ interface Sub {
   last_morning_sent: string | null
   rain_alert?: boolean
   last_rain_alert?: string | null
+  persona?: string
+  alert_air?: boolean
+  alert_temp?: boolean
+  last_air_alert?: string | null
+  last_temp_alert?: string | null
 }
+
+/** 폭염·한파 기준 (앱의 상단 배너와 같다) */
+const HOT_MAX = 33
+const COLD_MIN = -5
 
 /** KST 기준 오늘 날짜 (하루 한 번 판정 기준) */
 function kstDay(): string {
@@ -109,20 +121,45 @@ async function fetchAirWorst(lat: number, lon: number): Promise<number | null> {
   }
 }
 
+/** 지금 시각의 미세먼지 등급. 실패하면 null */
+async function fetchAirNow(lat: number, lon: number): Promise<number | null> {
+  try {
+    const url = new URL('https://air-quality-api.open-meteo.com/v1/air-quality')
+    url.searchParams.set('latitude', String(lat))
+    url.searchParams.set('longitude', String(lon))
+    url.searchParams.set('timezone', 'Asia/Seoul')
+    url.searchParams.set('forecast_days', '1')
+    url.searchParams.set('hourly', 'pm10,pm2_5')
+    const res = await fetch(url)
+    if (!res.ok) return null
+    const h = (await res.json()).hourly
+    const i = new Date(Date.now() + 9 * 3600_000).getUTCHours()
+    const a = h.pm10?.[i]
+    const b = h.pm2_5?.[i]
+    if (typeof a !== 'number' || typeof b !== 'number') return null
+    const g10 = a <= 30 ? 0 : a <= 80 ? 1 : a <= 150 ? 2 : 3
+    const g25 = b <= 15 ? 0 : b <= 35 ? 1 : b <= 75 ? 2 : 3
+    return Math.max(g10, g25)
+  } catch {
+    return null
+  }
+}
+
 function morningMsg(
   place: string,
   w: Awaited<ReturnType<typeof fetchDaily>>,
   air: number | null,
+  persona?: string,
 ): { title: string; body: string } {
   const d = r1(w.today.tmax - w.yesterday.tmax)
   const cmp =
     Math.abs(d) < 1 ? '어제와 비슷해요' : d > 0 ? `어제보다 ${d}° 높아요` : `어제보다 ${Math.abs(d)}° 낮아요`
   const parts = [`오늘 ${r1(w.today.tmin)}~${r1(w.today.tmax)}°, 낮 기온이 ${cmp}.`]
-  if (isSnow(w.today.code)) parts.push('눈 소식이 있어요, 길 조심!')
-  else if (w.today.prob >= 60) parts.push(`강수확률 ${w.today.prob}%, 우산 챙기세요!`)
-  if (air !== null && air >= 3) parts.push('미세먼지 매우 나쁨, 마스크 필수!')
-  else if (air !== null && air >= 2) parts.push('미세먼지 나쁨, 마스크 챙기세요.')
-  if (w.today.uv >= 8) parts.push('자외선 매우 강함, 선크림 필수!')
+  if (isSnow(w.today.code)) parts.push(say(persona, 'snow'))
+  else if (w.today.prob >= 60) parts.push(`강수확률 ${w.today.prob}%, ${say(persona, 'umbrella')}`)
+  if (air !== null && air >= 3) parts.push(`미세먼지 매우 나쁨, ${say(persona, 'mask')}`)
+  else if (air !== null && air >= 2) parts.push(`미세먼지 나쁨, ${say(persona, 'mask')}`)
+  if (w.today.uv >= 8) parts.push(`자외선 매우 강함, ${say(persona, 'uv')}`)
   return { title: `☀️ ${place} 오늘 날씨 브리핑`, body: parts.join(' ') }
 }
 
@@ -218,61 +255,102 @@ async function runRain(): Promise<Response> {
       headers: { 'Content-Type': 'application/json' },
     })
   }
-  if (!KMA_KEY) {
-    return new Response(JSON.stringify({ error: 'no-kma-key' }), { status: 500 })
-  }
-  // 6시간 안에 이미 보낸 사람은 뺀다 (비가 그쳤다 오기를 반복해도 하루에 몇 번이면 충분)
-  const since = new Date(Date.now() - 6 * 3600_000).toISOString()
-  const q =
-    `${SB_URL}/rest/v1/weather_push_subs?select=*&rain_alert=eq.true` +
-    `&or=(last_rain_alert.is.null,last_rain_alert.lt.${encodeURIComponent(since)})`
+  const q = `${SB_URL}/rest/v1/weather_push_subs?select=*&or=(rain_alert.eq.true,alert_air.eq.true,alert_temp.eq.true)`
   const subsRes = await fetch(q, { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } })
   if (!subsRes.ok) {
-    console.error('[weather-push] 비 알림 구독 조회 실패', subsRes.status)
+    console.error('[weather-push] 조건 알림 구독 조회 실패', subsRes.status)
     return new Response(JSON.stringify({ error: 'subs-fetch-failed' }), { status: 502 })
   }
   const subs = (await subsRes.json()) as Sub[]
+  const today = kstDay()
+  // 비가 그쳤다 오기를 반복해도 하루에 몇 번이면 충분
+  const rainSince = Date.now() - 6 * 3600_000
   let sent = 0
   let skipped = 0
   let failed = 0
   let removed = 0
-  const cache = new Map<string, Promise<{ hour: number; kind: string } | null>>()
+  const rainCache = new Map<string, Promise<{ hour: number; kind: string } | null>>()
+  const airCache = new Map<string, Promise<number | null>>()
+  const dayCache = new Map<string, ReturnType<typeof fetchDaily>>()
+  const mark = (id: number, patch: Record<string, unknown>) =>
+    fetch(`${SB_URL}/rest/v1/weather_push_subs?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: {
+        apikey: SERVICE_KEY,
+        Authorization: `Bearer ${SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify(patch),
+    }).catch((e) => console.error('[weather-push] 조건 알림 기록 실패', id, String(e)))
+
   for (const s of subs) {
-    if (!inKorea(s.lat, s.lon)) {
-      skipped++
-      continue
-    }
     try {
-      const { nx, ny } = dfsGrid(s.lat, s.lon)
-      const key = `${nx},${ny}`
-      if (!cache.has(key)) cache.set(key, rainSoon(nx, ny))
-      const soon = await cache.get(key)!
-      if (!soon) {
-        skipped++
-        continue
-      }
       const place = s.label || '우리 동네'
-      const msg = {
-        title: `🌂 ${place} 곧 ${soon.kind} 소식`,
-        body: `${soon.hour}시쯤부터 ${soon.kind === '비' ? '비가' : `${soon.kind}이`} 올 것 같아요. 나갈 일이 있으면 우산 챙기세요. (기상청 초단기예보)`,
+      const push = (msg: { title: string; body: string }) =>
+        webpush.sendNotification(
+          { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+          JSON.stringify(msg),
+          // 한 시간 뒤에 도착하면 이미 지난 얘기다
+          { TTL: 45 * 60 },
+        )
+      const key = `${s.lat.toFixed(2)},${s.lon.toFixed(2)}`
+      let any = false
+
+      // 비 시작 (기상청 초단기예보라 국내만)
+      const rainDue = s.rain_alert && (!s.last_rain_alert || new Date(s.last_rain_alert).getTime() < rainSince)
+      if (rainDue && KMA_KEY && inKorea(s.lat, s.lon)) {
+        const { nx, ny } = dfsGrid(s.lat, s.lon)
+        const grid = `${nx},${ny}`
+        // 기상청이 잠깐 실패해도 같은 사람의 미세먼지·폭염 알림까지 빠지면 안 된다
+        if (!rainCache.has(grid)) {
+          rainCache.set(grid, rainSoon(nx, ny).catch((e) => {
+            console.error('[weather-push] 기상청 조회 실패', grid, String(e).slice(0, 200))
+            return null
+          }))
+        }
+        const soon = await rainCache.get(grid)!
+        if (soon) {
+          await push({
+            title: `🌂 ${place} 곧 ${soon.kind} 소식`,
+            body: `${soon.hour}시쯤부터 ${soon.kind === '비' ? '비가' : `${soon.kind}이`} 올 것 같아요. ${say(s.persona, soon.kind === '눈' ? 'snow' : 'umbrella')}`,
+          })
+          sent++
+          any = true
+          await mark(s.id, { last_rain_alert: new Date().toISOString() })
+        }
       }
-      await webpush.sendNotification(
-        { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-        JSON.stringify(msg),
-        // 한 시간 뒤에 도착하면 이미 비가 온 뒤라 소용없다
-        { TTL: 45 * 60 },
-      )
-      sent++
-      await fetch(`${SB_URL}/rest/v1/weather_push_subs?id=eq.${s.id}`, {
-        method: 'PATCH',
-        headers: {
-          apikey: SERVICE_KEY,
-          Authorization: `Bearer ${SERVICE_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'return=minimal',
-        },
-        body: JSON.stringify({ last_rain_alert: new Date().toISOString() }),
-      }).catch((e) => console.error('[weather-push] 비 알림 기록 실패', s.id, String(e)))
+
+      // 지금 미세먼지 나쁨 (하루 한 번)
+      if (s.alert_air && s.last_air_alert !== today) {
+        if (!airCache.has(key)) airCache.set(key, fetchAirNow(s.lat, s.lon))
+        const air = await airCache.get(key)!
+        if (air !== null && air >= 2) {
+          await push({ title: `😷 ${place} 미세먼지 ${air >= 3 ? '매우 나쁨' : '나쁨'}`, body: say(s.persona, 'mask') })
+          sent++
+          any = true
+          await mark(s.id, { last_air_alert: today })
+        }
+      }
+
+      // 오늘 폭염·한파 (하루 한 번)
+      if (s.alert_temp && s.last_temp_alert !== today) {
+        if (!dayCache.has(key)) dayCache.set(key, fetchDaily(s.lat, s.lon))
+        const w = await dayCache.get(key)!
+        const hot = w.today.tmax >= HOT_MAX
+        const cold = w.today.tmin <= COLD_MIN
+        if (hot || cold) {
+          await push(
+            hot
+              ? { title: `🥵 ${place} 오늘 폭염`, body: `낮 최고 ${r1(w.today.tmax)}°. ${say(s.persona, 'hot')}` }
+              : { title: `🥶 ${place} 오늘 한파`, body: `아침 최저 ${r1(w.today.tmin)}°. ${say(s.persona, 'cold')}` },
+          )
+          sent++
+          any = true
+          await mark(s.id, { last_temp_alert: today })
+        }
+      }
+      if (!any) skipped++
     } catch (e) {
       const code = (e as { statusCode?: number }).statusCode
       if (code === 404 || code === 410) {
@@ -283,7 +361,7 @@ async function runRain(): Promise<Response> {
         if (del && del.ok) removed++
       } else {
         failed++
-        console.error('[weather-push] 비 알림 실패', s.id, code ?? '', String(e).slice(0, 200))
+        console.error('[weather-push] 조건 알림 실패', s.id, code ?? '', String(e).slice(0, 200))
       }
     }
   }
@@ -292,21 +370,21 @@ async function runRain(): Promise<Response> {
   })
 }
 
-function nightMsg(place: string, w: Awaited<ReturnType<typeof fetchDaily>>): { title: string; body: string } | null {
+function nightMsg(place: string, w: Awaited<ReturnType<typeof fetchDaily>>, persona?: string): { title: string; body: string } | null {
   // 내일 아침 출근 전 챙길 것 — 오늘과 크게 다를 때만 발송
   const parts: string[] = []
   const dMax = r1(w.tomorrow.tmax - w.today.tmax)
   const dMin = r1(w.tomorrow.tmin - w.today.tmin)
   if (isSnow(w.tomorrow.code))
-    parts.push('내일 눈 소식! 미끄러우니 10분 일찍 나서고, 접지력 좋은 신발 준비해두세요.')
+    parts.push(`내일 눈 소식! ${say(persona, 'snow')}`)
   else if (w.tomorrow.prob >= 60)
-    parts.push(`내일 비 올 확률 ${w.tomorrow.prob}%. 현관에 우산 미리 꺼내두세요.`)
+    parts.push(`내일 비 올 확률 ${w.tomorrow.prob}%. ${say(persona, 'umbrella')}`)
   if (dMin <= -5)
-    parts.push(`내일 아침이 오늘보다 ${Math.abs(dMin)}° 추워요. 두꺼운 겉옷 준비!`)
+    parts.push(`내일 아침이 오늘보다 ${Math.abs(dMin)}° 추워요. ${say(persona, 'coat')}`)
   else if (dMax <= -5)
-    parts.push(`내일 낮이 오늘보다 ${Math.abs(dMax)}° 낮아요. 겉옷 하나 챙겨두세요.`)
+    parts.push(`내일 낮이 오늘보다 ${Math.abs(dMax)}° 낮아요. ${say(persona, 'coat')}`)
   if (dMax >= 5)
-    parts.push(`내일은 오늘보다 ${dMax}° 더워요. 얇은 옷 꺼내두면 아침이 편해요.`)
+    parts.push(`내일은 오늘보다 ${dMax}° 더워요. ${say(persona, 'light')}`)
   if (parts.length === 0) return null // 특이사항 없으면 조용히
   return { title: `🌙 내일 출근 준비 (${place})`, body: parts.join(' ') }
 }
@@ -322,7 +400,13 @@ Deno.serve(async (req: Request) => {
     const [plat, plon] = probe.split(',').map(Number)
     try {
       const { nx, ny } = dfsGrid(plat, plon)
-      return Response.json({ nx, ny, ...(await rainCheck(nx, ny)) })
+      return Response.json({
+        nx,
+        ny,
+        ...(await rainCheck(nx, ny)),
+        airNow: await fetchAirNow(plat, plon),
+        sample: morningMsg('점검', { ...(await fetchDaily(plat, plon)), today: { tmax: 34, tmin: 25, prob: 80, precip: 5, code: 61, uv: 9 } }, 2, url.searchParams.get('persona') ?? undefined),
+      })
     } catch (e) {
       return Response.json({ error: String(e).slice(0, 200) }, { status: 502 })
     }
@@ -379,7 +463,7 @@ Deno.serve(async (req: Request) => {
         if (!airCache.has(key)) airCache.set(key, await fetchAirWorst(s.lat, s.lon))
         air = airCache.get(key) ?? null
       }
-      const msg = mode === 'morning' ? morningMsg(place, w, air) : nightMsg(place, w)
+      const msg = mode === 'morning' ? morningMsg(place, w, air, s.persona) : nightMsg(place, w, s.persona)
       if (!msg) {
         skipped++
         continue
