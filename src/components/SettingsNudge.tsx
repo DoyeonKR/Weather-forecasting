@@ -10,7 +10,7 @@ const SESSION_KEY = 'eojeboda.settingsNudge.shown'
 const FEATURES = [
   { Icon: Bell, title: '푸시 알림', desc: '아침·밤 브리핑, 비·미세먼지 알림' },
   { Icon: MapPin, title: '지역 설정', desc: '처음 열 때 보여줄 우리 동네' },
-  { Icon: ChatCircleText, title: '알림 말투', desc: '욕쟁이 할머니, 동네 형, 커뮤니티' },
+  { Icon: ChatCircleText, title: '앱 말투', desc: '욕쟁이 할머니, 동네 형, 커뮤니티' },
   { Icon: SlidersHorizontal, title: '내 맞춤 설정', desc: '출퇴근 시간, 체감 보정, 화면 스타일' },
 ]
 

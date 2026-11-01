@@ -38,6 +38,7 @@ import { loadLast, saveLast } from './lib/lastWeather'
 import { todayAhead, yesterdaySameWindow } from './lib/ahead'
 import { buildGlance } from './lib/glance'
 import { getPushAlerts } from './lib/push'
+import { useVoice } from './lib/useVoice'
 import type { Persona } from '../supabase/functions/_shared/persona.ts'
 import { buildSummary, type SummaryTarget } from './lib/summary'
 import { buildWeatherScene, loadWeatherMotion, observedSceneCode, saveWeatherMotion } from './lib/weatherScene'
@@ -144,11 +145,12 @@ export default function App() {
   const [settingsSignal, setSettingsSignal] = useState(0)
   const [air, setAir] = useState<AirNow | null>(boot?.air ?? null)
   const [feel, setFeel] = useState(loadFeel)
-  // 알림·배너 말투 (서버 저장은 설정 화면에서)
+  // 앱 전체 말투 (서버 저장은 설정 화면에서, 화면 적용은 useVoice)
   const [persona, setPersona] = useState<Persona>('default')
   useEffect(() => {
     getPushAlerts().then((a) => setPersona(a.persona))
   }, [])
+  useVoice(persona)
   // "서울 기준으로 보고 있어요" 안내는 처음 한 번만 크게, 그다음부터는 한 줄로 작게
   const [fallbackSeen] = useState(() => {
     try {

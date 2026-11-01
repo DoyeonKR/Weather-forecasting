@@ -490,8 +490,8 @@ export default function Settings({
                 </button>
               </div>
               <div className="persona-sec">
-                <h4 className="settings-sub-title"><ChatCircleText size={18} weight="duotone" aria-hidden /> 알림 말투</h4>
-                <div className="persona-row" role="radiogroup" aria-label="알림 말투">
+                <h4 className="settings-sub-title"><ChatCircleText size={18} weight="duotone" aria-hidden /> 앱 말투</h4>
+                <div className="persona-row" role="radiogroup" aria-label="앱 말투">
                   {PERSONAS.map((p) => (
                     <button
                       key={p.id}
@@ -507,7 +507,7 @@ export default function Settings({
                   ))}
                 </div>
                 <p className="persona-preview">“{say(persona, 'umbrella')}”</p>
-                {persona === 'grandma' && <p className="muted small notify-desc">거친 말이 섞여 있어요. 화면 위쪽 안내에도 같은 말투로 나와요.</p>}
+                <p className="muted small notify-desc">앱 화면과 알림 전체가 이 말투로 바뀌어요.{persona === 'grandma' ? ' 거친 말이 섞여 있어요.' : ''}</p>
               </div>
             </div>
 
