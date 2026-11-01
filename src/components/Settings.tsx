@@ -42,6 +42,8 @@ interface Props {
   sectionOrder: SectionKey[]
   persona: Persona
   onSetPersona: (p: Persona) => void
+  /** 값이 오를 때마다 설정을 연다 (안내 팝업의 바로가기) */
+  openSignal?: number
   onSetOrder: (next: SectionKey[]) => void
   commute: CommutePrefs
   onSetCommute: (next: CommutePrefs) => void
@@ -61,6 +63,7 @@ export default function Settings({
   onSetOrder,
   persona,
   onSetPersona,
+  openSignal = 0,
   commute,
   onSetCommute,
   feelOffset,
@@ -68,6 +71,9 @@ export default function Settings({
   visitors,
 }: Props) {
   const [open, setOpen] = useState(false)
+  useEffect(() => {
+    if (openSignal > 0) setOpen(true)
+  }, [openSignal])
   // 핵심 흐름은 고정하고, 상세 정보 안에서만 사용자가 순서를 고른다.
   const cardOrder = sectionOrder.filter((k) => DETAIL_KEYS.includes(k))
   const moveDetail = (from: number, to: number) => {

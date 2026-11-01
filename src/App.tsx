@@ -81,6 +81,7 @@ import CoupangBanner from './components/CoupangBanner'
 import { fetchTodayVisitors, trackEvent } from './lib/track'
 import HourlyCard from './components/HourlyCard'
 import BriefBanner from './components/BriefBanner'
+import SettingsNudge from './components/SettingsNudge'
 import { SectionBoundary } from './components/ErrorBoundary'
 import { SECTION_LABEL, loadOrder, saveOrder, type SectionKey } from './lib/sections'
 import './App.css'
@@ -140,6 +141,7 @@ export default function App() {
   const [sectionOrder, setSectionOrder] = useState<SectionKey[]>(loadOrder)
   /** 헤더의 지역 버튼을 누를 때마다 올려서 검색창을 연다 */
   const [searchSignal, setSearchSignal] = useState(0)
+  const [settingsSignal, setSettingsSignal] = useState(0)
   const [air, setAir] = useState<AirNow | null>(boot?.air ?? null)
   const [feel, setFeel] = useState(loadFeel)
   // 알림·배너 말투 (서버 저장은 설정 화면에서)
@@ -892,6 +894,7 @@ export default function App() {
   return (
     <>
     {/* 상단 브리핑 띠: .shell(overflow: hidden) 바깥에 고정. 지역·날씨가 바뀌면 같이 바뀐다 */}
+    {!statsOpen && <SettingsNudge onOpenSettings={() => setSettingsSignal((n) => n + 1)} />}
     <BriefBanner wx={wx} resetKey={`${selectedId}|${loc.label}`} airGrade={air?.grade ?? null} persona={persona} />
     <WeatherFx scene={scene} paused={motionPaused} />
     <div className={`shell journal-app has-brief ${theme} ${status === 'loading' ? 'refreshing' : ''}`}>
@@ -934,6 +937,7 @@ export default function App() {
             onSetOrder={applyOrder}
             persona={persona}
             onSetPersona={setPersona}
+            openSignal={settingsSignal}
             commute={commute}
             onSetCommute={onSetCommute}
             feelOffset={feel.offset}
