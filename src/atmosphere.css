@@ -138,3 +138,128 @@
   .weather-atmosphere *, .weather-atmosphere *::before { animation: none !important; }
   .hero-immersive .hero-photo > img { animation: none; transform: none; will-change: auto; }
 }
+
+/* ── 메인 요약 8칸 (v1.0.88) ─────────────────────────────────
+   스크롤하지 않아도 전체 날씨가 보이게, 메인 카드를 줄이고 아이콘 칸으로 요약한다.
+   칸을 누르면 해당 섹션으로 내려간다 (신경 쓸 것만 색) */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.summary-tile {
+  --tone: #e8eef7;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 86px;
+  padding: 9px 2px 8px;
+  border: 1px solid #ffffff38;
+  border-radius: 14px;
+  background: #071c3e80;
+  color: #fff;
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .12s ease, background-color .12s ease;
+}
+
+.summary-tile:active { transform: scale(.96); background: #071c3eb8; }
+.summary-tile:disabled { opacity: .55; cursor: default; }
+.summary-tile:disabled:active { transform: none; }
+
+.summary-tile.tone-info { --tone: #d3c5ff; }
+.summary-tile.tone-rain { --tone: #93cdff; border-color: #93cdff80; }
+.summary-tile.tone-warn { --tone: #ffcb70; border-color: #ffcb7080; }
+.summary-tile.tone-alert { --tone: #ff9d9d; border-color: #ff9d9d80; }
+.summary-tile.tone-warm { --tone: #ffb995; }
+.summary-tile.tone-cold { --tone: #97e0ff; }
+
+.summary-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tone) 22%, transparent);
+  color: var(--tone);
+}
+
+.summary-value {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: -.03em;
+  word-break: keep-all;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-label {
+  margin-top: auto;
+  color: #ffffffc7;
+  font-size: 10.5px;
+  line-height: 1.2;
+  letter-spacing: -.02em;
+  white-space: nowrap;
+}
+
+/* 메인 카드를 줄여 요약 칸까지 첫 화면에 넣는다 */
+@media (max-width: 859px) {
+  .hero.hero-immersive { padding: 16px; }
+  .hero-immersive .hero-date { margin-bottom: 8px; }
+  .hero-immersive .hero-main { min-height: 0; }
+  .hero-immersive .hero-temp { font-size: 68px; }
+  .hero-immersive .hero-condition { margin-top: 0; font-size: 15px; }
+  .hero-immersive .hero-main .weather-artwork { width: 84px; height: 84px; }
+  .hero-immersive .hero-decision { margin-top: 10px; padding-top: 12px; }
+  .hero-immersive .glance-head { margin: 0 0 10px; font-size: 16px; line-height: 1.35; }
+  .hero-immersive .hero-subs { margin-top: 0; }
+  .hero-immersive .hero-line { margin-top: 10px; padding-top: 0; border-top: 0; justify-content: center; }
+
+  /* 위쪽을 낮춘다: 띠 64px, 헤더는 제목 줄 + 지역 줄, 재방문 위치 안내는 "현재 위치" 버튼과 겹쳐 숨긴다 */
+  :root { --brief-h: 64px; --brief-top: 8px; }
+  .shell.has-brief { padding-top: calc(var(--brief-h) + var(--brief-top) + 12px + env(safe-area-inset-top)); }
+  .journal-app > .top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 8px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+  }
+  .journal-app > .top > div:first-child { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; grid-column: 1; min-width: 0; }
+  .journal-app > .top > .top-right { display: contents; }
+  .journal-app > .top .loc { grid-column: 1; justify-self: start; max-width: 100%; }
+  .journal-app > .top .gear { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+  .journal-app > .top .visitors { margin-top: 0; }
+  .journal-app .placebar { gap: 8px; margin-bottom: 8px; }
+  .journal-app .fallback-note.compact { display: none; }
+  .summary-tile { min-height: 78px; padding-block: 7px; gap: 3px; }
+  .summary-icon { width: 26px; height: 26px; }
+}
+
+@media (max-width: 359px) {
+  .summary-grid { gap: 4px; }
+  .summary-tile { padding-inline: 1px; }
+  .summary-value { font-size: 12px; }
+  .summary-label { font-size: 10px; letter-spacing: -.04em; }
+}
+
+/* 요약 칸에서 내려온 곳: 어디인지 잠깐 표시한다 */
+[data-jump]:focus { outline: none; }
+
+.jump-flash { animation: jump-flash 1.4s ease-out; }
+
+@keyframes jump-flash {
+  0%, 35% { box-shadow: 0 0 0 3px #4d8fe0; }
+  100% { box-shadow: 0 0 0 3px #4d8fe000; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .summary-tile { transition: none; }
+  .jump-flash { animation: none; }
+}

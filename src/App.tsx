@@ -1,6 +1,8 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import {
   ArrowClockwise,
+  CalendarBlank,
+  MapTrifold,
   ArrowUp,
   ArrowsLeftRight,
   Backpack,
@@ -35,6 +37,7 @@ import { weatherIcon, weatherTone, type UiIcon } from './lib/weatherIcon'
 import { loadLast, saveLast } from './lib/lastWeather'
 import { todayAhead, yesterdaySameWindow } from './lib/ahead'
 import { buildGlance } from './lib/glance'
+import { buildSummary, type SummaryTarget } from './lib/summary'
 import { buildWeatherScene, loadWeatherMotion, observedSceneCode, saveWeatherMotion } from './lib/weatherScene'
 import { sunImpact, type Impact } from './lib/impact'
 import { detectInApp } from './lib/inapp'
@@ -498,6 +501,42 @@ export default function App() {
   const tomorrowLabel = codeLabel(wx.tomorrow.code)
   const tomorrowTone = weatherTone(tomorrowLabel.label)
 
+  const summary = buildSummary({
+    glance,
+    forTomorrow: prepTomorrow,
+    wx,
+    raining: kmaNow ? (kmaNow.pty ?? 0) > 0 || (kmaNow.rn1 ?? 0) > 0 : null,
+    nowMs: Date.now(),
+    deviceOffsetSec: -new Date().getTimezoneOffset() * 60,
+  })
+  const summaryIcon: Record<SummaryTarget, UiIcon> = {
+    hourly: Umbrella,
+    prep: (prepTomorrow ? wx.tomorrow : wx.today).tmax < 17 ? Hoodie : TShirt,
+    air: Leaf,
+    compare: ArrowsLeftRight,
+    tomorrow: weatherIcon(tomorrowLabel.label),
+    week: CalendarBlank,
+    sun: SunHorizon,
+    radar: MapTrifold,
+  }
+  /** 요약 칸 → 해당 섹션으로. 접힌 디테일이면 펼치고 내려간다 */
+  function jumpTo(target: SummaryTarget) {
+    const el = document.querySelector<HTMLElement>(`[data-jump="${target}"]`)
+    if (!el) return
+    if (el instanceof HTMLDetailsElement) el.open = true
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    // 내려가면 브리핑 띠가 낮아진다(44px). 그 바로 아래에 멈추도록 직접 계산한다
+    const barTop = document.querySelector('.brief')?.getBoundingClientRect().top ?? 0
+    window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - (barTop + 44 + 12), behavior: reduced ? 'auto' : 'smooth' })
+    el.tabIndex = -1
+    el.focus({ preventScroll: true })
+    el.classList.remove('jump-flash')
+    void el.offsetWidth
+    el.classList.add('jump-flash')
+    // 내려가는 동안은 스크롤 처리가 맨 위로 버튼을 숨긴다 → 도착한 뒤에 띄워 요약으로 돌아갈 길을 준다
+    window.setTimeout(() => setShowTop(true), reduced ? 0 : 1000)
+  }
+
   // 데이터와 조작은 유지하고, 본문에서 시간 흐름별 묶음 또는 인라인 상세로 배치한다.
   const renderSection = (key: SectionKey) => (
     <>
@@ -556,20 +595,26 @@ export default function App() {
             </div>
             <div className="hero-decision">
             <h2 className="glance-head">{glance.headline}</h2>
-            <ul className="glance" aria-label={prepTomorrow ? '내일 챙길 것' : '오늘 챙길 것'}>
-              {glance.tiles.map((t) => {
-                const Icon = t.key === 'umbrella' ? Umbrella : t.key === 'air' ? Leaf : (prepTomorrow ? wx.tomorrow : wx.today).tmax < 17 ? Hoodie : TShirt
+            {/* 요약 8칸: 아래 섹션을 한 칸씩 대표한다. 스크롤하지 않아도 다 보이고, 누르면 그 섹션으로 내려간다 */}
+            <nav className="summary-grid" aria-label="날씨 요약, 누르면 해당 정보로 이동">
+              {summary.map((t) => {
+                const Icon = summaryIcon[t.target]
                 return (
-                  <li key={t.key} className={`glance-tile tone-${t.tone}`}>
-                    <span className="glance-label">
-                      <Icon size={18} weight="regular" aria-hidden /> {t.label}
-                    </span>
-                    <b className="glance-value">{t.value}</b>
-                    {t.sub && <span className="glance-sub">{t.sub}</span>}
-                  </li>
+                  <button
+                    key={t.target}
+                    type="button"
+                    className={`summary-tile tone-${t.tone}`}
+                    disabled={t.value === '-' || (t.target === 'air' && !air)}
+                    aria-label={`${t.label} ${t.value}. ${t.section}으로 이동`}
+                    onClick={() => jumpTo(t.target)}
+                  >
+                    <span className="summary-icon"><Icon size={20} weight="duotone" aria-hidden /></span>
+                    <b className="summary-value">{t.value}</b>
+                    <span className="summary-label">{t.label}</span>
+                  </button>
                 )
               })}
-            </ul>
+            </nav>
             <div className="hero-subs">
               {reducedMotion && <p className="weather-motion-note">기기의 동작 줄이기 설정으로 배경 효과가 꺼져 있어요.</p>}
               <p className="hero-line">
@@ -669,7 +714,7 @@ export default function App() {
       )}
       {key === 'tomorrow' && (
         <>
-          <section className="card tomorrow-card">
+          <section className="card tomorrow-card" data-jump="tomorrow">
             <div className="tomorrow-heading">
               <div className="tomorrow-title">
                 <h2 className="section-title">내일은 오늘보다</h2>
@@ -708,7 +753,7 @@ export default function App() {
       )}
       {key === 'week' && (
         <>
-          <section className="card">
+          <section className="card" data-jump="week">
             <div className="week-heading">
               <h2 className="section-title">이번 주 날씨</h2>
               <span className="week-key"><span className="cold-icon">최저</span><span className="warm-icon">최고</span></span>
@@ -769,7 +814,7 @@ export default function App() {
       )}
       {key === 'radar' && (
         <>
-          <section className="card radar-card">
+          <section className="card radar-card" data-jump="radar">
             <h2 className="section-title radar-title"><Drop size={18} weight="duotone" className="rain-icon" aria-hidden /> 비구름 레이더</h2>
             <WhenVisible minHeight={320}>
               <Suspense
@@ -942,7 +987,7 @@ export default function App() {
       <main className="app-main">
       <div id="weather-main" tabIndex={-1} key={selectedId} className="switch-enter">
         <SectionBoundary name="hero">{renderSection('hero')}</SectionBoundary>
-        <section className="journal-flow card" aria-labelledby="flow-title">
+        <section className="journal-flow card" data-jump="hourly" aria-labelledby="flow-title">
           <header className="journal-heading">
             <h2 id="flow-title">오늘의 흐름</h2>
           </header>
@@ -967,7 +1012,7 @@ export default function App() {
             if (!info?.impact) return null
             const Icon = info.Icon
             return (
-              <details key={key} className={`journal-detail tone-${info.impact.tone}`} data-detail={key} data-air-grade={key === 'air' ? air?.grade : undefined} data-trend={key === 'compare' ? wx.nowTemp - wx.yesterdaySameHour >= .5 ? 'warmer' : wx.nowTemp - wx.yesterdaySameHour <= -.5 ? 'cooler' : 'same' : undefined}>
+              <details key={key} className={`journal-detail tone-${info.impact.tone}`} data-detail={key} data-jump={key} data-air-grade={key === 'air' ? air?.grade : undefined} data-trend={key === 'compare' ? wx.nowTemp - wx.yesterdaySameHour >= .5 ? 'warmer' : wx.nowTemp - wx.yesterdaySameHour <= -.5 ? 'cooler' : 'same' : undefined}>
                 <summary>
                   <Icon size={22} weight="regular" aria-hidden />
                   <span className="journal-detail-copy"><b>{info.label}</b></span>
