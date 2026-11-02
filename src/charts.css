@@ -1,0 +1,99 @@
+/* Color lives in data; the journal UI remains neutral. Line styles and
+   hollow/filled endpoints supplement color rather than replace it. */
+:root {
+  --chart-ink: #c35238;
+  --chart-mid: #69758c;
+  --chart-cold: #2675bc;
+  --chart-rain: #1971c2;
+  --chart-wind: #15806f;
+  --chart-place-a: #286fc0;
+  --chart-place-b: #8552ba;
+  --chart-temp: linear-gradient(90deg, #408dd0, #b5b8cb 45%, #df7752);
+  --chart-track: #f1f3f4;
+  --chart-grid: #dce0e3;
+}
+.chart-legend, .vs-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; color: #525a61; font-size: 12px; }
+.chart-legend { margin: 0 0 8px; }
+.chart-note { color: #5c656d; font-size: 11px; line-height: 1.5; margin: 0 0 14px; }
+.chart-legend > span, .week-key > span { display: inline-flex; align-items: center; gap: 5px; }
+.chart-swatch, .vs-dot { display: inline-block; width: 22px; height: 10px; border-radius: 3px; border: 1px solid #687078; }
+.chart-legend--temp .current { background: var(--chart-temp); border-color: #7085a8; }
+.chart-legend .previous { background: #d9dfe8; border: 1px dashed var(--chart-mid); }
+.chart-legend--rain .current { background: var(--chart-rain); border-color: var(--chart-rain); }
+.chart-legend--wind .current { background: var(--chart-wind); border-color: var(--chart-wind); }
+.vs-dot.a { background: var(--chart-place-a); border-color: var(--chart-place-a); }
+.vs-dot.b { background: var(--chart-place-b); border-color: var(--chart-place-b); }
+.vs-name.a { color: var(--chart-place-a); }
+.vs-name.b { color: var(--chart-place-b); }
+
+.hs-legend { font-size: 12px; gap: 8px 14px; color: #525a61; }
+.hs-legend .hl.today { height: 0; background: none; border-top: 3px solid var(--chart-ink); }
+.hs-legend .hl.yest { border-top: 2px dashed var(--chart-mid); }
+.hs-legend .hl.band.warm { background: #f9d9ce; border: 1px solid #ce745b; }
+.hs-legend .hl.band.cold { background: #d4e8fb; border: 1px solid #4d8bc0; }
+.hs-legend .hl.band.rain { background: var(--chart-rain); border: 1px solid var(--chart-rain); }
+.hs-plot { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 3px; }
+.hs-axis { position: relative; align-self: end; margin-bottom: 6px; color: #626b72; font-size: 11px; font-variant-numeric: tabular-nums; }
+.hs-axis > span { position: absolute; right: 3px; transform: translateY(-50%); }
+.hs-axis > small { position: absolute; right: 6px; font: inherit; color: var(--chart-rain); }
+.hs-plot .hourly-scroll { margin: 10px 0 0; }
+.hs-grid { stroke: var(--chart-grid); stroke-dasharray: 2 4; }
+.hs-daysep { stroke: #c2c8cd; stroke-dasharray: 3 4; }
+.hs-band.warm { fill: #efa78d; opacity: .4; }
+.hs-band.cold { fill: #8ec3f0; opacity: .4; }
+.hs-band.same { fill: #edf0f2; }
+.hs-line-halo { fill: none; stroke: #fff; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.hs-line-halo.now { stroke-width: 6; }
+.hs-line.now { stroke: var(--chart-ink); stroke-width: 3; }
+.hs-line.prev { stroke: var(--chart-mid); stroke-width: 2.2; stroke-dasharray: 6 5; }
+.hs-dot { fill: var(--chart-ink); stroke: #fff; stroke-width: 1.5; }
+.hs-dot.first { fill: #fff; stroke: var(--chart-ink); stroke-width: 2.5; }
+.hs-rainbar { stroke: var(--chart-rain); stroke-width: 1; opacity: 1; }
+.hs-rain, .hs-prob { color: var(--chart-rain); }
+
+.range-track, .precip-track, .week-track { background: var(--chart-track); box-shadow: inset 0 0 0 1px #dce0e3; }
+.range-gridline { background: #cdd2d6; }
+.range-bar.today { background: var(--chart-temp); border: 1px solid #7085a8; box-shadow: none; }
+.range-bar.yesterday, .precip-bar.yesterday { background: #d9dfe8; border: 1px dashed var(--chart-mid); box-shadow: none; }
+.precip-bar.today { background: linear-gradient(90deg, #69ace3, var(--chart-rain)); border: 1px solid var(--chart-rain); }
+.precip-bar.wind.today { background: linear-gradient(90deg, #68b6a2, var(--chart-wind)); border: 1px solid var(--chart-wind); }
+.precip-track { height: 12px; }
+.precip-bar { min-width: 0; }
+.range-head, .range-ticks, .range-name, .precip-val { color: #5c656d; }
+.range-min.today, .week-min, .week-today .week-min { color: var(--chart-cold); }
+.range-max.today, .week-max { color: var(--chart-ink); }
+.vs-range { background: var(--chart-track); height: 11px; }
+.vs-range .range-bar.today { background: var(--chart-place-a); border-color: #225da1; }
+.vs-range .range-bar.other { background: var(--chart-place-b); border: 1px solid #69408f; box-shadow: none; }
+.vs-legend .vs-dot { vertical-align: -1px; }
+
+.week-track { height: 10px; }
+.week-head { font-size: 11px; color: #5c656d; }
+.week-key { font-size: 11px; gap: 12px; }
+.week-bar, .week-today .week-bar { background: var(--chart-temp); border: 1px solid #8a9bb3; box-shadow: none; }
+.week-bar::before, .week-bar::after { content: ''; position: absolute; top: 50%; width: 7px; height: 7px; border-radius: 50%; transform: translateY(-50%); }
+.week-bar::before { left: -1px; background: #fff; border: 1.5px solid var(--chart-cold); }
+.week-bar::after { right: -1px; background: var(--chart-ink); border: 1.5px solid var(--chart-ink); }
+.chart-end { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.chart-end.low { background: #fff; border: 1.5px solid var(--chart-cold); }
+.chart-end.high { background: var(--chart-ink); border: 1.5px solid var(--chart-ink); }
+.week-key > span:first-child { color: var(--chart-cold); }
+.week-key > span:last-child { color: var(--chart-ink); }
+.week-today { background: #f0f4f8; }
+
+.air-card { --g0: #1769a8; --g1: #237046; --g2: #a35b08; --g3: #b7353a; }
+.air-gauge-bar { height: 12px; }
+.air-gauge-bar > i { opacity: 1; }
+.air-gauge-bar > .g0, .air-outlook li.g0 i { background: #4094d5; border: 1px solid #1769a8; }
+.air-gauge-bar > .g1, .air-outlook li.g1 i { background: #52a779; border: 1px solid #237046; }
+.air-gauge-bar > .g2, .air-outlook li.g2 i { background: #e5a134; border: 1px solid #a35b08; }
+.air-gauge-bar > .g3, .air-outlook li.g3 i { background: #dd5a58; border: 1px solid #b7353a; }
+.air-gauge-labels { display: grid; grid-template-columns: repeat(4, 1fr); margin: 2px 0 12px; font-size: 11px; text-align: center; color: #5c656d; }
+.air-card .g0.air-g, .air-card .g0 > b, .air-gauge-labels .g0, .air-card .air-verdict.g0 { color: var(--g0); --c: var(--g0); }
+.air-card .g1.air-g, .air-card .g1 > b, .air-gauge-labels .g1, .air-card .air-verdict.g1 { color: var(--g1); --c: var(--g1); }
+.air-card .g2.air-g, .air-card .g2 > b, .air-gauge-labels .g2, .air-card .air-verdict.g2 { color: var(--g2); --c: var(--g2); }
+.air-card .g3.air-g, .air-card .g3 > b, .air-gauge-labels .g3, .air-card .air-verdict.g3 { color: var(--g3); --c: var(--g3); }
+.air-gauge-mark { background: #fff; border: 3px solid #263847; box-shadow: 0 0 0 1.5px #fff; }
+.air-outlook li i { height: 10px; border-radius: 3px; }
+.air-outlook li b { white-space: normal; text-align: center; }
+.air-outlook li > span { font-size: 11px; text-align: center; }

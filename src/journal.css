@@ -1,4 +1,4 @@
-/* Weather journal: neutral UI, with color reserved for sky photographs and radar data. */
+/* Weather journal: neutral UI, with color reserved for imagery and data graphics. */
 :root,
 :root[data-accent] {
   --bg: #f4f4f2;
@@ -112,14 +112,14 @@ button:disabled { cursor: default; }
 .hs-delta, .hs-delta.warm, .hs-delta.cold, .hs-delta.same { display: flex; align-items: center; justify-content: center; color: #737373; font-size: 11px; min-height: 17px; }
 .hs-rain, .hs-prob { color: #666; }
 .hs-band.warm { fill: #dededb; opacity: .6; }
-.hs-band.cold { fill: url(#journal-cold-hatch); opacity: .7; }
+.hs-band.cold { opacity: .7; }
 .hs-band.same { fill: #eee; }
 .hs-line { stroke-linecap: round; stroke-linejoin: round; }
 .hs-line.now { stroke: #292929; stroke-width: 2.5; filter: none; }
 .hs-line.prev { stroke: #999; stroke-width: 1.5; stroke-dasharray: 4 5; }
 .hs-dot { fill: #292929; stroke: #fff; stroke-width: 1.5; }
 .hs-dot.first { fill: #fff; stroke: #292929; stroke-width: 2; filter: none; }
-.hs-rainbar { fill: #666; opacity: .75; }
+.hs-rainbar { opacity: .75; }
 .hs-daysep { stroke: #e2e2df; }
 .hs-grid { stroke: #ededeb; stroke-width: 1; }
 .hourly-foot { color: #666; border-top: 1px solid #eee; padding-top: 14px; margin-top: 12px; }
@@ -356,10 +356,7 @@ button:disabled { cursor: default; }
    같은 말을 두 번 하는 소제목·요약·범례·표 머리를 걷어낸다. 정보(숫자·그래프)는 그대로 */
 .journal-flow .hourly-head > .section-title { display: none; }
 .journal-flow .hourly-head { justify-content: flex-end; margin: -60px 0 18px auto; width: max-content; }
-.journal-flow .hs-legend > span:nth-child(n + 3) { display: none; }
 .journal-flow .hourly-foot { display: none; }
-.journal-outlook .week-head,
-.journal-outlook .week-key { display: none; }
 .journal-detail-copy small { display: none; }
 
 @media (max-width: 520px) {

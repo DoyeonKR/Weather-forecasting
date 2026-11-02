@@ -1,13 +1,14 @@
 // 시간대별 기온·강수 — 지금부터 3시간 간격으로 받아 둔 예보 끝(약 7일)까지.
 // 한 화면에는 15시간쯤 보이고, 좌우로 밀면 뒷날이 이어진다.
-// 각 시각을 하루 전 같은 시각과 비교한다. 실선/점선과 면/빗금으로 구별하여 색에 의존하지 않는다.
-import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
+// 예보는 코랄 실선, 하루 전은 슬레이트 점선. 높은 구간은 빨강, 낮은 구간은 파랑.
+import { useEffect, useId, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import { CaretRight } from '@phosphor-icons/react'
 import { codeLabel } from '../lib/compare'
 import type { WeatherData } from '../lib/weather'
 import { weatherIcon, weatherTone } from '../lib/weatherIcon'
 import { trackEvent } from '../lib/track'
 import DeltaPill from './DeltaPill'
+import { temperatureBands } from '../lib/chartBands'
 
 interface Props {
   wx: WeatherData
@@ -41,16 +42,19 @@ function dayLabel(t: Date, today: Date): string {
 }
 
 export default function HourlyCard({ wx, embedded = false }: Props) {
+  const rainId = `hourly-rain-${useId().replace(/:/g, '')}`
   const { time, temp, precip, code, prob: probAll } = wx.hourly
   const scrollRef = useRef<HTMLDivElement>(null)
   const [atEnd, setAtEnd] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [scrollbarHeight, setScrollbarHeight] = useState(0)
 
   // 끝에 닿았는지(오른쪽 흐림·버튼 숨김), 한 번이라도 밀어 봤는지(안내 숨김)
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
     const onScroll = () => {
+      setScrollbarHeight(el.offsetHeight - el.clientHeight)
       setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 4)
       if (el.scrollLeft > 8) {
         setScrolled((was) => {
@@ -61,7 +65,9 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
     }
     onScroll()
     el.addEventListener('scroll', onScroll, { passive: true })
-    return () => el.removeEventListener('scroll', onScroll)
+    const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(onScroll)
+    resizeObserver?.observe(el)
+    return () => { el.removeEventListener('scroll', onScroll); resizeObserver?.disconnect() }
   }, [wx])
 
   // 마우스로도 끌어서 넘길 수 있게 (터치는 브라우저 기본 가로 스크롤)
@@ -116,14 +122,7 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
   const line = (arr: number[]) =>
     arr.map((t, k) => `${k === 0 ? 'M' : 'L'}${x(k).toFixed(1)} ${y(t).toFixed(1)}`).join(' ')
 
-  // 두 선 사이 면 — 따뜻하면 회색 면, 쌀쌀하면 빗금
-  const bands = tNow.slice(0, -1).map((_, k) => {
-    const warmer = tNow[k] + tNow[k + 1] - (tPrev[k] + tPrev[k + 1])
-    const d =
-      `M${x(k)} ${y(tNow[k])} L${x(k + 1)} ${y(tNow[k + 1])} ` +
-      `L${x(k + 1)} ${y(tPrev[k + 1])} L${x(k)} ${y(tPrev[k])} Z`
-    return { d, cls: Math.abs(warmer) < 1 ? 'same' : warmer > 0 ? 'warm' : 'cold' }
-  })
+  const bands = temperatureBands(tNow, tPrev, x, y)
 
   const maxP = Math.max(...pr, 1)
   const rainTop = PAD_Y * 2 + CHART_H
@@ -173,8 +172,14 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
         <span>
           <i className="hl band cold" /> 더 쌀쌀
         </span>
+        {anyRain && <span><i className="hl band rain" /> 강수량</span>}
       </div>
 
+      <div className="hs-plot">
+      <div className="hs-axis" style={{ height: svgH, marginBottom: 6 + scrollbarHeight }} aria-hidden="true">
+        {[0, .5, 1].map(f => <span key={f} style={{ top: PAD_Y + f * CHART_H }}>{Number((lo + (1 - f) * span).toFixed(1))}°</span>)}
+        {anyRain && <small style={{ top: rainTop }}>비</small>}
+      </div>
       <div
         ref={scrollRef}
         className={`hourly-scroll ${atEnd ? 'at-end' : ''}`}
@@ -216,9 +221,9 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
           </div>
           <svg width={totalW} height={svgH} viewBox={`0 0 ${totalW} ${svgH}`} className="hs-svg" aria-hidden>
             <defs>
-              <pattern id="journal-cold-hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-                <line x1="0" y1="0" x2="0" y2="5" stroke="#c5c5c0" strokeWidth="1.5" />
-              </pattern>
+              <linearGradient id={rainId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stopColor="#81c2f2" /><stop offset="1" stopColor="#1971c2" />
+              </linearGradient>
             </defs>
             {[0, .25, .5, .75, 1].map((f) => <line key={f} x1={0} x2={totalW} y1={PAD_Y + f * CHART_H} y2={PAD_Y + f * CHART_H} className="hs-grid" />)}
             {/* 날짜 경계 */}
@@ -228,7 +233,9 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
             {bands.map((b, k) => (
               <path key={`b${k}`} d={b.d} className={`hs-band ${b.cls}`} />
             ))}
+            <path d={line(tPrev)} className="hs-line-halo" />
             <path d={line(tPrev)} className="hs-line prev" />
+            <path d={line(tNow)} className="hs-line-halo now" />
             <path d={line(tNow)} className="hs-line now" />
             {tNow.map((t, k) => (
               <circle key={`c${k}`} cx={x(k)} cy={y(t)} r={k === 0 ? 4.5 : 2.6} className={k === 0 ? 'hs-dot first' : 'hs-dot'} />
@@ -243,16 +250,18 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
                   height={Math.max(Math.min(p / maxP, 1) * RAIN_H, 2)}
                   rx={2}
                   className="hs-rainbar"
+                  style={{ fill: `url(#${rainId})` }}
                 />
               ) : null,
             )}
           </svg>
         </div>
       </div>
+      </div>
 
       <div className="hourly-foot muted small">{summary}</div>
       <table className="sr-only">
-        <caption>시간대별 예보. 화면의 검은 실선은 예보, 회색 점선은 하루 전 같은 시각입니다.</caption>
+        <caption>시간대별 예보. 코랄 실선은 예보, 슬레이트 점선은 하루 전 같은 시각이며, 더 따뜻한 구간은 빨강, 더 쌀쌀한 구간은 파랑입니다.</caption>
         <thead><tr><th>시각</th><th>날씨</th><th>기온</th><th>하루 전</th><th>강수확률</th><th>강수량</th></tr></thead>
         <tbody>{idx.map((i, k) => <tr key={i}><th>{time[i].replace('T', ' ')}</th><td>{labels[k]}</td><td>{Math.round(tNow[k])}도</td><td>{Math.round(tPrev[k])}도</td><td>{prob[k] === null ? '정보 없음' : `${prob[k]}%`}</td><td>{mm(pr[k])}</td></tr>)}</tbody>
       </table>

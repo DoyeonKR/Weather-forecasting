@@ -33,6 +33,13 @@ function diffChip(d: number) {
   return <DeltaPill delta={d} />
 }
 
+function ComparisonLegend({ kind }: { kind: 'temp' | 'rain' | 'wind' }) {
+  return <div className={`chart-legend chart-legend--${kind}`} aria-label="오늘·어제 그래프 범례">
+    <span><i className="chart-swatch current" aria-hidden="true" /> 오늘</span>
+    <span><i className="chart-swatch previous" aria-hidden="true" /> 어제</span>
+  </div>
+}
+
 /**
  * 온도 범위 바: 같은 눈금 위에 오늘(색)과 어제(회색) 캡슐.
  * 막대가 "무엇"인지 안 보인다는 지적 — 위에 최저/최고 머리글, 아래에 눈금 숫자,
@@ -56,6 +63,7 @@ export function TempRangeBars({ today, yesterday }: { today: DayStats; yesterday
 
   return (
     <div className="range-wrap">
+      <ComparisonLegend kind="temp" />
       <div className="range-row range-head" aria-hidden>
         <span />
         <span className="range-min">최저</span>
@@ -107,11 +115,12 @@ export function PrecipCompare({ today, yesterday }: { today: DayStats; yesterday
   const y = yesterday.precipSum
   const max = Math.max(t, y, 1)
   return (
-    <div className="precip-wrap">
+    <div className="precip-wrap precip-wrap--rain">
+      <ComparisonLegend kind="rain" />
       <div className="precip-row">
         <span className="range-name">오늘</span>
         <div className="precip-track">
-          <div className="precip-bar today" style={{ width: `${(t / max) * 100}%` }} />
+          {t > 0 && <div className="precip-bar today" style={{ width: `${(t / max) * 100}%` }} />}
         </div>
         <span className="precip-val">
           {round1(t)}mm{today.precipProbMax !== null ? ` · ${today.precipProbMax}%` : ''}
@@ -120,7 +129,7 @@ export function PrecipCompare({ today, yesterday }: { today: DayStats; yesterday
       <div className="precip-row">
         <span className="range-name">어제</span>
         <div className="precip-track">
-          <div className="precip-bar yesterday" style={{ width: `${(y / max) * 100}%` }} />
+          {y > 0 && <div className="precip-bar yesterday" style={{ width: `${(y / max) * 100}%` }} />}
         </div>
         <span className="precip-val">{round1(y)}mm</span>
       </div>
@@ -130,28 +139,29 @@ export function PrecipCompare({ today, yesterday }: { today: DayStats; yesterday
 
 /** 바람 비교: 최대 풍속 비례 바 (돌풍 병기) */
 export function WindCompare({ today, yesterday }: { today: DayStats; yesterday: DayStats }) {
-  const t = today.windMax ?? 0
-  const y = yesterday.windMax ?? 0
-  const max = Math.max(t, y, 10)
-  const gust = (s: DayStats) => (s.gustMax ? ` · 돌풍 ${Math.round(s.gustMax)}` : '')
+  const t = today.windMax
+  const y = yesterday.windMax
+  const max = Math.max(t ?? 0, y ?? 0, 10)
+  const gust = (s: DayStats) => (s.gustMax != null ? ` · 돌풍 ${Math.round(s.gustMax)}` : '')
   return (
-    <div className="precip-wrap">
+    <div className="precip-wrap precip-wrap--wind">
+      <ComparisonLegend kind="wind" />
       <div className="precip-row">
         <span className="range-name">오늘</span>
         <div className="precip-track">
-          <div className="precip-bar wind today" style={{ width: `${(t / max) * 100}%` }} />
+          {t != null && t > 0 && <div className="precip-bar wind today" style={{ width: `${(t / max) * 100}%` }} />}
         </div>
         <span className="precip-val">
-          {Math.round(t)}km/h{gust(today)}
+          {t == null ? '자료 없음' : `${Math.round(t)}km/h${gust(today)}`}
         </span>
       </div>
       <div className="precip-row">
         <span className="range-name">어제</span>
         <div className="precip-track">
-          <div className="precip-bar wind yesterday" style={{ width: `${(y / max) * 100}%` }} />
+          {y != null && y > 0 && <div className="precip-bar wind yesterday" style={{ width: `${(y / max) * 100}%` }} />}
         </div>
         <span className="precip-val">
-          {Math.round(y)}km/h{gust(yesterday)}
+          {y == null ? '자료 없음' : `${Math.round(y)}km/h${gust(yesterday)}`}
         </span>
       </div>
     </div>

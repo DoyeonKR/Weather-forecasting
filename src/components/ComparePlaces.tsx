@@ -185,7 +185,7 @@ export default function ComparePlaces({ baseLabel, baseWx, favorites }: Props) {
                 const bar = (s: { tmin: number; tmax: number }, cls: string) => (
                   <div className="vs-track">
                     <span className="vs-min">{Math.round(s.tmin)}°</span>
-                    <div className="range-track vs-range">
+                    <div className="range-track vs-range" role="img" aria-label={`${cls === 'today' ? shortBase : other.name} ${d.date}, 최저 ${Math.round(s.tmin)}도, 최고 ${Math.round(s.tmax)}도`}>
                       <div
                         className={`range-bar ${cls}`}
                         style={{

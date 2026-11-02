@@ -1,4 +1,4 @@
-/* Editorial accents: only key icons gain color; copy, values and charts remain monochrome. */
+/* Editorial accents: neutral interface, selected colored icons and data graphics. */
 .weather-artwork--illustrated { object-fit: contain; filter: drop-shadow(0 5px 9px #1e3a5014); }
 .hero-immersive .hero-main > .weather-artwork--illustrated { width: 144px; height: 144px; filter: drop-shadow(0 8px 16px #1022382b); }
 .hero-immersive .hero-info { min-width: 0; }

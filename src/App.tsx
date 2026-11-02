@@ -89,6 +89,7 @@ import './App.css'
 import './journal.css'
 import './atmosphere.css'
 import './artwork.css'
+import './charts.css'
 
 type Status = 'loading' | 'ready' | 'error'
 
@@ -771,7 +772,7 @@ export default function App() {
           <section className="card" data-jump="week">
             <div className="week-heading">
               <h2 className="section-title">이번 주 날씨</h2>
-              <span className="week-key"><span className="cold-icon">최저</span><span className="warm-icon">최고</span></span>
+              <span className="week-key"><span><i className="chart-end low" aria-hidden="true" /> 최저</span><span><i className="chart-end high" aria-hidden="true" /> 최고</span></span>
             </div>
             <ul className="week">
               <li className="week-head" aria-hidden>

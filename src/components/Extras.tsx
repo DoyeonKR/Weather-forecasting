@@ -155,6 +155,7 @@ function AirGauge({ name, unit, value, cuts, grade }: { name: string; unit: stri
           </span>
         ))}
       </div>
+      <div className="air-gauge-labels" aria-hidden="true">{GRADE_LABEL.map((label, g) => <span key={label} className={`g${g}`}>{label}</span>)}</div>
     </div>
   )
 }
@@ -184,6 +185,7 @@ export function AirCard({ air }: { air: AirNow }) {
         <p>{AIR_ADVICE[air.grade]}</p>
       </div>
 
+      <p className="chart-note">막대는 등급별 구간이며, 구간마다 농도 범위가 달라요.</p>
       <AirGauge name="미세먼지 PM10" unit="㎍/㎥" value={air.pm10} cuts={PM10_CUTS} grade={g10} />
       <AirGauge name="초미세먼지 PM2.5" unit="㎍/㎥" value={air.pm25} cuts={PM25_CUTS} grade={g25} />
 
@@ -210,7 +212,7 @@ export function AirCard({ air }: { air: AirNow }) {
           <ol>
             {air.outlook.map((o) => (
               <li key={`${o.nextDay}-${o.hour}`} className={`g${o.grade}`}>
-                <span>{o.hour}시</span>
+                <span>{o.nextDay ? '내일 ' : ''}{o.hour}시</span>
                 <i aria-hidden />
                 <b>{GRADE_LABEL[o.grade]}</b>
               </li>
