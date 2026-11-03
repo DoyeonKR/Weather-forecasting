@@ -82,6 +82,7 @@ import CoupangBanner from './components/CoupangBanner'
 import { fetchTodayVisitors, trackEvent } from './lib/track'
 import HourlyCard from './components/HourlyCard'
 import BriefBanner from './components/BriefBanner'
+import { warmLatestFrame } from './lib/kmaRadar'
 import SettingsNudge from './components/SettingsNudge'
 import { SectionBoundary } from './components/ErrorBoundary'
 import { SECTION_LABEL, loadOrder, saveOrder, type SectionKey } from './lib/sections'
@@ -317,6 +318,20 @@ export default function App() {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  // 페이지가 자리 잡은 뒤 지도 코드와 최신 레이더 이미지를 미리 받아 둔다 (데이터 절약 모드는 제외)
+  const warmLat = loc?.lat
+  const warmLon = loc?.lon
+  useEffect(() => {
+    if (warmLat === undefined || warmLon === undefined) return
+    const conn = (navigator as { connection?: { saveData?: boolean } }).connection
+    if (conn?.saveData) return
+    const t = window.setTimeout(() => {
+      void import('./components/RadarMap')
+      warmLatestFrame(warmLat, warmLon)
+    }, 1500)
+    return () => window.clearTimeout(t)
+  }, [warmLat, warmLon])
 
   function onFeelVote(v: FeelVote) {
     setFeel(voteFeel(v))
@@ -832,7 +847,7 @@ export default function App() {
         <>
           <section className="card radar-card" data-jump="radar">
             <h2 className="section-title radar-title"><Drop size={18} weight="duotone" className="rain-icon" aria-hidden /> 비구름 레이더</h2>
-            <WhenVisible minHeight={320}>
+            <WhenVisible minHeight={320} margin={900}>
               <Suspense
                 fallback={
                   <div className="radar-map radar-loading" role="status">

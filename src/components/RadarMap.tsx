@@ -6,8 +6,8 @@ import L from 'leaflet'
 import { ArrowsIn, ArrowsOut, CloudRain, Crosshair, Pause, Play, Sun } from '@phosphor-icons/react'
 import 'leaflet/dist/leaflet.css'
 import { fetchRainSummary, type RainSummary } from '../lib/rainSoon'
-import { lccForward, lccInverse } from '../lib/lcc'
 import { mapleForecastOverlays } from '../lib/kmaMaple'
+import { KMA_BOX_M, inKorea, kmaBox, kmaFrameTimes, kmaFrameUrl } from '../lib/kmaRadar'
 
 interface RadarFrame {
   time: number
@@ -115,67 +115,6 @@ function resample(src: number[], out: number): number[] {
 
 /** 보간 해상도. 13에서 여기까지 값으로 늘린 뒤 색을 입힌다 */
 const FIELD_N = 192
-
-// ── 기상청(KMA) 실황 레이더 GIS 오버레이 ──────────────────
-// radar.kma.go.kr GIS 뷰어의 com_gis CGI 를 재현: 임의 bbox 의 투명 레이더 PNG (인증 불필요)
-
-const KMA_BOX_M = 700_000 // 위치 중심 700km 정사각 (남한 전역 커버)
-
-function inKorea(lat: number, lon: number): boolean {
-  return lat > 32.5 && lat < 40.5 && lon > 123 && lon < 132.5
-}
-
-/** KST 10분 단위 프레임 시각들 (과거 minutes 분 전부터 현재까지) */
-function kmaFrameTimes(count: number): { stamp: string; epoch: number }[] {
-  const now = Date.now()
-  const kstNow = new Date(now + 9 * 3600_000)
-  kstNow.setUTCMinutes(Math.floor((kstNow.getUTCMinutes() - 6) / 10) * 10, 0, 0)
-  const frames: { stamp: string; epoch: number }[] = []
-  const p = (n: number) => String(n).padStart(2, '0')
-  for (let i = count - 1; i >= 0; i--) {
-    const d = new Date(kstNow.getTime() - i * 10 * 60_000)
-    frames.push({
-      stamp: `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}${p(d.getUTCHours())}${p(d.getUTCMinutes())}`,
-      epoch: (d.getTime() - 9 * 3600_000) / 1000,
-    })
-  }
-  return frames
-}
-
-function kmaBox(lat: number, lon: number): {
-  urlPart: string
-  bounds: L.LatLngBoundsExpression
-  rectX0: number
-  rectY1: number
-} {
-  const c = lccForward(lat, lon)
-  const half = KMA_BOX_M / 2
-  const x0 = c.x - half, x1 = c.x + half, y0 = c.y - half, y1 = c.y + half
-  const nw = lccInverse(x0, y1)
-  const ne = lccInverse(x1, y1)
-  const sw = lccInverse(x0, y0)
-  const se = lccInverse(x1, y0)
-  // 기상청 뷰어와 동일하게 우하단을 20% 연장해 요청
-  const rlLon = se.lon + (se.lon - nw.lon) * 0.2
-  const rlLat = se.lat + (se.lat - nw.lat) * 0.2
-  const urlPart =
-    `LU_LON=${nw.lon.toFixed(5)}&LU_LAT=${nw.lat.toFixed(5)}` +
-    `&RL_LON=${rlLon.toFixed(5)}&RL_LAT=${rlLat.toFixed(5)}` +
-    `&IMG_XDIM=420&IMG_YDIM=420&X_DIST=${KMA_BOX_M}&Y_DIST=${KMA_BOX_M}` +
-    `&UNIT_BAR=0&ECHO_OPACITY=1`
-  const bounds: L.LatLngBoundsExpression = [
-    [(sw.lat + se.lat) / 2, (nw.lon + sw.lon) / 2],
-    [(nw.lat + ne.lat) / 2, (ne.lon + se.lon) / 2],
-  ]
-  return { urlPart, bounds, rectX0: x0, rectY1: y1 }
-}
-
-function kmaFrameUrl(stamp: string, urlPart: string): string {
-  return (
-    'https://radar.kma.go.kr/cgi-bin/com_gis/radar_comp_gis_realtime_hsp' +
-    `?D_VER=HSP&D_TYPE=RN&COMP_MIX=2&IS_SMOOTH=1&FLICKER=0&ACC=0&HT=0&DATE=${stamp}&${urlPart}`
-  )
-}
 
 function timeLabel(epochSec: number): string {
   const d = new Date(epochSec * 1000)
@@ -324,6 +263,8 @@ export default function RadarMap({ lat, lon, tempC, observedRaining = null }: Pr
   const [expanded, setExpanded] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
   const [rain, setRain] = useState<RainSummary | null>(null)
+  /** 지금 볼 첫 프레임을 받는 중 */
+  const [firstFrameLoading, setFirstFrameLoading] = useState(true)
 
   // 지도 초기화 (최초 1회)
   useEffect(() => {
@@ -413,11 +354,13 @@ export default function RadarMap({ lat, lon, tempC, observedRaining = null }: Pr
   useEffect(() => {
     let cancelled = false
     let retryTimer: number | null = null
+    let restTimer: number | null = null
     async function loadAll() {
       const map = mapRef.current
       if (!map) return
       // 이전 지역에서 실패했더라도 다시 시도하므로 상태를 초기화한다
       setError(false)
+      setFirstFrameLoading(true)
       try {
         const useKma = inKorea(lat, lon)
         // 한국: 미래는 아래 기상청 공식 예측 카드가 담당 (연한 모델 예보 오버레이 제거)
@@ -439,15 +382,50 @@ export default function RadarMap({ lat, lon, tempC, observedRaining = null }: Pr
           // ── 과거: 기상청 실황 레이더 오버레이 (2시간, 10분 간격)
           const frames = kmaFrameTimes(13)
           const box = kmaBox(lat, lon)
-          radarLayersRef.current = frames.map((f) =>
+          // 한꺼번에 지도에 올리면 13장을 동시에 요청하고, 지금 볼 최신 장이 맨 뒤로 밀린다.
+          // 레이어만 만들어 두고(지도에 올려야 이미지를 받는다) 최신 장부터 받는다.
+          const overlays = frames.map((f) =>
             L.imageOverlay(kmaFrameUrl(f.stamp, box.urlPart), box.bounds, {
               opacity: 0,
               interactive: false,
-            }).addTo(mapRef.current!),
+            }),
           )
+          radarLayersRef.current = overlays
           items = frames.map((f, i) => ({ time: f.epoch, kind: 'radar', layerIdx: i }))
+          const newest = overlays[overlays.length - 1]
+          // 지난 프레임은 최신에 가까운 것부터 3장씩
+          const rest = overlays.slice(0, -1).reverse()
+          const pump = () => {
+            if (cancelled || !mapRef.current) return
+            const next = rest.shift()
+            if (!next) return
+            // 슬라이더로 먼저 받은 프레임은 load 가 다시 오지 않아 줄이 멈춘다 → 건너뛴다
+            if (mapRef.current.hasLayer(next)) return pump()
+            next.once('load error', pump)
+            next.addTo(mapRef.current)
+          }
+          const startRest = () => {
+            if (restTimer === null) return
+            window.clearTimeout(restTimer)
+            restTimer = null
+            pump()
+            pump()
+            pump()
+          }
+          newest.once('load error', () => {
+            if (cancelled) return
+            setFirstFrameLoading(false)
+            startRest()
+          })
+          // 최신 장이 오래 걸려도 재생은 준비해 둔다
+          restTimer = window.setTimeout(startRest, 4000)
+          newest.addTo(map)
+          // 예측을 기다리지 않고 지금 프레임부터 보여준다
+          setTimeline([...items])
+          setNowIdx(items.length - 1)
+          setIdx(items.length - 1)
 
-          // ── 미래: 기상청 MAPLE 예측(+10분~+3시간)을 재투영해 오버레이
+          // ── 미래: 기상청 MAPLE 예측(+10분~+3시간)을 재투영해 오버레이 (받아서 슬라이더만 늘린다)
           const lastObs = items[items.length - 1].time
           const maple = await mapleForecastOverlays(box.rectX0, box.rectY1, KMA_BOX_M, 320).catch(
             () => [],
@@ -486,6 +464,11 @@ export default function RadarMap({ lat, lon, tempC, observedRaining = null }: Pr
             }).addTo(mapRef.current!),
           )
           items = past.map((f, i) => ({ time: f.time, kind: 'radar', layerIdx: i }))
+          setFirstFrameLoading(false)
+          const pastNow = api.radar.past.slice(-12).length - 1
+          setTimeline([...items])
+          setNowIdx(pastNow)
+          setIdx(pastNow)
         }
 
         const grid = await gridPromise
@@ -520,9 +503,9 @@ export default function RadarMap({ lat, lon, tempC, observedRaining = null }: Pr
           })
         }
 
+        // 예측이 붙어도 뒤에 늘어날 뿐이라 보고 있는 프레임 번호는 그대로다
         setTimeline(items)
         setNowIdx(now)
-        setIdx(now)
       } catch {
         if (!cancelled) setError(true)
       }
@@ -531,6 +514,7 @@ export default function RadarMap({ lat, lon, tempC, observedRaining = null }: Pr
     return () => {
       cancelled = true
       if (retryTimer !== null) window.clearTimeout(retryTimer)
+      if (restTimer !== null) window.clearTimeout(restTimer)
       radarLayersRef.current.forEach((l) => l.remove())
       forecastLayersRef.current.forEach((g) => g.remove())
       radarLayersRef.current = []
@@ -548,6 +532,9 @@ export default function RadarMap({ lat, lon, tempC, observedRaining = null }: Pr
   useEffect(() => {
     const item = timeline[idx]
     if (!item) return
+    const map = mapRef.current
+    const picked = item.kind === 'radar' ? radarLayersRef.current[item.layerIdx] : null
+    if (map && picked && !map.hasLayer(picked)) picked.addTo(map)
     radarLayersRef.current.forEach((l, j) =>
       l.setOpacity(item.kind === 'radar' && j === item.layerIdx ? RADAR_OPACITY : 0),
     )
@@ -641,7 +628,7 @@ export default function RadarMap({ lat, lon, tempC, observedRaining = null }: Pr
       )}
       <div className="radar-stage">
         <div ref={containerRef} className="radar-map" />
-        {!error && timeline.length === 0 && <div className="radar-loading-pill">레이더 불러오는 중…</div>}
+        {!error && (timeline.length === 0 || firstFrameLoading) && <div className="radar-loading-pill">레이더 불러오는 중…</div>}
         {TOUCH_FIRST && !expanded && (
           <div className={`radar-gesture-hint ${gestureHint ? 'show' : ''}`} aria-hidden>
             두 손가락으로 움직여요 · 한 손가락은 「크게 보기」에서
