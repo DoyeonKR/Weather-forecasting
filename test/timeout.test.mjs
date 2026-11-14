@@ -107,3 +107,13 @@ test('두 길이 다 실패하면 실패로 끝난다 (영영 기다리지 않�
     await assert.rejects(fetchForecast(URL0), (e) => e.reason === 'http' && e.status === 503)
   })
 })
+
+test('api 서버만 멈추면 Open-Meteo 의 다른 서버로 바로 받는다 (기다리지 않는다)', async () => {
+  await withFetch(async (u, i) => (String(u).includes('historical-forecast-api') ? ok() : hangHeaders(u, i)), async () => {
+    const t0 = Date.now()
+    const notes = []
+    await fetchForecast(URL0, (n) => notes.push(n))
+    assert.ok(Date.now() - t0 < 1000)
+    assert.equal(notes[0].via, 'alt')
+  })
+})

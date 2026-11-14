@@ -95,6 +95,8 @@ function dayStats(d: OpenMeteoResponse['daily'], i: number): DayStats {
 
 /** Open-Meteo 를 우리 서버(Supabase)를 거쳐 받는 길. 고정된 예보 주소로만 넘긴다 (supabase/functions/weather-forecast) */
 const FORECAST_PROXY = 'https://tqegatiuembcvphxmujl.supabase.co/functions/v1/weather-forecast'
+/** Open-Meteo 의 다른 서버 — 같은 요청·같은 응답 형식. api.open-meteo.com 만 통째로 멈춘 일이 있었다(2026-11-14) */
+const ALT_HOST = 'historical-forecast-api.open-meteo.com'
 /** 바로 가는 길이 이만큼 조용하면 우회 길도 같이 연다 */
 const HEDGE_MS = 3_500
 /** 두 길을 합쳐 이보다 오래 기다리지 않는다 */
@@ -102,7 +104,7 @@ const OVERALL_MS = 15_000
 
 /** 날씨를 어느 길로 받았는지 — 한 길이 막혔다가 다른 길로 받은 경우를 기록하려고 */
 export interface ForecastNote {
-  via: 'direct' | 'proxy'
+  via: 'direct' | 'alt' | 'proxy'
   /** 먼저 실패한 길의 이유. 바로 가는 길이 조용히 멈춰 우회 길이 이긴 경우는 'slow', 문제없으면 null */
   firstFail: FailReason | 'slow' | null
   status: number | null
@@ -110,7 +112,7 @@ export interface ForecastNote {
 
 /**
  * 예보 JSON 받기. Open-Meteo 에 바로 가는 길이 네트워크에 따라 수십 초씩 멈추는 일이 있었다(2026-11).
- * 바로 가는 길을 먼저 열고, 3.5초 동안 소식이 없거나 실패하면 우리 서버를 거치는 길도 연다.
+ * 바로 가는 길과 Open-Meteo 의 다른 서버를 함께 열고, 3.5초 동안 소식이 없거나 둘 다 실패하면 우리 서버를 거치는 길도 연다.
  * 먼저 온 쪽을 쓰고 나머지는 끊는다. 둘 다 안 되면 15초 안에 실패로 끝난다.
  */
 export function fetchForecast(url: URL, note?: (n: ForecastNote) => void): Promise<OpenMeteoResponse> {
@@ -143,8 +145,9 @@ export function fetchForecast(url: URL, note?: (n: ForecastNote) => void): Promi
         pending--
         if (settled) return
         fails.push(e instanceof FetchFail ? e : new FetchFail('network'))
-        if (!proxyOn) openProxy()
-        else if (pending === 0) end(() => reject(fails[0]))
+        if (!proxyOn) {
+          if (pending === 0) openProxy()
+        } else if (pending === 0) end(() => reject(fails[0]))
       })
     }
     const openProxy = () => {
@@ -155,6 +158,9 @@ export function fetchForecast(url: URL, note?: (n: ForecastNote) => void): Promi
     const hedge = setTimeout(openProxy, HEDGE_MS)
     const overall = setTimeout(() => end(() => reject(fails[0] ?? new FetchFail('timeout'))), OVERALL_MS)
     run(url.toString(), 'direct')
+    const alt = new URL(url)
+    alt.host = ALT_HOST
+    run(alt.toString(), 'alt')
   })
 }
 
