@@ -35,6 +35,7 @@ import {
 import { locate, type Located } from './lib/geo'
 import { weatherIcon, weatherTone, type UiIcon } from './lib/weatherIcon'
 import { loadLast, saveLast } from './lib/lastWeather'
+import { FetchFail } from './lib/http'
 import { todayAhead, yesterdaySameWindow } from './lib/ahead'
 import { buildGlance } from './lib/glance'
 import { getPushAlerts } from './lib/push'
@@ -251,8 +252,9 @@ export default function App() {
           setAir(a)
           saveLast(id, { loc: where, wx: weather, kmaNow: obs, air: a })
         })
-      } catch {
+      } catch (e) {
         if (seq !== loadSeq.current) return
+        trackEvent('weather_fail', e instanceof FetchFail ? { reason: e.reason, status: e.status ?? 0 } : { reason: 'other' })
         setStatus('error')
         // 화면에 이전 지역 날씨가 남아 있으면 선택 칩도 그 지역으로 되돌린다.
         // 칩은 부산인데 기온은 서울이면 사용자는 그것을 부산 날씨로 읽는다.

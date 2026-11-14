@@ -1,5 +1,6 @@
 // 위치 획득 + 역지오코딩 (BigDataCloud — 키 불필요, 클라이언트 무료)
 import { detectInApp } from './inapp'
+import { fetchTimeout } from './http'
 
 export interface Located {
   lat: number
@@ -35,8 +36,8 @@ export function getPosition(): Promise<{ lat: number; lon: number } | null> {
 export async function reverseGeocode(lat: number, lon: number): Promise<string | null> {
   try {
     const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ko`
-    const res = await fetch(url)
-    if (!res.ok) return null
+    // 이름을 기다리느라 날씨를 못 띄우면 안 된다 → 4초 안에 안 오면 좌표 이름으로
+    const res = await fetchTimeout(url, 4_000)
     const d = await res.json()
     const parts = [d.principalSubdivision, d.city || d.locality].filter(
       (s: unknown): s is string => typeof s === 'string' && s.length > 0,

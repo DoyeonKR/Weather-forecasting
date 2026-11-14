@@ -1,4 +1,5 @@
 // Open-Meteo API — 키 불필요, CORS 허용, past_days=1 로 어제 실측 포함
+import { FetchFail, fetchTimeout } from './http'
 import type { DayStats } from './compare'
 
 export interface WeatherData {
@@ -109,8 +110,16 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     'daily',
     'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,uv_index_max,wind_speed_10m_max,wind_gusts_10m_max,sunrise,sunset',
   )
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`날씨 API 오류 (${res.status})`)
+  // 응답이 안 오면 첫 화면이 "확인하고 있어요"에서 끝나지 않는다 → 10초에 끊고 한 번 더 (2026-11 실제 발생)
+  let res: Response
+  try {
+    res = await fetchTimeout(url, 10_000)
+  } catch (e) {
+    // 주소가 잘못된 경우(4xx, 429 제외)는 다시 해도 같다
+    if (e instanceof FetchFail && e.reason === 'http' && e.status !== 429 && (e.status ?? 0) < 500) throw e
+    await new Promise((r) => setTimeout(r, 800))
+    res = await fetchTimeout(url, 12_000)
+  }
   const data: OpenMeteoResponse = await res.json()
 
   // hourly 는 어제 00시부터 시작 → 인덱스 0~23이 어제, 24~47이 오늘

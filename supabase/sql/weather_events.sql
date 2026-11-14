@@ -52,3 +52,12 @@ grant execute on function public.weather_events_summary(integer) to anon;
 -- 보관 기간 (v1.0.66): 180일이 지난 기능 사용 기록은 매주 지운다 (일요일 18:15 UTC = 월요일 03:15 KST).
 -- select cron.schedule('weather-events-purge', '15 18 * * 0',
 --   $$delete from public.weather_events where created_at < now() - interval '180 days'$$);
+
+-- 날씨 받기 실패 이유 (v1.0.95, 2026-11-14 적용) — 앱이 안 켜지는 원인을 가리려고
+-- props: { reason: 'timeout' | 'http' | 'network', status }
+alter table public.weather_events drop constraint if exists weather_events_name_check;
+alter table public.weather_events add constraint weather_events_name_check check (name in (
+  'share', 'share_done', 'search', 'place_select', 'notify_on', 'notify_off',
+  'rain_alert_on', 'rain_alert_off', 'refresh', 'feel_vote', 'hourly_scroll', 'commute_set',
+  'weather_fail'
+));

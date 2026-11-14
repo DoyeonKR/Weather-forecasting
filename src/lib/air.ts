@@ -58,7 +58,7 @@ async function fetchAirKorea(lat: number, lon: number): Promise<AirKorea | null>
   if (!(lat > 32.5 && lat < 40.5 && lon > 123 && lon < 132.5)) return null
   if (isBackedOff('air-korea')) return null
   try {
-    const res = await fetch(`${AK_PROXY}?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`)
+    const res = await fetch(`${AK_PROXY}?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`, { signal: AbortSignal.timeout?.(8_000) })
     // 502(서비스 미승인·업스트림 장애)는 잠시 쉰다. 404(가까운 측정소 없음)는 이 지점만의 사정이라 쉬지 않는다.
     if (!res.ok) {
       if (res.status >= 500) markFailed('air-korea')
@@ -167,7 +167,7 @@ async function fetchAirModel(lat: number, lon: number): Promise<AirNow | null> {
     url.searchParams.set('forecast_days', '2')
     url.searchParams.set('hourly', 'pm10,pm2_5')
     url.searchParams.set('current', 'pm10,pm2_5')
-    const res = await fetch(url)
+    const res = await fetch(url, { signal: AbortSignal.timeout?.(8_000) })
     if (!res.ok) return null
     const d = await res.json()
     const times: string[] = d?.hourly?.time ?? []

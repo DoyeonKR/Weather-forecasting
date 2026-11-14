@@ -110,7 +110,7 @@ export async function fetchWarnings(): Promise<WarnItem[] | null> {
   // 서비스 승인 전에는 매번 502 — 잠시 쉬었다가 다시 시도한다 (lib/backoff)
   if (isBackedOff('kma-warn')) return null
   try {
-    const res = await fetch(PROXY)
+    const res = await fetch(PROXY, { signal: AbortSignal.timeout?.(8_000) })
     if (!res.ok) {
       markFailed('kma-warn')
       return null

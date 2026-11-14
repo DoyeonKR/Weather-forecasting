@@ -108,6 +108,7 @@ export type EventName =
   | 'feel_vote'
   | 'hourly_scroll'
   | 'commute_set'
+  | 'weather_fail'
 
 const lastSent = new Map<string, number>()
 

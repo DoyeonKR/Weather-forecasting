@@ -1,4 +1,5 @@
 // 기상청 초단기실황(관측값) — kma-ncst 프록시 경유. 실패 시 null (모델값으로 폴백)
+import { fetchTimeout } from './http'
 export interface KmaNow {
   t1h: number | null
   rn1: number | null
@@ -15,8 +16,8 @@ export function inKoreaBounds(lat: number, lon: number): boolean {
 
 export async function fetchKmaNow(lat: number, lon: number): Promise<KmaNow | null> {
   try {
-    const res = await fetch(`${PROXY}?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`)
-    if (!res.ok) return null
+    // 첫 화면이 이걸 기다린다 → 5초 안에 안 오면 실황 없이 그린다
+    const res = await fetchTimeout(`${PROXY}?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`, 5_000)
     const d = await res.json()
     if (d.error) return null
     // 값이 문자열로 와도 비교가 어긋나지 않게 일괄 숫자화한다
