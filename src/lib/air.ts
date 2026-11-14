@@ -4,6 +4,7 @@
 // 모델 값일 때는 화면에 출처를 함께 밝힌다.
 
 import { isBackedOff, markFailed, markOk } from './backoff'
+import { isTimeout } from './http'
 
 /** 환경부 예보 등급: 0 좋음 · 1 보통 · 2 나쁨 · 3 매우 나쁨 */
 export type AirGrade = 0 | 1 | 2 | 3
@@ -70,8 +71,8 @@ async function fetchAirKorea(lat: number, lon: number): Promise<AirKorea | null>
       return d as AirKorea
     }
     return null
-  } catch {
-    markFailed('air-korea')
+  } catch (e) {
+    if (!isTimeout(e)) markFailed('air-korea')
     return null
   }
 }

@@ -234,7 +234,9 @@ export default function App() {
         }
         if (seq !== loadSeq.current) return
         const [weather, obs] = await Promise.all([
-          fetchWeather(where.lat, where.lon),
+          fetchWeather(where.lat, where.lon, (n) => {
+            if (n.firstFail) trackEvent('weather_fail', { reason: n.firstFail, status: n.status ?? 0, recovered: true, via: n.via })
+          }),
           inKoreaBounds(where.lat, where.lon) ? fetchKmaNow(where.lat, where.lon) : Promise.resolve(null),
         ])
         if (seq !== loadSeq.current) return
@@ -254,7 +256,7 @@ export default function App() {
         })
       } catch (e) {
         if (seq !== loadSeq.current) return
-        trackEvent('weather_fail', e instanceof FetchFail ? { reason: e.reason, status: e.status ?? 0 } : { reason: 'other' })
+        trackEvent('weather_fail', e instanceof FetchFail ? { reason: e.reason, status: e.status ?? 0, recovered: false } : { reason: 'other', recovered: false })
         setStatus('error')
         // 화면에 이전 지역 날씨가 남아 있으면 선택 칩도 그 지역으로 되돌린다.
         // 칩은 부산인데 기온은 서울이면 사용자는 그것을 부산 날씨로 읽는다.

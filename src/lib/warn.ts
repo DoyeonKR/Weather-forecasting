@@ -4,6 +4,7 @@
 //   시·군 이름이 구역 목록에 있으면 확실히, 광역시·서울처럼 권역만 있으면 "그 도시 어딘가"로 본다.
 
 import { isBackedOff, markFailed, markOk } from './backoff'
+import { isTimeout } from './http'
 
 export interface WarnArea {
   name: string
@@ -119,8 +120,8 @@ export async function fetchWarnings(): Promise<WarnItem[] | null> {
     if (!Array.isArray(d?.items)) return null
     markOk('kma-warn')
     return d.items as WarnItem[]
-  } catch {
-    markFailed('kma-warn')
+  } catch (e) {
+    if (!isTimeout(e)) markFailed('kma-warn')
     return null
   }
 }

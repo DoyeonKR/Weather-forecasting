@@ -1,5 +1,5 @@
 // Open-Meteo API — 키 불필요, CORS 허용, past_days=1 로 어제 실측 포함
-import { FetchFail, fetchTimeout } from './http'
+import { FetchFail, fetchJsonTimeout, type FailReason } from './http'
 import type { DayStats } from './compare'
 
 export interface WeatherData {
@@ -93,7 +93,71 @@ function dayStats(d: OpenMeteoResponse['daily'], i: number): DayStats {
   }
 }
 
-export async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
+/** Open-Meteo 를 우리 서버(Supabase)를 거쳐 받는 길. 고정된 예보 주소로만 넘긴다 (supabase/functions/weather-forecast) */
+const FORECAST_PROXY = 'https://tqegatiuembcvphxmujl.supabase.co/functions/v1/weather-forecast'
+/** 바로 가는 길이 이만큼 조용하면 우회 길도 같이 연다 */
+const HEDGE_MS = 3_500
+/** 두 길을 합쳐 이보다 오래 기다리지 않는다 */
+const OVERALL_MS = 15_000
+
+/** 날씨를 어느 길로 받았는지 — 한 길이 막혔다가 다른 길로 받은 경우를 기록하려고 */
+export interface ForecastNote {
+  via: 'direct' | 'proxy'
+  /** 먼저 실패한 길의 이유 (없으면 null) */
+  firstFail: FailReason | null
+  status: number | null
+}
+
+/**
+ * 예보 JSON 받기. Open-Meteo 에 바로 가는 길이 네트워크에 따라 수십 초씩 멈추는 일이 있었다(2026-11).
+ * 바로 가는 길을 먼저 열고, 3.5초 동안 소식이 없거나 실패하면 우리 서버를 거치는 길도 연다.
+ * 먼저 온 쪽을 쓰고 나머지는 끊는다. 둘 다 안 되면 15초 안에 실패로 끝난다.
+ */
+export function fetchForecast(url: URL, note?: (n: ForecastNote) => void): Promise<OpenMeteoResponse> {
+  return new Promise((resolve, reject) => {
+    const outer = new AbortController()
+    const fails: FetchFail[] = []
+    let settled = false
+    let pending = 0
+    let proxyOn = false
+    const end = (fn: () => void) => {
+      if (settled) return
+      settled = true
+      clearTimeout(hedge)
+      clearTimeout(overall)
+      outer.abort()
+      fn()
+    }
+    const run = (target: string, via: ForecastNote['via']) => {
+      pending++
+      fetchJsonTimeout<OpenMeteoResponse>(target, OVERALL_MS, outer.signal).then(
+        (d) => {
+          if (!d?.current || !d?.hourly || !d?.daily) throw new FetchFail('http', 0)
+          end(() => {
+            note?.({ via, firstFail: fails[0]?.reason ?? null, status: fails[0]?.status ?? null })
+            resolve(d)
+          })
+        },
+      ).catch((e) => {
+        pending--
+        if (settled) return
+        fails.push(e instanceof FetchFail ? e : new FetchFail('network'))
+        if (!proxyOn) openProxy()
+        else if (pending === 0) end(() => reject(fails[0]))
+      })
+    }
+    const openProxy = () => {
+      if (proxyOn || settled) return
+      proxyOn = true
+      run(`${FORECAST_PROXY}${url.search}`, 'proxy')
+    }
+    const hedge = setTimeout(openProxy, HEDGE_MS)
+    const overall = setTimeout(() => end(() => reject(fails[0] ?? new FetchFail('timeout'))), OVERALL_MS)
+    run(url.toString(), 'direct')
+  })
+}
+
+export async function fetchWeather(lat: number, lon: number, note?: (n: ForecastNote) => void): Promise<WeatherData> {
   const url = new URL('https://api.open-meteo.com/v1/forecast')
   url.searchParams.set('latitude', String(lat))
   url.searchParams.set('longitude', String(lon))
@@ -110,17 +174,8 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherDat
     'daily',
     'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,uv_index_max,wind_speed_10m_max,wind_gusts_10m_max,sunrise,sunset',
   )
-  // 응답이 안 오면 첫 화면이 "확인하고 있어요"에서 끝나지 않는다 → 10초에 끊고 한 번 더 (2026-11 실제 발생)
-  let res: Response
-  try {
-    res = await fetchTimeout(url, 10_000)
-  } catch (e) {
-    // 주소가 잘못된 경우(4xx, 429 제외)는 다시 해도 같다
-    if (e instanceof FetchFail && e.reason === 'http' && e.status !== 429 && (e.status ?? 0) < 500) throw e
-    await new Promise((r) => setTimeout(r, 800))
-    res = await fetchTimeout(url, 12_000)
-  }
-  const data: OpenMeteoResponse = await res.json()
+  // 응답이 안 오면 첫 화면이 "확인하고 있어요"에서 끝나지 않는다 → 두 길로, 15초 안에 끝낸다 (2026-11 실제 발생)
+  const data = await fetchForecast(url, note)
 
   // hourly 는 어제 00시부터 시작 → 인덱스 0~23이 어제, 24~47이 오늘
   const nowHour = new Date(data.current.time).getHours()
