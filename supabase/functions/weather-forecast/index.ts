@@ -2,6 +2,8 @@
 // 고정된 예보 주소로만, 정해진 인자만 넘긴다 (아무 주소나 대신 부르는 통로가 되지 않게).
 // GET ?latitude=..&longitude=..&current=..&hourly=..&daily=.. → Open-Meteo 응답 그대로
 const UPSTREAM = 'https://api.open-meteo.com/v1/forecast'
+/** 같은 형식의 Open-Meteo 다른 서버 — 주 서버만 멈춘 일이 있었다(2026-11-14) */
+const ALT_HOST = 'historical-forecast-api.open-meteo.com'
 const ALLOWED = ['latitude', 'longitude', 'timezone', 'past_days', 'forecast_days', 'current', 'hourly', 'daily', 'wind_speed_unit']
 
 Deno.serve(async (req: Request) => {
@@ -22,13 +24,24 @@ Deno.serve(async (req: Request) => {
     const v = q.get(k)
     if (v !== null && v.length <= 400) up.searchParams.set(k, v)
   }
+  // 두 서버에 함께 물어 먼저 온 정상 응답을 쓴다
+  const done = new AbortController()
   try {
-    const res = await fetch(up, { signal: AbortSignal.timeout(8_000) })
-    if (!res.ok) return new Response('upstream ' + res.status, { status: 502, headers: cors })
-    return new Response(await res.text(), {
+    const body = await Promise.any(
+      [UPSTREAM, ''].map(async (_, i) => {
+        const u = new URL(up)
+        if (i === 1) u.host = ALT_HOST
+        const res = await fetch(u, { signal: AbortSignal.any([done.signal, AbortSignal.timeout(8_000)]) })
+        if (!res.ok) throw new Error('upstream ' + res.status)
+        return await res.text()
+      }),
+    )
+    return new Response(body, {
       headers: { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=60' },
     })
   } catch (e) {
     return new Response('upstream ' + String(e).slice(0, 80), { status: 504, headers: cors })
+  } finally {
+    done.abort()
   }
 })

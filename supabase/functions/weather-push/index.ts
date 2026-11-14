@@ -66,6 +66,29 @@ function targetSlots(): string[] {
   return [...seen]
 }
 
+/** Open-Meteo 예보 서버들 — 같은 요청·응답 형식. api.open-meteo.com 만 통째로 멈춘 일이 있었다(2026-11-14) */
+const FORECAST_HOSTS = ['api.open-meteo.com', 'historical-forecast-api.open-meteo.com']
+
+/** 예보 서버들에 함께 물어 먼저 온 정상 응답을 쓴다. 각자 10초 제한, 이기면 나머지는 끊는다 */
+async function fetchForecastJson(url: URL): Promise<any> {
+  const done = new AbortController()
+  try {
+    return await Promise.any(
+      FORECAST_HOSTS.map(async (host) => {
+        const u = new URL(url)
+        u.host = host
+        const res = await fetch(u, { signal: AbortSignal.any([done.signal, AbortSignal.timeout(10_000)]) })
+        if (!res.ok) throw new Error(`open-meteo ${host} ${res.status}`)
+        const j = await res.json()
+        if (!j || j.error) throw new Error(`open-meteo ${host} bad body`)
+        return j
+      }),
+    )
+  } finally {
+    done.abort()
+  }
+}
+
 async function fetchDaily(lat: number, lon: number) {
   const url = new URL('https://api.open-meteo.com/v1/forecast')
   url.searchParams.set('latitude', String(lat))
@@ -77,9 +100,7 @@ async function fetchDaily(lat: number, lon: number) {
     'daily',
     'temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,weather_code,uv_index_max',
   )
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`open-meteo ${res.status}`)
-  const d = (await res.json()).daily
+  const d = (await fetchForecastJson(url)).daily
   const pick = (i: number) => ({
     tmax: d.temperature_2m_max[i] as number,
     tmin: d.temperature_2m_min[i] as number,
@@ -103,7 +124,7 @@ async function fetchAirWorst(lat: number, lon: number): Promise<number | null> {
     url.searchParams.set('timezone', 'Asia/Seoul')
     url.searchParams.set('forecast_days', '1')
     url.searchParams.set('hourly', 'pm10,pm2_5')
-    const res = await fetch(url)
+    const res = await fetch(url, { signal: AbortSignal.timeout(8_000) })
     if (!res.ok) return null
     const h = (await res.json()).hourly
     const g10 = (v: number) => (v <= 30 ? 0 : v <= 80 ? 1 : v <= 150 ? 2 : 3)
@@ -130,7 +151,7 @@ async function fetchAirNow(lat: number, lon: number): Promise<number | null> {
     url.searchParams.set('timezone', 'Asia/Seoul')
     url.searchParams.set('forecast_days', '1')
     url.searchParams.set('hourly', 'pm10,pm2_5')
-    const res = await fetch(url)
+    const res = await fetch(url, { signal: AbortSignal.timeout(8_000) })
     if (!res.ok) return null
     const h = (await res.json()).hourly
     const i = new Date(Date.now() + 9 * 3600_000).getUTCHours()
@@ -208,7 +229,7 @@ async function kma(op: string, nx: number, ny: number, bd: string, bt: string, r
     `https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/${op}` +
     `?serviceKey=${KMA_KEY}&pageNo=1&numOfRows=${rows}&dataType=JSON` +
     `&base_date=${bd}&base_time=${bt}&nx=${nx}&ny=${ny}`
-  const res = await fetch(api)
+  const res = await fetch(api, { signal: AbortSignal.timeout(8_000) })
   if (!res.ok) throw new Error(`kma ${op} ${res.status}`)
   const items = (await res.json())?.response?.body?.items?.item
   if (!Array.isArray(items)) throw new Error(`kma ${op} no items`)
