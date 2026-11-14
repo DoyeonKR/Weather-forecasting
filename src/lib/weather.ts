@@ -103,8 +103,8 @@ const OVERALL_MS = 15_000
 /** 날씨를 어느 길로 받았는지 — 한 길이 막혔다가 다른 길로 받은 경우를 기록하려고 */
 export interface ForecastNote {
   via: 'direct' | 'proxy'
-  /** 먼저 실패한 길의 이유 (없으면 null) */
-  firstFail: FailReason | null
+  /** 먼저 실패한 길의 이유. 바로 가는 길이 조용히 멈춰 우회 길이 이긴 경우는 'slow', 문제없으면 null */
+  firstFail: FailReason | 'slow' | null
   status: number | null
 }
 
@@ -134,7 +134,8 @@ export function fetchForecast(url: URL, note?: (n: ForecastNote) => void): Promi
         (d) => {
           if (!d?.current || !d?.hourly || !d?.daily) throw new FetchFail('http', 0)
           end(() => {
-            note?.({ via, firstFail: fails[0]?.reason ?? null, status: fails[0]?.status ?? null })
+            // 바로 가는 길이 실패 없이 조용히 멈춘 경우(실제로 본 92초 대기)도 남겨야 원인을 안다
+            note?.({ via, firstFail: fails[0]?.reason ?? (via === 'proxy' ? 'slow' : null), status: fails[0]?.status ?? null })
             resolve(d)
           })
         },

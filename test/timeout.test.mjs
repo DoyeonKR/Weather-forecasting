@@ -65,6 +65,7 @@ test('서버 오류는 http + 상태 코드, 연결 실패는 network, 시간 �
     await assert.rejects(fetchJsonTimeout('https://x.test', 1000), (e) => e.reason === 'network' && !isTimeout(e))
   })
   assert.ok(isTimeout(new DOMException('t', 'TimeoutError')))
+  assert.ok(isTimeout(new DOMException('a', 'AbortError')))
 })
 
 test('바로 가는 길이 빠르면 우회 길은 열지 않는다', async () => {
@@ -83,7 +84,8 @@ test('바로 가는 길의 본문이 멈추면 3.5초 뒤 우회 길로 받는�
     const notes = []
     const d = await fetchForecast(URL0, (n) => notes.push(n))
     assert.ok(d.current)
-    assert.equal(notes[0].via, 'proxy')
+    // 실패 없이 조용히 멈춘 경우도 기록에 남아야 한다
+    assert.deepEqual(notes, [{ via: 'proxy', firstFail: 'slow', status: null }])
     const ms = Date.now() - t0
     assert.ok(ms >= 3000 && ms < 6000, `${ms}ms`)
   })

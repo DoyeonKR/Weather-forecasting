@@ -40,5 +40,7 @@ export async function fetchJsonTimeout<T>(url: string | URL, ms: number, outer?:
 
 /** 선택 기능(미세먼지·특보)의 시간 초과는 "서비스 고장"이 아니다 — 잠시 쉬기(backoff)로 세지 않는다 */
 export function isTimeout(e: unknown): boolean {
-  return (e as { name?: string })?.name === 'TimeoutError' || (e instanceof FetchFail && e.reason === 'timeout')
+  // 브라우저에 따라 AbortSignal.timeout 이 AbortError 로 끝나기도 한다 (여기서 끊는 이유는 시간 초과뿐)
+  const name = (e as { name?: string })?.name
+  return name === 'TimeoutError' || name === 'AbortError' || (e instanceof FetchFail && e.reason === 'timeout')
 }
