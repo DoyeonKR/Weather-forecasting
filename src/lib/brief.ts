@@ -64,6 +64,8 @@ export function alertBrief(
   forTomorrow: boolean,
   airGrade: number | null,
   persona: Persona,
+  /** airGrade 가 내일 아침 예보인지 */
+  airTomorrow = false,
 ): BriefCard | null {
   const when = forTomorrow ? '내일' : '오늘'
   const prob = day.precipProbMax ?? 0
@@ -72,7 +74,7 @@ export function alertBrief(
   if (prob >= 60 || day.precipSum >= 1) return pick('cooler', 'umbrella', `${when} 강수확률 ${prob}%`)
   if (day.tmax >= 33) return pick('warmer', 'hot', `${when} 낮 최고 ${fmt(day.tmax)}`)
   if (day.tmin <= -5) return pick('cooler', 'cold', `${when} 아침 최저 ${fmt(day.tmin)}`)
-  if (airGrade !== null && airGrade >= 2) return pick('cooler', 'mask', `지금 미세먼지 ${airGrade >= 3 ? '매우 나쁨' : '나쁨'}`)
+  if (airGrade !== null && airGrade >= 2) return pick('cooler', 'mask', `${airTomorrow ? '내일 아침' : '지금'} 미세먼지 ${airGrade >= 3 ? '매우 나쁨' : '나쁨'}`)
   return null
 }
 

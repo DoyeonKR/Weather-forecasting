@@ -61,3 +61,9 @@ test('말투를 고르면 값이 확 달라진다, 기본은 그대로', () => {
   assert.equal(tile(buildGlance({ ...rain, persona: 'community' }), 'umbrella').value, '필수템')
   assert.equal(tile(buildGlance({ ...rain, persona: 'community' }), 'air').value, '개꿀')
 })
+
+test('밤에는 미세먼지 칸이 내일 아침 예보임을 밝힌다', () => {
+  const g = buildGlance({ day: day(), airGrade: 1, airTomorrow: true, forTomorrow: true })
+  assert.deepEqual([tile(g, 'air').label, tile(g, 'air').sub], ['내일 미세먼지', '아침 예보'])
+  assert.equal(tile(buildGlance({ day: day(), airGrade: 1 }), 'air').label, '미세먼지')
+})

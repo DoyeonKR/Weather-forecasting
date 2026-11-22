@@ -35,11 +35,14 @@ export default function BriefBanner({
   wx,
   resetKey,
   airGrade,
+  airTomorrowGrade = null,
   persona,
 }: {
   wx: WeatherData
   resetKey: string
   airGrade: number | null
+  /** 내일 아침 미세먼지 예보 (밤에 쓴다) */
+  airTomorrowGrade?: number | null
   persona: Persona
 }) {
   const [idx, setIdx] = useState(0)
@@ -78,7 +81,14 @@ export default function BriefBanner({
 
   // 밤 8시부터는 내일 기준 (메인 카드의 "내일의 준비"와 같다)
   const forTomorrow = wx.nowHourLocal >= 20
-  const alert = alertBrief(forTomorrow ? wx.tomorrow : todayAhead(wx), forTomorrow, airGrade, persona)
+  const useTomorrowAir = forTomorrow && airTomorrowGrade !== null
+  const alert = alertBrief(
+    forTomorrow ? wx.tomorrow : todayAhead(wx),
+    forTomorrow,
+    useTomorrowAir ? airTomorrowGrade : airGrade,
+    persona,
+    useTomorrowAir,
+  )
   const cards = [...(alert ? [alert] : []), ...buildBriefs(wx, nowMs, -new Date(nowMs).getTimezoneOffset() * 60)]
   const n = cards.length
   const cur = n ? idx % n : 0

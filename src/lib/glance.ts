@@ -42,6 +42,8 @@ export function buildGlance(opts: {
   forTomorrow?: boolean
   /** 대기질 종합 등급 0~3, 모르면 null */
   airGrade: number | null
+  /** airGrade 가 내일 아침 예보인지 (밤에만) */
+  airTomorrow?: boolean
   feelOffset?: number
   /** 고른 말투 — 결론과 값을 말투별 대사로 바꾼다 */
   persona?: Persona
@@ -50,7 +52,7 @@ export function buildGlance(opts: {
   /** 그날 자외선 최고 */
   uvMax?: number | null
 }): Glance {
-  const { day, forTomorrow = false, airGrade, persona = 'default', seed = '', uvMax = null } = opts
+  const { day, forTomorrow = false, airGrade, airTomorrow = false, persona = 'default', seed = '', uvMax = null } = opts
   const when = forTomorrow ? '내일' : '오늘'
   const feel = Math.max(-4, Math.min(4, opts.feelOffset ?? 0))
   const prob = day.precipProbMax
@@ -93,9 +95,9 @@ export function buildGlance(opts: {
       ? { key: 'air', label: '미세먼지', value: '정보 없음', sub: '', tone: 'ok' }
       : {
           key: 'air',
-          label: '미세먼지',
+          label: airTomorrow ? '내일 미세먼지' : '미세먼지',
           value: personaAir(persona, g) ?? AIR_VALUE[g],
-          sub: g >= 2 ? '마스크 챙기기' : '',
+          sub: g >= 2 ? '마스크 챙기기' : airTomorrow ? '아침 예보' : '',
           tone: g === 3 ? 'alert' : g === 2 ? 'warn' : 'ok',
         }
 

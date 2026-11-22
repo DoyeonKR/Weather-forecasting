@@ -475,6 +475,8 @@ export default function App() {
   const tipToday = iceDay && wx.today.tmin <= 0 ? { ...ahead, code: wx.today.code } : ahead
   // 저녁 8시부터는 오늘 낮 얘기 대신 "내일의 준비" — 오늘을 기준(어제 자리)으로 내일을 본다
   const prepTomorrow = wx.nowHourLocal >= 20
+  // 내일 아침(6~9시) 미세먼지 예보 — 밤에는 "지금" 대신 이걸 말한다
+  const airTomorrow = air?.tomorrowMorning?.grade ?? null
   const tips = funTips({
     today: tipToday,
     yesterday: wx.yesterday,
@@ -487,7 +489,7 @@ export default function App() {
         today: wx.tomorrow,
         yesterday: wx.today,
         uvMax: wx.uvMaxTomorrow ?? null,
-        airGrade: null, // 내일 미세먼지는 아직 모른다
+        airGrade: airTomorrow, // 내일 아침 예보 (없으면 null)
         feelOffset: feel.offset,
         forTomorrow: true,
       })
@@ -528,7 +530,8 @@ export default function App() {
     uvMax: prepTomorrow ? wx.uvMaxTomorrow ?? null : wx.uvMaxToday,
     day: prepTomorrow ? wx.tomorrow : tipToday,
     forTomorrow: prepTomorrow,
-    airGrade: air?.grade ?? null,
+    airGrade: prepTomorrow && airTomorrow !== null ? airTomorrow : air?.grade ?? null,
+    airTomorrow: prepTomorrow && airTomorrow !== null,
     feelOffset: feel.offset,
   })
   const alerts = tomorrowAlerts(wx.tomorrow, wx.today)
@@ -924,7 +927,7 @@ export default function App() {
     <>
     {/* 상단 브리핑 띠: .shell(overflow: hidden) 바깥에 고정. 지역·날씨가 바뀌면 같이 바뀐다 */}
     {!statsOpen && <SettingsNudge onOpenSettings={() => setSettingsSignal((n) => n + 1)} />}
-    <BriefBanner wx={wx} resetKey={`${selectedId}|${loc.label}`} airGrade={air?.grade ?? null} persona={persona} />
+    <BriefBanner wx={wx} resetKey={`${selectedId}|${loc.label}`} airGrade={air?.grade ?? null} airTomorrowGrade={air?.tomorrowMorning?.grade ?? null} persona={persona} />
     <WeatherFx scene={scene} paused={motionPaused} />
     <div className={`shell journal-app has-brief ${theme} ${status === 'loading' ? 'refreshing' : ''}`}>
       <a className="skip-link" href="#weather-main">날씨 본문으로 건너뛰기</a>

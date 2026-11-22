@@ -45,6 +45,7 @@ test('배너 카드: 급한 순서대로 하나만', () => {
   assert.equal(alertBrief(day({ tmax: 34 }), false, 0, 'bro').title, say('bro', 'hot'))
   assert.equal(alertBrief(day({ tmin: -7 }), false, 0, 'default').sub, '오늘 아침 최저 -7°')
   assert.equal(alertBrief(day(), false, 2, 'default').sub, '지금 미세먼지 나쁨')
+  assert.equal(alertBrief(day(), true, 3, 'default', true).sub, '내일 아침 미세먼지 매우 나쁨')
 })
 
 test('밤에는 내일 기준으로 말한다', () => {

@@ -62,7 +62,7 @@ export function buildSummary(opts: {
   return [
     { target: 'hourly', section: '시간대별 기온과 강수', label: `${prefix}우산`, value: umbrella?.value ?? '-', tone: umbrella?.tone ?? 'ok' },
     { target: 'prep', section: '준비물', label: `${prefix}옷차림`, value: outfit?.value ?? '-', tone: outfit?.tone ?? 'ok' },
-    { target: 'air', section: '미세먼지', label: '미세먼지', value: air?.value ?? '-', tone: air?.tone ?? 'ok' },
+    { target: 'air', section: '미세먼지', label: air?.label ?? '미세먼지', value: air?.value ?? '-', tone: air?.tone ?? 'ok' },
     { target: 'compare', section: '어제와 비교', label: '어제보다', ...compareTile(wx.nowTemp - wx.yesterdaySameHour) },
     { target: 'tomorrow', section: '내일 날씨', label: '내일 낮', value: `${Math.round(wx.tomorrow.tmax)}°`, tone: tomorrowTone(wx.tomorrow) },
     {

@@ -432,3 +432,10 @@
 /* 말투 대사: 겹친 다음 상황 (v1.0.92) */
 .hero-immersive .glance-head { word-break: keep-all; }
 .glance-note { margin: -4px 0 10px; color: #ffffffe0; font-size: 13px; font-weight: 600; line-height: 1.4; letter-spacing: -.02em; word-break: keep-all; }
+
+/* 미세먼지 카드: 내일 아침 예보 한 줄 (v1.0.100) */
+.air-tomorrow { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: #f6f6f3; color: #333; font-size: 14px; }
+.air-tomorrow b { font-weight: 800; }
+.air-tomorrow.g2 b { color: #b86a00; }
+.air-tomorrow.g3 b { color: #c0392b; }
+.air-tomorrow small { margin-left: 6px; color: #777; font-size: 11px; }

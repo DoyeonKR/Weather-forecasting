@@ -206,6 +206,13 @@ export function AirCard({ air }: { air: AirNow }) {
         </div>
       )}
 
+      {air.tomorrowMorning && (
+        <p className={`air-tomorrow g${air.tomorrowMorning.grade}`}>
+          내일 아침(6~9시) <b>{GRADE_LABEL[air.tomorrowMorning.grade]}</b>
+          {air.tomorrowMorning.grade >= 2 ? ' · 마스크 챙기기' : ''}
+          <small> 예측 모델</small>
+        </p>
+      )}
       {air.outlook && air.outlook.length > 0 && (
         <div className="air-outlook">
           <span className="air-outlook-title">앞으로 12시간</span>

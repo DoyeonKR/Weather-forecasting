@@ -65,3 +65,13 @@ test('앞으로 12시간 흐름: 2시간 간격 6칸, 내일 넘어가면 표시
   assert.deepEqual(s.outlook[0], { hour: 0, grade: 0, nextDay: true })
   assert.deepEqual(s.outlook[1], { hour: 2, grade: 2, nextDay: true })
 })
+
+test('내일 아침(6~9시) 가장 나쁜 등급 — 예측 모델, 시각은 지역 현지 시각', () => {
+  const pm10 = Array.from({ length: 72 }, () => 20)
+  const pm25 = Array.from({ length: 72 }, (_, i) => (i === 48 + 7 ? 50 : i === 48 + 12 ? 90 : 10))
+  const s = summarizeAir(pm10, pm25, 24 + 21, (i) => i % 24)
+  // 7시의 50(나쁨)이 잡히고, 아침 밖 12시의 90(매우 나쁨)은 안 잡힌다
+  assert.deepEqual(s.tomorrowMorning, { grade: 2, pm10: 20, pm25: 50 })
+  // 자료가 내일까지 없으면 만들지 않는다
+  assert.equal(summarizeAir(pm10.slice(0, 50), pm25.slice(0, 50), 24 + 21, (i) => i % 24).tomorrowMorning, undefined)
+})
