@@ -22,10 +22,8 @@ import {
   Sun,
   SunHorizon,
   Sunglasses,
-  ThermometerSimple,
   TShirt,
   Umbrella,
-  Warning,
   WifiSlash,
   Wind,
   ChatCircleDots,
@@ -33,7 +31,7 @@ import {
   Eye,
 } from '@phosphor-icons/react'
 import { locate, type Located } from './lib/geo'
-import { weatherIcon, weatherTone, type UiIcon } from './lib/weatherIcon'
+import { weatherIcon, type UiIcon } from './lib/weatherIcon'
 import { loadLast, saveLast } from './lib/lastWeather'
 import { FetchFail } from './lib/http'
 import { todayAhead, yesterdaySameWindow } from './lib/ahead'
@@ -50,12 +48,11 @@ import { answeredToday, loadFeel, resetFeel, voteFeel, type FeelVote } from './l
 import { loadCommute, saveCommute, type CommutePrefs } from './lib/commute'
 import { fetchNormal, type Normal } from './lib/normals'
 import { fetchWarnings, matchWarnings, type WarnItem } from './lib/warn'
-import { AirCard, CommuteCompare, FeelAsk, InAppBanner, NormalLine, SunRow, WarnBanner } from './components/Extras'
+import { AirCard, CommuteCompare, FeelAsk, InAppBanner, SunRow, WarnBanner } from './components/Extras'
 import { fetchWeather, type WeatherData } from './lib/weather'
 import {
   codeLabel,
   isSnowCode,
-  compareSummary,
   deltaText,
   funTips,
   round1,
@@ -66,6 +63,7 @@ import { loadFavorites, loadHome, saveFavorites, saveHome, type Place } from './
 import { fetchKmaNow, inKoreaBounds, ptyLabel, type KmaNow } from './lib/kmaNow'
 import { PARTNERS_NOTICE, partnerPicks, partnersActive } from './lib/partners'
 import WhenVisible from './components/WhenVisible'
+import { CompareCard, TomorrowCard, WeekCard } from './components/ForecastCards'
 // 지도·GIF 해석기는 첫 화면에 필요 없으므로 화면에 나올 때 불러온다
 const RadarMap = lazy(() => import('./components/RadarMap'))
 // 운영자용 — 주소 끝 #stats 로만 연다
@@ -73,8 +71,6 @@ const StatsPanel = lazy(() => import('./components/StatsPanel'))
 const ShareSheet = lazy(() => import('./components/ShareSheet'))
 import PlaceBar from './components/PlaceBar'
 import Settings from './components/Settings'
-import DeltaPill from './components/DeltaPill'
-import { PrecipCompare, TempRangeBars, WindCompare } from './components/CompareGraphic'
 import WeatherArtwork from './components/WeatherArtwork'
 import WeatherFx from './components/WeatherFx'
 import WeatherBackdrop from './components/WeatherBackdrop'
@@ -95,7 +91,6 @@ import './charts.css'
 
 type Status = 'loading' | 'ready' | 'error'
 
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 /** 탭으로 돌아왔을 때 이보다 오래된 날씨면 새로 받는다 */
 const STALE_MS = 15 * 60 * 1000
 
@@ -549,7 +544,6 @@ export default function App() {
   const glance = buildGlance(glanceArgs)
   const alerts = tomorrowAlerts(wx.tomorrow, wx.today)
   const tomorrowLabel = codeLabel(wx.tomorrow.code)
-  const tomorrowTone = weatherTone(tomorrowLabel.label)
 
   const summary = buildSummary({
     glance,
@@ -736,136 +730,9 @@ export default function App() {
     
             </>
       )}
-      {key === 'compare' && (
-        <>
-          <section className="card">
-            <h2 className="section-title">어제와 비교하면</h2>
-            <p className="cmp-summary">{compareSummary(ahead, yestWindow)}</p>
-            <div className="cmp-sec">
-              <h3 className="cmp-title">
-                <ThermometerSimple size={16} weight="duotone" className="warm-icon" aria-hidden /> 기온
-              </h3>
-              <TempRangeBars today={wx.today} yesterday={wx.yesterday} />
-              {normal && <NormalLine normal={normal} today={wx.today} />}
-            </div>
-            <div className="cmp-sec">
-              <h3 className="cmp-title">
-                <Drop size={16} weight="duotone" className="cold-icon" aria-hidden /> 강수
-                {/* 오늘은 남은 시간, 어제는 같은 시간대 — 어느 구간인지 밝혀야 숫자를 오해하지 않는다 */}
-                <small className="cmp-window">{wx.nowHourLocal}시~자정</small>
-              </h3>
-              <PrecipCompare today={ahead} yesterday={yestWindow} />
-            </div>
-            <div className="cmp-sec">
-              <h3 className="cmp-title">
-                <Wind size={16} weight="duotone" className="wind-icon" aria-hidden /> 바람
-              </h3>
-              <WindCompare today={wx.today} yesterday={wx.yesterday} />
-            </div>
-          </section>
-    
-            </>
-      )}
-      {key === 'tomorrow' && (
-        <>
-          <section className="card tomorrow-card" data-jump="tomorrow">
-            <div className="tomorrow-heading">
-              <div className="tomorrow-title">
-                <h2 className="section-title">내일은 오늘보다</h2>
-                <p>{tomorrowLabel.label}</p>
-              </div>
-              <span className={`tomorrow-emoji wi-${tomorrowTone}`} aria-hidden>
-                <WeatherArtwork label={tomorrowLabel.label} size={72} variant="illustrated" />
-              </span>
-            </div>
-            <div className="tomorrow-stats">
-              {([
-                { label: '아침 · 최저', temp: wx.tomorrow.tmin, diff: wx.tomorrow.tmin - wx.today.tmin },
-                { label: '낮 · 최고', temp: wx.tomorrow.tmax, diff: wx.tomorrow.tmax - wx.today.tmax },
-              ]).map(({ label, temp, diff }) => (
-                <div className="tomorrow-stat" key={label}>
-                  <span>{label}</span>
-                  <strong>{round1(temp).toFixed(1)}°</strong>
-                  <small className={Math.abs(round1(diff)) < 0.5 ? 'muted' : diff > 0 ? 'warm-icon' : 'cold-icon'}>
-                    <DeltaPill delta={diff} digits={1} sameText="오늘과 비슷" />
-                  </small>
-                </div>
-              ))}
-            </div>
-            {alerts.length > 0 && (
-              <ul className="alerts">
-                {alerts.map((a) => (
-                  <li key={a}>
-                    <Warning size={16} weight="duotone" aria-hidden /> {a}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-    
-            </>
-      )}
-      {key === 'week' && (
-        <>
-          <section className="card" data-jump="week">
-            <div className="week-heading">
-              <h2 className="section-title">이번 주 날씨</h2>
-              <span className="week-key"><span><i className="chart-end low" aria-hidden="true" /> 최저</span><span><i className="chart-end high" aria-hidden="true" /> 최고</span></span>
-            </div>
-            <ul className="week">
-              <li className="week-head" aria-hidden>
-                <span>요일</span>
-                <span>날짜</span>
-                <span style={{ textAlign: 'center' }}>날씨</span>
-                <span style={{ textAlign: 'right', paddingRight: 8 }}>강수</span>
-                <span style={{ textAlign: 'right' }}>최저</span>
-                <span />
-                <span style={{ textAlign: 'right' }}>최고</span>
-              </li>
-              {(() => {
-                const lo = Math.floor(Math.min(...wx.week.map((d) => d.stats.tmin))) - 1
-                const hi = Math.ceil(Math.max(...wx.week.map((d) => d.stats.tmax))) + 1
-                const span = hi - lo
-                return wx.week.map((d, i) => {
-                  const dt = new Date(`${d.date}T00:00:00`)
-                  // 오늘 줄은 남은 시간 기준 (밤에 맑으면 해 대신 달)
-                  const lb = codeLabel(i === 0 ? ahead.code : d.stats.code)
-                  const DayIcon = weatherIcon(lb.label, i === 0 ? wx.nowIsDay : true)
-                  const dayName = i === 0 ? '오늘' : WEEKDAYS[dt.getDay()]
-                  const left = ((d.stats.tmin - lo) / span) * 100
-                  const width = Math.max(((d.stats.tmax - d.stats.tmin) / span) * 100, 4)
-                  return (
-                    <li key={d.date} className={i === 0 ? 'week-today' : ''}>
-                      <span className={`week-day ${dt.getDay() === 0 ? 'sun' : dt.getDay() === 6 ? 'sat' : ''}`}>
-                        {dayName}
-                      </span>
-                      <span className="week-date">
-                        {dt.getMonth() + 1}.{dt.getDate()}
-                      </span>
-                      <span className={`week-emoji wi-${weatherTone(lb.label)}`} role="img" aria-label={lb.label}>
-                        <DayIcon size={22} weight="duotone" aria-hidden />
-                      </span>
-                      <span className="week-prob">
-                        {(() => {
-                          // 오늘 줄은 남은 시간 기준 — 위쪽 강수확률 칸(0%)과 같은 숫자를 말하게
-                          const p = i === 0 ? ahead.precipProbMax : d.stats.precipProbMax
-                          return (p ?? 0) >= 20 ? `${p}%` : ''
-                        })()}
-                      </span>
-                      <span className="week-min">{Math.round(d.stats.tmin)}°</span>
-                      <div className="week-track">
-                        <div className="week-bar" style={{ left: `${left}%`, width: `${width}%` }} />
-                      </div>
-                      <span className="week-max">{Math.round(d.stats.tmax)}°</span>
-                    </li>
-                  )
-                })
-              })()}
-            </ul>
-          </section>
-    
-            </>
-      )}
+      {key === 'compare' && <CompareCard wx={wx} ahead={ahead} yestWindow={yestWindow} normal={normal} />}
+      {key === 'tomorrow' && <TomorrowCard wx={wx} alerts={alerts} />}
+      {key === 'week' && <WeekCard wx={wx} ahead={ahead} />}
       {key === 'radar' && (
         <>
           <section className="card radar-card" data-jump="radar">
