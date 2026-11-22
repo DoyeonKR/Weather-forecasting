@@ -47,7 +47,8 @@ export function trackVisit(): void {
       },
       body: JSON.stringify({
         session_id: visitorId(),
-        path: location.pathname,
+        // 공유 링크(?ref=share)로 들어온 방문을 셀 수 있게. 정해진 값만 남긴다
+        path: location.pathname + (new URLSearchParams(location.search).get('ref') === 'share' ? '?ref=share' : ''),
         referrer: document.referrer.slice(0, 200) || null,
         is_pwa: isPwa,
         ua: navigator.userAgent.slice(0, 200),

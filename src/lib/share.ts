@@ -10,6 +10,8 @@ export interface ShareInput {
   today: { tmin: number; tmax: number }
   yesterday: { tmin: number; tmax: number }
   air?: string | null
+  /** 오늘 챙길 것 한 줄 (받는 사람이 보는 그림이라 늘 기본 말투) */
+  tip?: string | null
 }
 
 /** sheet: 기기 공유 창을 못 써서 화면 시트로 넘김(그림·복사 버튼) */
@@ -113,10 +115,21 @@ export async function drawShareCard(s: ShareInput): Promise<Blob | null> {
     ctx.fillText(`${Math.round(r.tmin)}°~${Math.round(r.tmax)}°`, bx + bw + 24, y + 14)
   })
 
+  if (s.tip) {
+    ctx.fillStyle = accent
+    let size = 44
+    ctx.font = `800 ${size}px ${FONT}`
+    while (size > 30 && ctx.measureText(s.tip).width > W - 160) {
+      size -= 2
+      ctx.font = `800 ${size}px ${FONT}`
+    }
+    ctx.fillText(s.tip, 80, 1130)
+  }
+
   if (s.air) {
     ctx.fillStyle = '#555555'
     ctx.font = `600 38px ${FONT}`
-    ctx.fillText(`미세먼지 ${s.air}`, 80, 1170)
+    ctx.fillText(`미세먼지 ${s.air}`, 80, 1195)
   }
 
   ctx.fillStyle = '#666666'

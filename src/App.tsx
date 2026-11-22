@@ -498,9 +498,9 @@ export default function App() {
     : tips
   const warnHits = warnItems ? matchWarnings(warnItems, loc.label) : []
 
-  async function onShare() {
+  async function onShare(from: 'hero' | 'bottom' = 'hero') {
     if (!wx || !loc) return
-    trackEvent('share')
+    trackEvent('share', { from })
     // 캔버스 그리기 코드는 누를 때만 받는다
     const { shareCompare } = await import('./lib/share')
     const r = await shareCompare(
@@ -512,6 +512,8 @@ export default function App() {
         today: wx.today,
         yesterday: wx.yesterday,
         air: air ? GRADE_LABEL[air.grade] : null,
+        // 받는 사람이 보는 그림 — 고른 말투(거친 말 포함)가 아니라 기본 말투로
+        tip: buildGlance({ ...glanceArgs, persona: 'default' }).headline,
       },
       // 기기 공유 창을 못 쓰는 환경(앱 안 브라우저 등) — 그림을 화면에 띄운다
       (blob, text) => setSheet({ blob, text }),
@@ -526,7 +528,7 @@ export default function App() {
   const windNow = kmaNow?.wsd != null ? kmaNow.wsd * 3.6 : wx.nowWind
   const scene = buildWeatherScene(effCode ?? wx.nowCode, wx.nowIsDay, windNow, wx.nowGust)
   const showFallback = loc.isFallback && selectedId === 'current' && !detectInApp()
-  const glance = buildGlance({
+  const glanceArgs = {
     persona,
     seed: `${wx.week[0]?.date ?? ''}|${loc.label}`,
     uvMax: prepTomorrow ? wx.uvMaxTomorrow ?? null : wx.uvMaxToday,
@@ -535,7 +537,8 @@ export default function App() {
     airGrade: prepTomorrow && airTomorrow !== null ? airTomorrow : air?.grade ?? null,
     airTomorrow: prepTomorrow && airTomorrow !== null,
     feelOffset: feel.offset,
-  })
+  }
+  const glance = buildGlance(glanceArgs)
   const alerts = tomorrowAlerts(wx.tomorrow, wx.today)
   const tomorrowLabel = codeLabel(wx.tomorrow.code)
   const tomorrowTone = weatherTone(tomorrowLabel.label)
@@ -601,7 +604,7 @@ export default function App() {
                 {motionPaused ? <Play size={14} aria-hidden /> : <Pause size={14} aria-hidden />}
                 <span className="motion-label">배경 효과</span>
               </button>
-              <button type="button" className="hero-updated" onClick={onShare} aria-label="어제와 비교한 오늘 날씨 공유하기">
+              <button type="button" className="hero-updated" onClick={() => onShare('hero')} aria-label="어제와 비교한 오늘 날씨 공유하기">
                 <ShareNetwork size={14} weight="bold" aria-hidden /> <span className="hero-share-label">공유</span>
               </button>
               <button
@@ -1081,6 +1084,10 @@ export default function App() {
           })}
         </section>
         <SectionBoundary name="radar">{renderSection('radar')}</SectionBoundary>
+        {/* 공유는 첫 화면 구석의 작은 버튼만 있어서 거의 쓰이지 않았다 — 다 보고 난 자리에 한 번 더 */}
+        <button type="button" className="share-bottom" onClick={() => onShare('bottom')}>
+          <ShareNetwork size={18} weight="bold" aria-hidden /> 친구에게 오늘 날씨 보내기
+        </button>
         <CoupangBanner id={1020558} template="carousel" height={140} />
         <CoupangBanner id={1020557} template="banner" height={90} maxWidth={728} />
       </div>

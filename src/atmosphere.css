@@ -448,3 +448,7 @@
 .nudge-install, .nudge-secondary { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 46px; margin-top: 8px; border: 1px solid #c9d6e8; border-radius: 14px; background: #fff; color: #1f5fa6; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
 .nudge-result { margin: 10px 0 0; color: #1f5f2e; font-size: 13px; font-weight: 600; word-break: keep-all; }
 .nudge-go:disabled { opacity: .7; cursor: default; }
+
+/* 페이지 끝 공유 버튼 (v1.0.102) */
+.share-bottom { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px; border: 1px solid #ffffff70; border-radius: 16px; background: #fffffff0; color: #1f5fa6; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 20px #102e4614; }
+.share-bottom:active { transform: scale(.98); }
