@@ -44,6 +44,8 @@ interface Props {
   onSetPersona: (p: Persona) => void
   /** 값이 오를 때마다 설정을 연다 (안내 팝업의 바로가기) */
   openSignal?: number
+  /** 설정 밖에서 알림 상태가 바뀌면 오른다 → 다시 읽는다 */
+  notifySignal?: number
   onSetOrder: (next: SectionKey[]) => void
   commute: CommutePrefs
   onSetCommute: (next: CommutePrefs) => void
@@ -64,6 +66,7 @@ export default function Settings({
   persona,
   onSetPersona,
   openSignal = 0,
+  notifySignal = 0,
   commute,
   onSetCommute,
   feelOffset,
@@ -108,7 +111,7 @@ export default function Settings({
     getNotifyState().then(setNotify)
     getRainAlert().then(setRain)
     getPushAlerts().then((a) => setAlerts({ air: a.air, temp: a.temp }))
-  }, [])
+  }, [notifySignal])
 
   async function testPush() {
     if (busy || notify !== 'on') return

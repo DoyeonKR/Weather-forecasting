@@ -146,6 +146,8 @@ export default function App() {
   /** 헤더의 지역 버튼을 누를 때마다 올려서 검색창을 연다 */
   const [searchSignal, setSearchSignal] = useState(0)
   const [settingsSignal, setSettingsSignal] = useState(0)
+  /** 설정 밖(안내 팝업)에서 알림을 켜면 올린다 → 설정이 상태를 다시 읽는다 */
+  const [notifySignal, setNotifySignal] = useState(0)
   const [air, setAir] = useState<AirNow | null>(boot?.air ?? null)
   const [feel, setFeel] = useState(loadFeel)
   // 앱 전체 말투 (서버 저장은 설정 화면에서, 화면 적용은 useVoice)
@@ -926,7 +928,13 @@ export default function App() {
   return (
     <>
     {/* 상단 브리핑 띠: .shell(overflow: hidden) 바깥에 고정. 지역·날씨가 바뀌면 같이 바뀐다 */}
-    {!statsOpen && <SettingsNudge onOpenSettings={() => setSettingsSignal((n) => n + 1)} />}
+    {!statsOpen && (
+      <SettingsNudge
+        loc={loc}
+        onOpenSettings={() => setSettingsSignal((n) => n + 1)}
+        onNotifyChange={() => setNotifySignal((n) => n + 1)}
+      />
+    )}
     <BriefBanner wx={wx} resetKey={`${selectedId}|${loc.label}`} airGrade={air?.grade ?? null} airTomorrowGrade={air?.tomorrowMorning?.grade ?? null} persona={persona} />
     <WeatherFx scene={scene} paused={motionPaused} />
     <div className={`shell journal-app has-brief ${theme} ${status === 'loading' ? 'refreshing' : ''}`}>
@@ -970,6 +978,7 @@ export default function App() {
             persona={persona}
             onSetPersona={setPersona}
             openSignal={settingsSignal}
+            notifySignal={notifySignal}
             commute={commute}
             onSetCommute={onSetCommute}
             feelOffset={feel.offset}

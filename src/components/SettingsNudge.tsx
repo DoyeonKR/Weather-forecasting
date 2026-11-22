@@ -2,8 +2,21 @@
 // "다시 보지 않기"를 누른 기기에서는 더 띄우지 않는다.
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Bell, ChatCircleText, GearSix, MapPin, SlidersHorizontal, X } from '@phosphor-icons/react'
+import { Bell, ChatCircleText, DeviceMobile, GearSix, MapPin, SlidersHorizontal, X } from '@phosphor-icons/react'
 import { trackEvent } from '../lib/track'
+import { enableNotify, getNotifyState, type NotifyState } from '../lib/push'
+import { installHint, promptInstall, type InstallHint } from '../lib/install'
+
+/** 설정 화면과 같은 저장값 (Settings.tsx 의 NIGHT_KEY·MORNING_KEY) */
+function savedTime(key: string, fallback: string): string {
+  try {
+    return localStorage.getItem(key) ?? fallback
+  } catch {
+    return fallback
+  }
+}
+
+type Loc = { lat: number; lon: number; label: string; isFallback?: boolean }
 
 const NEVER_KEY = 'eojeboda.settingsNudge.never'
 const SESSION_KEY = 'eojeboda.settingsNudge.shown'
@@ -27,8 +40,26 @@ function shouldShow(): boolean {
   }
 }
 
-export default function SettingsNudge({ onOpenSettings }: { onOpenSettings: () => void }) {
+export default function SettingsNudge({
+  onOpenSettings,
+  loc,
+  onNotifyChange,
+}: {
+  onOpenSettings: () => void
+  /** 알림을 받을 지역 (지금 보고 있는 곳) */
+  loc: Loc
+  /** 여기서 알림을 켜면 설정 화면도 새 상태를 읽게 */
+  onNotifyChange: () => void
+}) {
   const [open, setOpen] = useState(shouldShow)
+  // 바로 할 수 있는 한 가지: 알림 켜기(꺼져 있으면) · 홈 화면 설치(안 했으면)
+  const [notify, setNotify] = useState<NotifyState | 'loading'>('loading')
+  const [install] = useState<InstallHint>(installHint)
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState<string | null>(null)
+  useEffect(() => {
+    if (open) getNotifyState().then(setNotify)
+  }, [open])
   // 몇 명에게 보였는지 알아야 버튼을 누른 비율을 셀 수 있다
   const [shown] = useState(open)
   useEffect(() => {
@@ -90,9 +121,64 @@ export default function SettingsNudge({ onOpenSettings }: { onOpenSettings: () =
             </li>
           ))}
         </ul>
+        {notify === 'off' && (
+          <div className="nudge-quick">
+            <button
+              type="button"
+              className="nudge-go"
+              disabled={busy}
+              onClick={async () => {
+                // 권한 창은 이 버튼을 눌렀을 때만 띄운다 (한 번 거절하면 되돌리기 어렵다)
+                setBusy(true)
+                const r = await enableNotify(
+                  { lat: loc.lat, lon: loc.lon, label: loc.label },
+                  savedTime('eojeboda:nighttime', '2130'),
+                  savedTime('eojeboda:morningtime', '0730'),
+                )
+                setBusy(false)
+                trackEvent('nudge_notify', { result: r })
+                if (r === 'ok') {
+                  trackEvent('notify_on', { source: 'popup' })
+                  setNotify('on')
+                  onNotifyChange()
+                  setResult('알림을 켰어요! 아침·밤 브리핑과 비·미세먼지·폭염 알림이 와요.')
+                } else if (r === 'denied') {
+                  setNotify(await getNotifyState())
+                  setResult('알림이 막혀 있어요. 폰 설정에서 이 앱의 알림을 허용해 주세요.')
+                } else {
+                  setResult('알림을 켜지 못했어요. 잠시 뒤 설정에서 다시 시도해 주세요.')
+                }
+              }}
+            >
+              <Bell size={20} weight="bold" aria-hidden /> {busy ? '켜는 중…' : '알림 바로 켜기'}
+            </button>
+            <p className="nudge-note">
+              아침·밤 브리핑 + 비·미세먼지·폭염 알림 · {loc.isFallback ? '서울' : loc.label.replace(' (기본 위치)', '')} 기준
+            </p>
+          </div>
+        )}
+        {notify === 'needs-install' && (
+          <p className="nudge-steps">
+            <DeviceMobile size={18} weight="duotone" aria-hidden /> 아이폰은 <b>공유 버튼 → 홈 화면에 추가</b> 후 홈 화면 앱에서 알림을 켤 수 있어요.
+          </p>
+        )}
+        {install === 'button' && (
+          <button
+            type="button"
+            className="nudge-install"
+            onClick={async () => {
+              const r = await promptInstall()
+              trackEvent('install_prompt', { result: r })
+              if (r === 'accepted') setResult('설치했어요! 홈 화면에서 바로 열 수 있어요.')
+            }}
+          >
+            <DeviceMobile size={18} weight="bold" aria-hidden /> 홈 화면에 설치
+          </button>
+        )}
+        {result && <p className="nudge-result" role="status">{result}</p>}
         <button
           type="button"
-          className="nudge-go"
+          className={notify === 'off' ? 'nudge-secondary' : 'nudge-go'}
           onClick={() => {
             trackEvent('nudge_go')
             setOpen(false)

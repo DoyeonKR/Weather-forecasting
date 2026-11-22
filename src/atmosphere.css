@@ -439,3 +439,12 @@
 .air-tomorrow.g2 b { color: #b86a00; }
 .air-tomorrow.g3 b { color: #c0392b; }
 .air-tomorrow small { margin-left: 6px; color: #777; font-size: 11px; }
+
+/* 안내 팝업: 바로 알림 켜기·설치 (v1.0.101) */
+.nudge-quick { margin-bottom: 8px; }
+.nudge-note { margin: 6px 0 0; color: #666; font-size: 12px; line-height: 1.4; word-break: keep-all; }
+.nudge-steps { display: flex; gap: 8px; align-items: flex-start; margin: 0 0 10px; padding: 10px 12px; border-radius: 12px; background: #e6effa; color: #1f3f66; font-size: 13px; line-height: 1.45; text-align: left; word-break: keep-all; }
+.nudge-steps svg { flex: 0 0 auto; margin-top: 1px; }
+.nudge-install, .nudge-secondary { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 46px; margin-top: 8px; border: 1px solid #c9d6e8; border-radius: 14px; background: #fff; color: #1f5fa6; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+.nudge-result { margin: 10px 0 0; color: #1f5f2e; font-size: 13px; font-weight: 600; word-break: keep-all; }
+.nudge-go:disabled { opacity: .7; cursor: default; }
