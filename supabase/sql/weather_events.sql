@@ -61,3 +61,12 @@ alter table public.weather_events add constraint weather_events_name_check check
   'rain_alert_on', 'rain_alert_off', 'refresh', 'feel_vote', 'hourly_scroll', 'commute_set',
   'weather_fail'
 ));
+
+-- 참여 측정 (v1.0.99, 2026-11-22 적용) — 요약 칸·말투·안내 팝업·설치 버튼이 쓰이는지
+alter table public.weather_events drop constraint if exists weather_events_name_check;
+alter table public.weather_events add constraint weather_events_name_check check (name in (
+  'share', 'share_done', 'search', 'place_select', 'notify_on', 'notify_off',
+  'rain_alert_on', 'rain_alert_off', 'refresh', 'feel_vote', 'hourly_scroll', 'commute_set',
+  'weather_fail',
+  'summary_tap', 'persona_set', 'nudge_shown', 'nudge_go', 'nudge_never', 'nudge_notify', 'install_prompt'
+));

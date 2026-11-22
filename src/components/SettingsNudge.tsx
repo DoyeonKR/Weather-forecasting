@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Bell, ChatCircleText, GearSix, MapPin, SlidersHorizontal, X } from '@phosphor-icons/react'
+import { trackEvent } from '../lib/track'
 
 const NEVER_KEY = 'eojeboda.settingsNudge.never'
 const SESSION_KEY = 'eojeboda.settingsNudge.shown'
@@ -28,6 +29,11 @@ function shouldShow(): boolean {
 
 export default function SettingsNudge({ onOpenSettings }: { onOpenSettings: () => void }) {
   const [open, setOpen] = useState(shouldShow)
+  // 몇 명에게 보였는지 알아야 버튼을 누른 비율을 셀 수 있다
+  const [shown] = useState(open)
+  useEffect(() => {
+    if (shown) trackEvent('nudge_shown')
+  }, [shown])
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -53,6 +59,7 @@ export default function SettingsNudge({ onOpenSettings }: { onOpenSettings: () =
     } catch {
       // 저장이 막혀 있으면 이번만 닫힌다
     }
+    trackEvent('nudge_never')
     setOpen(false)
   }
 
@@ -87,6 +94,7 @@ export default function SettingsNudge({ onOpenSettings }: { onOpenSettings: () =
           type="button"
           className="nudge-go"
           onClick={() => {
+            trackEvent('nudge_go')
             setOpen(false)
             onOpenSettings()
           }}

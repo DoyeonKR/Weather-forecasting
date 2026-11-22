@@ -165,7 +165,10 @@ export default function Settings({
 
   async function pickPersona(p: Persona) {
     if (busy || p === persona) return
-    if (await saveAlerts({ persona: p, ...alerts })) onSetPersona(p)
+    if (await saveAlerts({ persona: p, ...alerts })) {
+      onSetPersona(p)
+      trackEvent('persona_set', { persona: p })
+    }
   }
 
   async function toggleAlert(key: 'air' | 'temp') {
@@ -253,7 +256,7 @@ export default function Settings({
         const r = await enableNotify(loc, nightTime, morningTime)
         setNotify(r === 'ok' ? 'on' : await getNotifyState())
         if (r === 'ok') {
-          trackEvent('notify_on')
+          trackEvent('notify_on', { source: 'settings' })
           // 새로 켜면 조건 알림도 함께 켜진다 → 스위치에 바로 보여준다
           getRainAlert().then(setRain)
           getPushAlerts().then((a) => setAlerts({ air: a.air, temp: a.temp }))

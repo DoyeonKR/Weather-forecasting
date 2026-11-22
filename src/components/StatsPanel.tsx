@@ -24,6 +24,14 @@ const LABEL: Record<string, string> = {
   feel_vote: '체감 답변',
   hourly_scroll: '7일 그래프 넘김',
   commute_set: '출퇴근 설정',
+  weather_fail: '날씨 받기 실패·우회',
+  summary_tap: '요약 칸 누름',
+  persona_set: '말투 바꿈',
+  nudge_shown: '안내 팝업 보임',
+  nudge_go: '팝업→설정',
+  nudge_never: '팝업 다시 안 봄',
+  nudge_notify: '팝업→알림 켜기',
+  install_prompt: '홈 화면 설치',
 }
 
 export default function StatsPanel({ onClose }: { onClose: () => void }) {

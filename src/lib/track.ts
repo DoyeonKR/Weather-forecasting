@@ -109,6 +109,17 @@ export type EventName =
   | 'hourly_scroll'
   | 'commute_set'
   | 'weather_fail'
+  /** 요약 8칸 누름 { target } */
+  | 'summary_tap'
+  /** 말투 바꿈 { persona } */
+  | 'persona_set'
+  /** 설정 안내 팝업: 보여줌 / 설정 바로가기 / 다시 보지 않기 / 바로 알림 켜기 { result } */
+  | 'nudge_shown'
+  | 'nudge_go'
+  | 'nudge_never'
+  | 'nudge_notify'
+  /** 홈 화면 설치 버튼 { result } */
+  | 'install_prompt'
 
 const lastSent = new Map<string, number>()
 

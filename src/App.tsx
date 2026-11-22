@@ -641,7 +641,10 @@ export default function App() {
                     className={`summary-tile tone-${t.tone}`}
                     disabled={t.value === '-' || (t.target === 'air' && !air)}
                     aria-label={`${t.label} ${t.value}. ${t.section}으로 이동`}
-                    onClick={() => jumpTo(t.target)}
+                    onClick={() => {
+                      trackEvent('summary_tap', { target: t.target })
+                      jumpTo(t.target)
+                    }}
                   >
                     <span className="summary-icon"><Icon size={20} weight="duotone" aria-hidden /></span>
                     <b className="summary-value">{t.value}</b>

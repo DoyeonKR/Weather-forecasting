@@ -70,7 +70,7 @@ function targetSlots(): string[] {
 const FORECAST_HOSTS = ['api.open-meteo.com', 'historical-forecast-api.open-meteo.com']
 
 /** 예보 서버들에 함께 물어 먼저 온 정상 응답을 쓴다. 각자 10초 제한, 이기면 나머지는 끊는다 */
-async function fetchForecastJson(url: URL): Promise<any> {
+async function fetchForecastJson(url: URL): Promise<{ daily: Record<string, (number | null)[]> }> {
   const done = new AbortController()
   try {
     return await Promise.any(
