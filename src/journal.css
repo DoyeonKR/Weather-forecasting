@@ -57,10 +57,8 @@ button:disabled { cursor: default; }
 .search-error, .search-status .search-error { color: #333; }
 .search-result-action { color: #555; }
 .section-title { color: #333; font-size: 17px; font-weight: 750; letter-spacing: -.025em; }
-.journal-eyebrow { margin: 0 0 8px; color: #707070; font-size: 12px; letter-spacing: .025em; font-weight: 500; }
 .journal-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 26px; }
 .journal-heading h2 { margin: 0; font-size: 24px; font-weight: 750; letter-spacing: -.05em; }
-.journal-index { color: #c1c1bc; font-size: 33px; line-height: 1; font-weight: 300; font-variant-numeric: tabular-nums; }
 .hero.journal-overview { padding: 28px; background: #fff; }
 .hero-date { color: #666; font-size: 12px; margin: 0 0 26px; gap: 8px; }
 .hero-date > span:first-child { flex-shrink: 1; }
@@ -183,8 +181,6 @@ button:disabled { cursor: default; }
 .range-bar.yesterday, .precip-bar.yesterday { background: #aaa; }
 .range-track, .precip-track { background: #f2f2ef; }
 .range-gridline { background: #ddd; }
-.range-diff { display: inline-flex; align-items: center; gap: 2px; }
-.range-diff.warm, .range-diff.cold, .range-diff.same { color: #444; }
 .range-summary, .normal-line { color: #666; }
 .delta.up, .delta.down, .delta.same { background: #eee; color: #333; }
 .air-card { --g0: #aaa; --g1: #888; --g2: #555; --g3: #222; }
@@ -232,7 +228,9 @@ button:disabled { cursor: default; }
 .settings-head { background: #fff; border-color: #e3e3df; }
 .settings-panel .promo-x, .promo-x { background: #f0f0ed; color: #333; border-color: #deded8; }
 .settings-sec, .settings-group[open] > summary { border-color: #deded8; }
-.settings-sec-title, .settings-sub-title, .settings-time-label, .notify-title { color: #333; }
+.settings-sec-title,
+.settings-sub-title,
+.settings-time-label { color: #333; }
 .settings-sec-title > svg, .settings-sub-title > svg, .settings-time-label > svg { color: #666; }
 .settings-panel .night-chip, .night-chip { background: #fff; color: #555; border-color: #ccc; display: inline-flex; align-items: center; gap: 5px; }
 .settings-panel .night-chip.on { background: #333; color: #fff; border-color: #333; }

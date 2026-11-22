@@ -39,14 +39,6 @@ body {
 }
 
 /* 살아있는 날씨 배경 캔버스 — 콘텐츠 뒤에 깔림 */
-.weather-fx {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-  z-index: 5;
-}
 
 .shell > .card,
 .shell > .top,
@@ -59,16 +51,6 @@ body {
 }
 
 /* 테마 색 형광 프레임 (우리들의 하루 스타일) */
-.neon-frame {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 3000;
-  border: 2px solid color-mix(in srgb, var(--accent) 85%, #fff);
-  box-shadow:
-    inset 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent),
-    inset 0 0 3px color-mix(in srgb, var(--accent) 80%, transparent);
-}
 
 .shell {
   max-width: 520px;
@@ -353,11 +335,6 @@ body {
   gap: 14px;
 }
 
-.hero-emoji {
-  font-size: 52px;
-  line-height: 1;
-}
-
 .hero-temp {
   font-size: 44px;
   font-weight: 800;
@@ -365,34 +342,13 @@ body {
   letter-spacing: -0.02em;
 }
 
-.hero-sub {
-  color: var(--sub);
-  font-size: 14px;
-  margin-top: 2px;
-  word-break: keep-all;
-  line-height: 1.5;
-}
-
 @media (max-width: 380px) {
-  .hero-emoji {
-    font-size: 42px;
-  }
 
   .hero-temp {
     font-size: 38px;
   }
 
 
-}
-
-.obs-badge {
-  display: inline-block;
-  margin-top: 4px;
-  font-size: 10px;
-  color: var(--sub);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 1px 6px;
 }
 
 /* ── 그래픽 비교 요소 ───────────────────────────── */
@@ -553,12 +509,6 @@ body {
   color: var(--cold);
 }
 
-.rain-note {
-  margin: 8px 0 0;
-  color: var(--sub);
-  font-size: 14px;
-}
-
 .tips {
   list-style: none;
   margin: 12px 0 0;
@@ -623,32 +573,6 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-}
-
-.stat {
-  background: color-mix(in srgb, var(--accent) 5%, rgba(255, 255, 255, 0.03));
-  border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--line));
-  border-radius: 12px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: var(--sub);
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.stat-yesterday {
-  font-size: 12px;
-  color: var(--sub);
 }
 
 .delta {
@@ -765,25 +689,6 @@ body {
 .radar-credit {
   font-size: 10px;
   color: var(--sub);
-}
-
-.kma-card {
-  padding: 12px;
-}
-
-.kma-card .section-title {
-  padding: 4px 6px 0;
-}
-
-.kma-gif {
-  width: 100%;
-  border-radius: 12px;
-  display: block;
-  background: #fff;
-}
-
-.kma-credit {
-  margin: 8px 6px 2px;
 }
 
 .week {
@@ -1033,19 +938,8 @@ body {
   background: #f0a3c4;
 }
 
-.tomorrow-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
 .tomorrow-emoji {
   font-size: 34px;
-}
-
-.tomorrow-info {
-  font-size: 15px;
-  font-weight: 600;
 }
 
 .alerts {
@@ -1166,34 +1060,11 @@ body {
   font-weight: 700;
 }
 
-.accent-row {
-  display: flex;
-  gap: 12px;
-  margin-top: 10px;
-}
-
-.accent-dot {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  cursor: pointer;
-}
-
-.accent-dot.on {
-  border-color: #fff;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
-}
-
 .notify-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-}
-
-.notify-title {
-  margin-bottom: 4px;
 }
 
 .notify-desc {
@@ -1460,65 +1331,6 @@ body {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
-.hero-cond {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 18px;
-  font-weight: 800;
-  margin-bottom: 10px;
-}
-
-.hero-cond-tag {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--sub);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 2px 6px;
-}
-
-.stat-chips {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-}
-
-@media (max-width: 400px) {
-  .stat-chips {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.stat-chip {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  padding: 8px 4px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.stat-chip-icon {
-  font-size: 16px;
-  line-height: 1;
-}
-
-.stat-chip-label {
-  font-size: 10px;
-  color: var(--sub);
-  white-space: nowrap;
-}
-
-.stat-chip-value {
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  font-variant-numeric: tabular-nums;
-}
-
 .cmp-summary {
   margin: -4px 0 12px;
   font-size: 14px;
@@ -1533,14 +1345,6 @@ body {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-}
-
-.tip-emoji {
-  font-size: 34px;
-  line-height: 1;
-  flex: 0 0 auto;
-  display: inline-block;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
 }
 
 .tip-text {
@@ -1561,12 +1365,6 @@ body {
   color: var(--sub);
   word-break: keep-all;
 }
-
-.anim-rain { animation: tip-rain 1.6s ease-in-out infinite; }
-.anim-snow { animation: tip-snow 2.6s ease-in-out infinite; }
-.anim-sun { animation: tip-sun 2.2s ease-in-out infinite; }
-.anim-wind { animation: tip-wind 1.4s ease-in-out infinite; }
-.anim-idle { animation: tip-idle 3s ease-in-out infinite; }
 
 @keyframes tip-rain { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(4px); } }
 @keyframes tip-snow { 0%, 100% { transform: translateY(0) rotate(-6deg); } 50% { transform: translateY(4px) rotate(6deg); } }
@@ -1593,15 +1391,10 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tip-emoji, .switch-enter { animation: none !important; }
+  .switch-enter { animation: none !important; }
 }
 
 /* ── 섹션 순서 바꾸기 (롱탭 드래그) ───────────────── */
-.section-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
 
 .reorder-active {
   touch-action: none;
@@ -1616,50 +1409,9 @@ body {
   pointer-events: none;
 }
 
-.reorder-active .section-wrap > .card,
-.reorder-active .section-wrap > .hourly-card {
-  animation: wiggle 0.35s ease-in-out infinite;
-  outline: 2px dashed color-mix(in srgb, var(--accent) 60%, transparent);
-  outline-offset: 2px;
-}
-
-.reorder-active .section-wrap.dragging > .card,
-.reorder-active .section-wrap.dragging > .hourly-card {
-  animation: none;
-  transform: scale(1.02);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-  outline-color: var(--accent);
-}
-
 @keyframes wiggle {
   0%, 100% { transform: rotate(-0.4deg); }
   50% { transform: rotate(0.4deg); }
-}
-
-.reorder-bar {
-  position: sticky;
-  top: 8px;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  background: var(--accent);
-  color: #fff;
-  border-radius: 12px;
-  padding: 10px 14px;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.reorder-bar button {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  color: #fff;
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 /* 칩 정렬은 가로 드래그만 쓰므로 세로 스크롤은 브라우저에 넘긴다 */
@@ -1751,10 +1503,6 @@ body {
 }
 
 /* 갱신 중에는 기존 화면을 유지하되 살짝 흐리게 */
-.shell.refreshing .section-wrap {
-  opacity: 0.72;
-  transition: opacity 0.2s;
-}
 
 .visitors.err {
   color: var(--warm);
@@ -1877,15 +1625,12 @@ button.visitors {
 
 /* 동작 줄이기 설정을 켠 사용자는 흔들림·미끄러짐 없이 */
 @media (prefers-reduced-motion: reduce) {
-  .tip-emoji,
   .switch-enter,
-  .reorder-active .section-wrap > .card,
-  .reorder-active .section-wrap > .hourly-card,
-  .chips.reorder-active .chip,
-  .promo-card,
-  .settings-panel,
-  .promo-backdrop,
-  .settings-backdrop {
+.chips.reorder-active .chip,
+.promo-card,
+.settings-panel,
+.promo-backdrop,
+.settings-backdrop {
     animation: none !important;
   }
 
@@ -1928,15 +1673,6 @@ button.visitors {
 
 body {
   background: #050a17;
-}
-
-.weather-fx {
-  z-index: 0;
-  opacity: 0.48;
-}
-
-.neon-frame {
-  opacity: 0.32;
 }
 
 .shell {
@@ -2078,45 +1814,10 @@ body {
   margin-top: 8px;
 }
 
-.stat-chips {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  margin-top: 10px;
-  border-block: 1px solid var(--line);
-  padding-block: 18px;
-}
-
-.stat-chip {
-  min-height: 84px;
-  justify-content: center;
-  padding: 6px 10px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
-.stat-chip + .stat-chip {
-  border-left: 1px solid var(--line);
-}
-
-.stat-chip-icon {
-  margin-bottom: 5px;
-}
-
 .warm-icon { color: var(--warm); }
 .cold-icon { color: var(--cold); }
 .rain-icon { color: #a891ff; }
 .wind-icon { color: #62c9ff; }
-
-.stat-chip-label {
-  font-size: 12px;
-  color: var(--sub);
-}
-
-.stat-chip-value {
-  margin-top: 2px;
-  font-size: 21px;
-}
 
 .hourly-embedded {
   margin-top: 20px;
@@ -2132,13 +1833,6 @@ body {
 .hourly-embedded .section-title {
   color: var(--text);
   font-size: 18px;
-}
-
-
-.hero-section-title {
-  margin: 22px 0 4px;
-  font-size: 22px;
-  letter-spacing: -0.03em;
 }
 
 .tips {
@@ -2228,28 +1922,11 @@ body {
     margin-bottom: 18px;
   }
 
-  .section-wrap[data-reorder-id='week'],
-  .section-wrap[data-reorder-id='radar'],
-  .section-wrap[data-reorder-id='places'],
-  .switch-enter > .reorder-bar,
   .switch-enter > .cp-slot {
     column-span: all;
   }
 
   /* 비어 있는 칸(미세먼지 값을 못 받은 경우 등)이 여백만 차지하지 않게 */
-  .switch-enter > .section-wrap:empty {
-    display: none;
-  }
-
-  .section-wrap[data-reorder-id='week'] .week {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 30px;
-  }
-
-  .section-wrap[data-reorder-id='week'] .week-head {
-    display: none;
-  }
 
   .radar-map {
     height: 440px;
@@ -2336,25 +2013,6 @@ body {
   }
 
 
-  .stat-chips {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    padding-block: 14px;
-  }
-
-  .stat-chip {
-    min-height: 78px;
-    padding-inline: 2px;
-  }
-
-  .stat-chip-value {
-    font-size: 17px;
-  }
-
-  .stat-chip-label {
-    font-size: 10px;
-  }
-
-
   .tips-visual .tip {
     min-height: 94px;
     gap: 12px;
@@ -2396,8 +2054,7 @@ body {
 .vs-base-chip,
 .night-chip.on,
 .retry,
-.promo-cta,
-.reorder-bar {
+.promo-cta {
   background: color-mix(in srgb, var(--accent) 72%, #000);
 }
 
@@ -2440,7 +2097,6 @@ body {
 }
 
 /* 12px 미만 글씨 정리 — 읽어야 하는 값은 12px 이상, 보조 표기도 11px 아래로 내리지 않는다. */
-.stat-chip-label,
 .visitors {
   font-size: 12px;
 }
@@ -2638,10 +2294,6 @@ body {
 /* 네온 테두리 — 대화상자(2000)보다 아래로. 홈 화면 앱(안전 영역이 있는 폰)에서는
    둥근 화면 모서리에 테두리가 잘려 보이므로 모서리를 둥글게 맞춘다.
    min(env, 1px) * 44 → 안전 영역이 없으면 0, 있으면 44px. */
-.neon-frame {
-  z-index: 1900;
-  border-radius: calc(min(env(safe-area-inset-bottom, 0px), 1px) * 44);
-}
 
 /* ── 시간대별 가로 스크롤 그래프 (2026-09-28) ───────────────────
    칸 하나 52px, 받아 둔 예보 끝(약 7일)까지 3시간 간격. 좌우로 밀어서 넘긴다.
@@ -2914,22 +2566,6 @@ body {
   font-size: 13px;
 }
 
-.range-diff {
-  font-weight: 800;
-}
-
-.range-diff.warm {
-  color: var(--warm);
-}
-
-.range-diff.cold {
-  color: var(--cold);
-}
-
-.range-diff.same {
-  color: var(--sub);
-}
-
 /* ── v1.0.63 추가 기능 ───────────────────────────────────────── */
 
 /* 날씨 카드 위 줄 오른쪽: 공유 · 기준 시각 */
@@ -2939,33 +2575,7 @@ body {
 }
 
 /* 미세먼지 한 줄 */
-.air-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 12px;
-  margin-top: 12px;
-  color: var(--sub);
-  font-size: 13px;
-}
 
-.air-row b {
-  font-weight: 800;
-}
-
-.air-row small {
-  color: var(--sub);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-}
-
-.air-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.air-dot.g0,
 .air-g.g0 {
   color: #4fa3ff;
   background-color: currentColor;
@@ -2978,25 +2588,16 @@ body {
   background-color: transparent;
 }
 
-.air-dot.g1,
 .air-g.g1 {
   color: #3ecf8e;
 }
 
-.air-dot.g2,
 .air-g.g2 {
   color: #ffb547;
 }
 
-.air-dot.g3,
 .air-g.g3 {
   color: #ff5f5f;
-}
-
-.air-dot.g1,
-.air-dot.g2,
-.air-dot.g3 {
-  background-color: currentColor;
 }
 
 .air-cmp {
@@ -4499,16 +4100,6 @@ summary:active {
   background: #0b1630;
 }
 
-.tomorrow-art {
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: right center;
-}
-
 .tomorrow-heading::before {
   content: '';
   position: absolute;
@@ -4644,15 +4235,6 @@ summary:active {
 .settings-panel .night-chip {
   min-height: 40px;
   padding: 8px 12px;
-}
-
-.settings-panel .accent-row {
-  gap: 12px;
-}
-
-.settings-panel .accent-dot {
-  width: 40px;
-  height: 40px;
 }
 
 @media (max-width: 359px) {
@@ -4827,123 +4409,11 @@ summary:active {
 
 /* ── 메인 아래 카드: 결론 머리 + 펼친 내용 (v1.0.79) ─────────────
    머리 = 라벨 · 큰 값 하나 · 한 줄 (신경 쓸 것만 색). 아래에 예전 카드 내용을 그대로 펼친다 */
-.isec-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-top: 14px;
-}
-
-.isec {
-  --tone: #8a97b0;
-  overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--tone) 28%, var(--line));
-  border-radius: 20px;
-  background: rgba(9, 18, 38, 0.82);
-}
-
-.isec.tone-ok { --tone: #8a97b0; }
-.isec.tone-info { --tone: #b59bff; }
-.isec.tone-rain { --tone: #4fa3ff; }
-.isec.tone-warn { --tone: #ffb547; }
-.isec.tone-alert { --tone: #ff5f5f; }
-.isec.tone-warm { --tone: #ff8a5c; }
-.isec.tone-cold { --tone: #5cc8ff; }
-
-.isec-head {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 16px 18px 14px;
-  border-bottom: 1px solid var(--line);
-  background: linear-gradient(160deg, color-mix(in srgb, var(--tone) 20%, transparent), transparent 75%);
-}
-
-.isec-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--tone);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.isec.tone-ok .isec-label {
-  color: var(--sub);
-}
-
-.isec-value {
-  color: var(--text);
-  font-size: 28px;
-  font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -0.03em;
-  word-break: keep-all;
-  font-variant-numeric: tabular-nums;
-}
-
-.isec-sub {
-  color: var(--sub);
-  font-size: 13px;
-  word-break: keep-all;
-}
-
-.isec-body {
-  padding: 4px 18px 18px;
-}
 
 /* 안쪽 예전 카드는 테두리·배경 없이 내용만, 제목은 위 머리가 대신한다 */
-.isec-body .card,
-.isec-body .hourly-card {
-  margin: 0;
-  padding: 10px 0 0;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-}
-
-.isec-body .section-title {
-  display: none;
-}
-
-@media (max-width: 359px) {
-  .isec-head {
-    padding: 14px 14px 12px;
-  }
-
-  .isec-body {
-    padding: 4px 14px 14px;
-  }
-
-  .isec-value {
-    font-size: 24px;
-  }
-}
 
 /* ── 메인 카드 뒤 하늘 사진 (v1.0.78) ───────────────────────────
    위쪽(날짜·기온)에만 깔고 아래로 갈수록 카드 바탕에 녹인다. 글자 대비를 위해 어둡게 덮는다 */
-.hero.has-sky {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-}
-
-.hero.has-sky::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  z-index: -1;
-  height: 400px;
-  background:
-    linear-gradient(180deg, rgba(5, 12, 30, var(--sky-dim-top, 0.3)) 0%, rgba(5, 12, 30, var(--sky-dim-mid, 0.5)) 60%, rgba(7, 21, 52, 0.85) 100%),
-    var(--hero-sky) center 40% / cover no-repeat;
-  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
-  mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
-  pointer-events: none;
-}
 
 /* 밝은 아침 하늘은 더 어둡게 덮어야 흰 글자가 읽힌다 */
 .hero.sky-day {
@@ -4959,15 +4429,6 @@ summary:active {
 /* 흐린 풍경(브리핑 이미지)은 오른쪽에 풍경이 있다 */
 .hero.sky-gloom::before {
   background-position: 0 0, right center;
-}
-
-.hero.has-sky .hero-date,
-.hero.has-sky .hero-condition {
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
-}
-
-.hero.has-sky .hero-temp {
-  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
 }
 
 /* 아침 하늘은 해가 오른쪽 아래 — 햇살이 카드에 들어오게 */
