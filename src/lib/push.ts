@@ -181,7 +181,25 @@ export async function getPushAlerts(): Promise<PushAlerts> {
   }
 }
 
+/** 말투 사본 — 캐시는 비동기라 앱을 열 때 기본 문구가 먼저 보였다가 바뀌었다. 첫 그림에 바로 쓴다 */
+const PERSONA_KEY = 'eojeboda.persona'
+
+/** 앱을 열 때 바로 읽는 말투 (없으면 기본) */
+export function readPersonaSync(): Persona {
+  try {
+    const v = localStorage.getItem(PERSONA_KEY)
+    return isPersona(v) ? v : 'default'
+  } catch {
+    return 'default'
+  }
+}
+
 async function saveAlerts(a: PushAlerts) {
+  try {
+    localStorage.setItem(PERSONA_KEY, a.persona)
+  } catch {
+    // 사본을 못 남겨도 캐시가 원본이다
+  }
   try {
     const c = await caches.open(PREFS_CACHE)
     await c.put(ALERTS_URL, new Response(JSON.stringify(a)))

@@ -38,7 +38,7 @@ import { loadLast, saveLast } from './lib/lastWeather'
 import { FetchFail } from './lib/http'
 import { todayAhead, yesterdaySameWindow } from './lib/ahead'
 import { buildGlance } from './lib/glance'
-import { getPushAlerts } from './lib/push'
+import { getPushAlerts, readPersonaSync } from './lib/push'
 import { useVoice } from './lib/useVoice'
 import type { Persona } from '../supabase/functions/_shared/persona.ts'
 import { buildSummary, type SummaryTarget } from './lib/summary'
@@ -151,9 +151,17 @@ export default function App() {
   const [air, setAir] = useState<AirNow | null>(boot?.air ?? null)
   const [feel, setFeel] = useState(loadFeel)
   // 앱 전체 말투 (서버 저장은 설정 화면에서, 화면 적용은 useVoice)
-  const [persona, setPersona] = useState<Persona>('default')
+  const [persona, setPersona] = useState<Persona>(readPersonaSync)
   useEffect(() => {
-    getPushAlerts().then((a) => setPersona(a.persona))
+    getPushAlerts().then((a) => {
+      setPersona(a.persona)
+      // 예전 버전에서 고른 말투는 캐시에만 있다 → 다음 실행부터 깜빡이지 않게 사본을 채운다
+      try {
+        localStorage.setItem('eojeboda.persona', a.persona)
+      } catch {
+        // 무시
+      }
+    })
   }, [])
   useVoice(persona)
   // "서울 기준으로 보고 있어요" 안내는 처음 한 번만 크게, 그다음부터는 한 줄로 작게
