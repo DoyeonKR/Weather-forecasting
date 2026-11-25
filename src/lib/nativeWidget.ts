@@ -18,17 +18,20 @@ export function isNativeApp(): boolean {
   }
 }
 
-let bridge: Promise<WidgetBridgePlugin> | null = null
-function getBridge(): Promise<WidgetBridgePlugin> {
-  bridge ??= import('@capacitor/core').then(({ registerPlugin }) => registerPlugin<WidgetBridgePlugin>('WidgetBridge'))
-  return bridge
+// ⚠ 플러그인 객체(Proxy)는 Promise 로 넘기거나 async 함수에서 return 하면 안 된다 — Promise 가 .then 을 찾다가
+//   그걸 네이티브 메서드 "then" 으로 불러 영원히 기다린다(실제로 위젯 추가 버튼이 아무 반응 없었다).
+//   그래서 상자({ p })에 담아 두고, 꺼낸 자리에서 바로 메서드를 부른다.
+let box: Promise<{ p: WidgetBridgePlugin }> | null = null
+function bridge(): Promise<{ p: WidgetBridgePlugin }> {
+  box ??= import('@capacitor/core').then(({ registerPlugin }) => ({ p: registerPlugin<WidgetBridgePlugin>('WidgetBridge') }))
+  return box
 }
 
 /** 앱에서 보고 있는 동네를 위젯에 넘긴다 — 위젯은 마지막으로 본 동네를 보여준다 */
-export function syncWidgetPlace(p: { lat: number; lon: number; label: string }): void {
+export function syncWidgetPlace(place: { lat: number; lon: number; label: string }): void {
   if (!isNativeApp()) return
-  getBridge()
-    .then((b) => b.setPlace({ lat: p.lat, lon: p.lon, label: p.label }))
+  bridge()
+    .then((b) => b.p.setPlace({ lat: place.lat, lon: place.lon, label: place.label }))
     .catch(() => {})
 }
 
@@ -36,7 +39,8 @@ export function syncWidgetPlace(p: { lat: number; lon: number; label: string }):
 export async function pinWidget(): Promise<boolean> {
   if (!isNativeApp()) return false
   try {
-    return (await (await getBridge()).pin()).requested
+    const b = await bridge()
+    return (await b.p.pin()).requested
   } catch {
     return false
   }
@@ -45,7 +49,8 @@ export async function pinWidget(): Promise<boolean> {
 export async function widgetInfo(): Promise<{ pinSupported: boolean; count: number } | null> {
   if (!isNativeApp()) return null
   try {
-    return await (await getBridge()).info()
+    const b = await bridge()
+    return await b.p.info()
   } catch {
     return null
   }

@@ -444,6 +444,9 @@ export default function Settings({
                   {notice}
                 </p>
               )}
+              {/* 앱(APK) 안에서는 웹 푸시가 안 된다 — 시간·알림 종류는 숨긴다 */}
+              {!native && (
+              <>
               <div className="night-row">
                 <span className="muted small settings-time-label"><Sun size={16} weight="duotone" aria-hidden /> 아침 브리핑 시간</span>
                 <div className="night-times">
@@ -538,6 +541,8 @@ export default function Settings({
                   <span className="notify-knob" />
                 </button>
               </div>
+              </>
+              )}
               <div className="persona-sec">
                 <h4 className="settings-sub-title"><ChatCircleText size={18} weight="duotone" aria-hidden /> 앱 말투</h4>
                 <div className="persona-row" role="radiogroup" aria-label="앱 말투">

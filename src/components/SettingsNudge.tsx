@@ -2,7 +2,8 @@
 // "다시 보지 않기"를 누른 기기에서는 더 띄우지 않는다.
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Bell, ChatCircleText, DeviceMobile, GearSix, MapPin, SlidersHorizontal, X } from '@phosphor-icons/react'
+import { Bell, ChatCircleText, DeviceMobile, GearSix, House, MapPin, SlidersHorizontal, X } from '@phosphor-icons/react'
+import { isNativeApp } from '../lib/nativeWidget'
 import { trackEvent } from '../lib/track'
 import { enableNotify, getNotifyState, type NotifyState } from '../lib/push'
 import { installHint, promptInstall, type InstallHint } from '../lib/install'
@@ -20,6 +21,9 @@ type Loc = { lat: number; lon: number; label: string; isFallback?: boolean }
 
 const NEVER_KEY = 'eojeboda.settingsNudge.never'
 const SESSION_KEY = 'eojeboda.settingsNudge.shown'
+
+// 앱(APK) 안에서는 푸시 알림 대신 홈 화면 위젯을 소개한다
+const WIDGET_FEATURE = { Icon: House, title: '홈 화면 위젯', desc: '앱을 열지 않아도 지금 기온·어제와 차이' }
 
 const FEATURES = [
   { Icon: Bell, title: '푸시 알림', desc: '아침·밤 브리핑, 비·미세먼지 알림' },
@@ -111,7 +115,7 @@ export default function SettingsNudge({
         <h2 id="nudge-title" className="nudge-title">설정, 꼭 한 번 봐주세요!</h2>
         <p className="nudge-lead">내 입맛대로 바꾸는 기능이 설정에 다 있어요</p>
         <ul className="nudge-list">
-          {FEATURES.map(({ Icon, title, desc }) => (
+          {(isNativeApp() ? [WIDGET_FEATURE, ...FEATURES.slice(1)] : FEATURES).map(({ Icon, title, desc }) => (
             <li key={title}>
               <span className="nudge-icon"><Icon size={20} weight="duotone" aria-hidden /></span>
               <span className="nudge-copy">
