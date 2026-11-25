@@ -123,6 +123,8 @@ export type EventName =
   | 'install_prompt'
   /** 안드로이드 앱: 홈 화면 위젯 추가 창 { ok } */
   | 'widget_pin'
+  /** 안드로이드 앱(APK) 받기 링크 { from } */
+  | 'apk_download'
 
 const lastSent = new Map<string, number>()
 

@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom'
 import { ArrowDown, ArrowUp, Bell, ChatCircleText, Clock, DeviceMobile, GearSix, House, Leaf, MapPin, Moon, Palette, PuzzlePiece, ShareFat, Star, Sun, ThermometerHot, TShirt, Umbrella, X } from '@phosphor-icons/react'
 import { installHint, onInstallChange, promptInstall, type InstallHint } from '../lib/install'
 import { detectInApp, openInBrowser } from '../lib/inapp'
-import { isNativeApp, pinWidget, widgetInfo } from '../lib/nativeWidget'
+import { APK_URL, isNativeApp, pinWidget, showApkDownload, widgetInfo } from '../lib/nativeWidget'
 import {
   disableNotify,
   enableNotify,
@@ -382,6 +382,23 @@ export default function Settings({
                     홈 화면에 위젯 추가
                   </button>
                 )}
+              </div>
+            )}
+
+            {showApkDownload() && (
+              <div className="settings-sec">
+                <h3 className="settings-sec-title"><House size={19} weight="duotone" aria-hidden /> 홈 화면 위젯 (안드로이드 앱)</h3>
+                <p className="muted small notify-desc">
+                  앱을 설치하면 홈 화면에 지금 기온과 어제 이맘때와의 차이를 띄워 둘 수 있어요. 받은 파일을 열고
+                  「출처를 알 수 없는 앱」을 허용하면 설치돼요.
+                </p>
+                <a
+                  className="order-reset test-push"
+                  href={APK_URL}
+                  onClick={() => trackEvent('apk_download', { from: 'settings' })}
+                >
+                  안드로이드 앱 받기
+                </a>
               </div>
             )}
 

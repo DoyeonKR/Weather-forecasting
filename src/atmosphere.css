@@ -452,3 +452,7 @@
 /* 페이지 끝 공유 버튼 (v1.0.102) */
 .share-bottom { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 52px; border: 1px solid #ffffff70; border-radius: 16px; background: #fffffff0; color: #1f5fa6; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; box-shadow: 0 6px 20px #102e4614; }
 .share-bottom:active { transform: scale(.98); }
+
+/* 안드로이드 앱 받기 (v1.0.107) — 공유 버튼 아래, 링크라 밑줄 없앰 */
+.apk-bottom { margin-top: 10px; text-decoration: none; }
+a.order-reset { display: inline-flex; align-items: center; text-decoration: none; color: inherit; }

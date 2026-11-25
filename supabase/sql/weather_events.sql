@@ -80,3 +80,13 @@ alter table public.weather_events add constraint weather_events_name_check check
   'summary_tap', 'persona_set', 'nudge_shown', 'nudge_go', 'nudge_never', 'nudge_notify', 'install_prompt',
   'widget_pin'
 ));
+
+-- 안드로이드 앱 받기 (v1.0.107, 2026-11-25 적용)
+alter table public.weather_events drop constraint if exists weather_events_name_check;
+alter table public.weather_events add constraint weather_events_name_check check (name in (
+  'share', 'share_done', 'search', 'place_select', 'notify_on', 'notify_off',
+  'rain_alert_on', 'rain_alert_off', 'refresh', 'feel_vote', 'hourly_scroll', 'commute_set',
+  'weather_fail',
+  'summary_tap', 'persona_set', 'nudge_shown', 'nudge_go', 'nudge_never', 'nudge_notify', 'install_prompt',
+  'widget_pin', 'apk_download'
+));

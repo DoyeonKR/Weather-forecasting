@@ -18,6 +18,7 @@ import {
   Pause,
   Play,
   ShareNetwork,
+  DownloadSimple,
   Star,
   Sun,
   SunHorizon,
@@ -43,7 +44,7 @@ import { buildSummary, type SummaryTarget } from './lib/summary'
 import { buildWeatherScene, loadWeatherMotion, observedSceneCode, saveWeatherMotion } from './lib/weatherScene'
 import { sunImpact, type Impact } from './lib/impact'
 import { detectInApp } from './lib/inapp'
-import { syncWidgetPlace } from './lib/nativeWidget'
+import { APK_URL, showApkDownload, syncWidgetPlace } from './lib/nativeWidget'
 import { GRADE_LABEL, fetchAir, type AirNow } from './lib/air'
 import { answeredToday, loadFeel, resetFeel, voteFeel, type FeelVote } from './lib/feel'
 import { loadCommute, saveCommute, type CommutePrefs } from './lib/commute'
@@ -965,6 +966,12 @@ export default function App() {
         <button type="button" className="share-bottom" onClick={() => onShare('bottom')}>
           <ShareNetwork size={18} weight="bold" aria-hidden /> 친구에게 오늘 날씨 보내기
         </button>
+        {/* 안드로이드 폰 웹에서만: 홈 화면 위젯이 되는 앱(APK) 받기 */}
+        {showApkDownload() && (
+          <a className="share-bottom apk-bottom" href={APK_URL} onClick={() => trackEvent('apk_download', { from: 'bottom' })}>
+            <DownloadSimple size={18} weight="bold" aria-hidden /> 안드로이드 앱 받기 · 홈 화면 위젯
+          </a>
+        )}
         <CoupangBanner id={1020558} template="carousel" height={140} />
         <CoupangBanner id={1020557} template="banner" height={90} maxWidth={728} />
       </div>

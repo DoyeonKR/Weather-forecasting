@@ -55,3 +55,11 @@ export async function widgetInfo(): Promise<{ pinSupported: boolean; count: numb
     return null
   }
 }
+
+/** 안드로이드 앱(APK) 받기 — GitHub Releases 의 고정 주소. 새 버전을 올려도 이 주소는 그대로 최신을 준다 */
+export const APK_URL = 'https://github.com/DoyeonKR/Weather-forecasting/releases/latest/download/eojeboda-weather.apk'
+
+/** 안드로이드 폰의 웹(브라우저·홈 화면 웹앱)에서만 "앱 받기"를 보여준다 — 앱 안·아이폰·PC 에서는 숨김 */
+export function showApkDownload(ua: string = typeof navigator === 'undefined' ? '' : navigator.userAgent): boolean {
+  return /Android/i.test(ua) && !/EojebodaApp/.test(ua) && !isNativeApp()
+}
