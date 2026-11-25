@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { ArrowDown, ArrowUp, Bell, ChatCircleText, Clock, DeviceMobile, GearSix, House, Leaf, MapPin, Moon, Palette, PuzzlePiece, ShareFat, Star, Sun, ThermometerHot, TShirt, Umbrella, X } from '@phosphor-icons/react'
 import { installHint, onInstallChange, promptInstall, type InstallHint } from '../lib/install'
 import { detectInApp, openInBrowser } from '../lib/inapp'
+import { isNativeApp, pinWidget, widgetInfo } from '../lib/nativeWidget'
 import {
   disableNotify,
   enableNotify,
@@ -29,6 +30,7 @@ const PM_HOURS = [16, 17, 18, 19, 20, 21]
 
 const NIGHT_KEY = 'eojeboda:nighttime'
 const MORNING_KEY = 'eojeboda:morningtime'
+const WIDGET_HOWTO = '홈 화면 빈 곳을 길게 누른 뒤 「위젯」에서 「무능한 날씨예측기」를 골라 주세요.'
 const fmt = (v: string) => `${v.slice(0, 2)}:${v.slice(2)}`
 const MORNING_TIMES = ['0600', '0630', '0700', '0730', '0800', '0830', '0900']
 const NIGHT_TIMES = ['2100', '2130', '2200', '2230', '2300']
@@ -86,6 +88,12 @@ export default function Settings({
   const [rain, setRain] = useState(false)
   const [alerts, setAlerts] = useState<Pick<PushAlerts, 'air' | 'temp'>>({ air: false, temp: false })
   const [inApp] = useState(() => detectInApp())
+  // 안드로이드 앱(APK) 안: 홈 화면 위젯을 안내한다
+  const [native] = useState(isNativeApp)
+  const [widgets, setWidgets] = useState<{ pinSupported: boolean; count: number } | null>(null)
+  useEffect(() => {
+    if (open && native) widgetInfo().then(setWidgets)
+  }, [open, native])
   // 설치 버튼은 브라우저가 나중에 이벤트를 줘야 생긴다 → 바뀌면 다시 읽는다
   const [install, setInstall] = useState<InstallHint>(installHint)
   useEffect(() => onInstallChange(() => setInstall(installHint())), [])
@@ -351,6 +359,32 @@ export default function Settings({
               </button>
             </div>
 
+            {native && (
+              <div className="settings-sec">
+                <h3 className="settings-sec-title"><House size={19} weight="duotone" aria-hidden /> 홈 화면 위젯</h3>
+                <p className="muted small notify-desc">
+                  앱을 열지 않아도 지금 기온과 어제 이맘때와의 차이를 홈 화면에서 볼 수 있어요. 위젯은 이 앱에서
+                  마지막으로 본 동네({loc.label})를 30분마다 새로 받아와요.
+                  {widgets && widgets.count > 0 ? ` 지금 홈 화면에 ${widgets.count}개 있어요.` : ''}
+                </p>
+                {widgets?.pinSupported === false ? (
+                  <p className="muted small notify-desc">{WIDGET_HOWTO}</p>
+                ) : (
+                  <button
+                    type="button"
+                    className="order-reset test-push"
+                    onClick={async () => {
+                      const ok = await pinWidget()
+                      trackEvent('widget_pin', { ok })
+                      if (!ok) setNotice(WIDGET_HOWTO)
+                    }}
+                  >
+                    홈 화면에 위젯 추가
+                  </button>
+                )}
+              </div>
+            )}
+
             <div className="settings-sec">
               <div className="notify-row">
                 <div>
@@ -363,7 +397,11 @@ export default function Settings({
                     {inApp && (notify === 'unsupported' || notify === 'needs-install')
                       ? ` ${inApp.name} 안에서는 알림을 받을 수 없어요. 기본 브라우저(크롬·사파리)에서 열어주세요.`
                       : ''}
-                    {!inApp && notify === 'unsupported' ? ' 이 브라우저에서는 지원되지 않아요.' : ''}
+                    {!inApp && notify === 'unsupported'
+                      ? native
+                        ? ' 앱에서는 아직 알림을 받을 수 없어요. 알림은 크롬에서 사이트를 열어 켜 주세요.'
+                        : ' 이 브라우저에서는 지원되지 않아요.'
+                      : ''}
                     {notify === 'blocked'
                       ? ' 브라우저에서 이 사이트의 알림을 차단해 뒀어요. 주소창 옆 자물쇠에서 알림을 허용으로 바꿔주세요.'
                       : ''}

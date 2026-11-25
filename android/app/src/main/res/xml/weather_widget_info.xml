@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 30분 갱신은 WidgetWorker(WorkManager) 가 맡는다 — updatePeriodMillis 는 0 -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/widget_weather"
+    android:minWidth="180dp"
+    android:minHeight="110dp"
+    android:minResizeWidth="160dp"
+    android:minResizeHeight="100dp"
+    android:previewImage="@mipmap/ic_launcher"
+    android:previewLayout="@layout/widget_weather"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellWidth="3"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

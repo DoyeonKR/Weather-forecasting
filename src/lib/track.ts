@@ -121,6 +121,8 @@ export type EventName =
   | 'nudge_notify'
   /** 홈 화면 설치 버튼 { result } */
   | 'install_prompt'
+  /** 안드로이드 앱: 홈 화면 위젯 추가 창 { ok } */
+  | 'widget_pin'
 
 const lastSent = new Map<string, number>()
 

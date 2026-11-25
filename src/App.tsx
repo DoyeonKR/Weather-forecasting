@@ -43,6 +43,7 @@ import { buildSummary, type SummaryTarget } from './lib/summary'
 import { buildWeatherScene, loadWeatherMotion, observedSceneCode, saveWeatherMotion } from './lib/weatherScene'
 import { sunImpact, type Impact } from './lib/impact'
 import { detectInApp } from './lib/inapp'
+import { syncWidgetPlace } from './lib/nativeWidget'
 import { GRADE_LABEL, fetchAir, type AirNow } from './lib/air'
 import { answeredToday, loadFeel, resetFeel, voteFeel, type FeelVote } from './lib/feel'
 import { loadCommute, saveCommute, type CommutePrefs } from './lib/commute'
@@ -250,6 +251,7 @@ export default function App() {
         setLoc(where)
         setWx(weather)
         setKmaNow(obs)
+        syncWidgetPlace(where) // 안드로이드 앱이면 홈 화면 위젯도 이 동네로
         loadedId.current = id
         setStatus('ready')
         saveLast(id, { loc: where, wx: weather, kmaNow: obs, air: null })

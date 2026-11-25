@@ -22,6 +22,8 @@ const TABLE: [RegExp, string][] = [
 ]
 
 export function detectInApp(ua: string = typeof navigator === 'undefined' ? '' : navigator.userAgent): InApp | null {
+  // 우리 안드로이드 앱(APK)도 WebView 지만 위치를 앱 권한으로 받는다 — 앱 안 브라우저로 보지 않는다 (capacitor.config.ts appendUserAgent)
+  if (/EojebodaApp/.test(ua)) return null
   const hit = TABLE.find(([re]) => re.test(ua))
   if (!hit) return null
   return {

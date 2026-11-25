@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">무능한 날씨예측기</string>
+    <string name="title_activity_main">무능한 날씨예측기</string>
+    <string name="package_name">com.doyeonkr.weather</string>
+    <string name="custom_url_scheme">com.doyeonkr.weather</string>
+    <string name="widget_name">오늘 날씨</string>
+    <string name="widget_description">지금 기온과 어제 이맘때와의 차이</string>
+</resources>

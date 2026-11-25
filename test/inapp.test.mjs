@@ -58,3 +58,7 @@ test('카카오톡은 어디서나 공식 스킴으로, 안드로이드는 크�
 test('열 방법이 없는 환경(아이폰의 인스타그램 등)은 null → 메뉴 안내', () => {
   assert.equal(browserOpenUrl(detectInApp(UA.instagramIos), 'https://x.test/'), null)
 })
+
+test('우리 안드로이드 앱(WebView + EojebodaApp)은 앱 안 브라우저로 보지 않는다', () => {
+  assert.equal(detectInApp(UA.genericWv + ' EojebodaApp'), null)
+})

@@ -26,3 +26,9 @@ dist-ssr
 # 브라우저 점검용 임시 프로필 · 루트에 떨어진 스크린샷
 .tmp-*/
 /*.png
+
+# 안드로이드 서명 키 — 절대 올리지 않는다 (잃어버리면 앱을 업데이트할 수 없으니 따로 백업)
+android/keystore.properties
+android/*.jks
+# 빌드한 APK 는 GitHub Releases 로 나눈다
+*.apk
