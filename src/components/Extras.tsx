@@ -11,7 +11,7 @@ import { feelLabel, rememberClothes, yesterdayClothes, type FeelVote } from '../
 import type { Normal } from '../lib/normals'
 import type { WarnHit } from '../lib/warn'
 import type { WeatherData } from '../lib/weather'
-import { weatherIcon, weatherTone } from '../lib/weatherIcon'
+import { iconTone, weatherIcon } from '../lib/weatherIcon'
 
 /** 차이 한 마디: 아이콘 배지 (3° 높음 / 2° 낮음 / 비슷) */
 function Diff({ d, unit = '°' }: { d: number; unit?: string }) {
@@ -299,13 +299,14 @@ export function CommuteCompare({ wx, prefs }: { wx: WeatherData; prefs: CommuteP
       <ul className="commute-list">
         {slots.map((s) => {
           const label = codeLabel(s.code).label
-          const Icon = weatherIcon(label, s.hour >= 6 && s.hour < 19)
+          const day = s.hour >= 6 && s.hour < 19
+          const Icon = weatherIcon(label, day)
           return (
             <li key={`${s.day}${s.kind}`}>
               <span className="commute-when">
                 {s.day} {s.kind} <small>{s.hour}시</small>
               </span>
-              <Icon size={22} weight="duotone" className={`wi-${weatherTone(label)}`} aria-hidden />
+              <Icon size={22} weight="duotone" className={`wic-${iconTone(label, day)}`} aria-hidden />
               <strong className="commute-temp">{Math.round(s.temp)}°</strong>
               <span className="commute-diff">
                 어제 <Diff d={s.temp - s.prev} />

@@ -28,3 +28,21 @@ export function weatherTone(label: string): 'sun' | 'cloud' | 'rain' | 'snow' | 
   }
   return 'sun'
 }
+
+/**
+ * 아이콘 색 계열 — 시간대별·주간·출퇴근 아이콘이 다 회색이라 한눈에 구분이 안 됐다(2026-11-26 의견).
+ * weatherTone 과 달리 밤(달)·구름 조금·안개를 따로 본다. 색은 artwork.css 의 .wic-*.
+ */
+export type IconTone = 'sun' | 'night' | 'partly' | 'cloud' | 'fog' | 'rain' | 'snow' | 'storm'
+
+export function iconTone(label: string, isDay = true): IconTone {
+  if (label.includes('뇌우')) return 'storm'
+  if (label.includes('눈')) return 'snow'
+  if (label.includes('안개')) return 'fog'
+  if (label.includes('비') || label.includes('소나기')) return 'rain'
+  if (label.includes('구름') || label.includes('흐림')) {
+    if (!label.includes('조금')) return 'cloud'
+    return isDay ? 'partly' : 'night'
+  }
+  return isDay ? 'sun' : 'night'
+}

@@ -5,7 +5,7 @@ import { NormalLine } from './Extras'
 import DeltaPill from './DeltaPill'
 import WeatherArtwork from './WeatherArtwork'
 import { codeLabel, compareSummary, round1, type DayStats } from '../lib/compare'
-import { weatherIcon, weatherTone } from '../lib/weatherIcon'
+import { iconTone, weatherIcon, weatherTone } from '../lib/weatherIcon'
 import type { Normal } from '../lib/normals'
 import type { WeatherData } from '../lib/weather'
 
@@ -135,7 +135,7 @@ export function WeekCard({ wx, ahead }: { wx: WeatherData; ahead: DayStats }) {
               <span className="week-date">
                 {dt.getMonth() + 1}.{dt.getDate()}
               </span>
-              <span className={`week-emoji wi-${weatherTone(lb.label)}`} role="img" aria-label={lb.label}>
+              <span className={`week-emoji wic-${iconTone(lb.label, i === 0 ? wx.nowIsDay : true)}`} role="img" aria-label={lb.label}>
                 <DayIcon size={22} weight="duotone" aria-hidden />
               </span>
               <span className="week-prob">{(p ?? 0) >= 20 ? `${p}%` : ''}</span>

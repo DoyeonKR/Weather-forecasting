@@ -36,3 +36,29 @@
   .hero-immersive .hero-main > .weather-artwork--illustrated { width: 96px; height: 96px; }
   .hero-immersive .hero-temp-wide { font-size: 66px; }
 }
+
+/* 날씨 아이콘 색 (시간대별·주간·출퇴근) — 회색 하나로는 해·구름·비가 한눈에 안 갈렸다.
+   흰 카드 위라 진한 색, duotone 의 옅은 면이 같은 색으로 채워져 그림처럼 보인다. iconTone() 과 짝 */
+.wic-sun { color: #f2a10c; }
+.wic-partly { color: #e39a1b; }
+.wic-night { color: #5b63d3; }
+.wic-cloud { color: #6f86a0; }
+.wic-fog { color: #8a96a3; }
+.wic-rain { color: #2584e0; }
+.wic-snow { color: #2fa3c9; }
+.wic-storm { color: #8957e8; }
+
+/* 요약 8칸 아이콘 — 평소(tone-ok)에도 칸마다 색. 비·주의·경고 색(tone-rain/warn/alert)은 그대로 우선 */
+.summary-tile.tone-ok.t-hourly { --tone: #93cdff; }
+.summary-tile.tone-ok.t-prep { --tone: #ffc48a; }
+.summary-tile.tone-ok.t-air { --tone: #8fe3b0; }
+.summary-tile.tone-ok.t-compare { --tone: #d3c5ff; }
+.summary-tile.tone-ok.t-week { --tone: #c9b8ff; }
+.summary-tile.tone-ok.t-sun { --tone: #ffbe7a; }
+.summary-tile.tone-ok.t-radar { --tone: #7fe0d4; }
+.summary-tile.tone-ok.t-tomorrow.sky-sun, .summary-tile.tone-ok.t-tomorrow.sky-partly { --tone: #ffd36b; }
+.summary-tile.tone-ok.t-tomorrow.sky-night { --tone: #b9bdff; }
+.summary-tile.tone-ok.t-tomorrow.sky-cloud, .summary-tile.tone-ok.t-tomorrow.sky-fog { --tone: #c9d6e6; }
+.summary-tile.tone-ok.t-tomorrow.sky-rain { --tone: #93cdff; }
+.summary-tile.tone-ok.t-tomorrow.sky-snow { --tone: #b5ecff; }
+.summary-tile.tone-ok.t-tomorrow.sky-storm { --tone: #d3c5ff; }

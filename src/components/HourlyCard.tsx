@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState, type PointerEvent as RPointerEvent 
 import { CaretRight } from '@phosphor-icons/react'
 import { codeLabel } from '../lib/compare'
 import type { WeatherData } from '../lib/weather'
-import { weatherIcon, weatherTone } from '../lib/weatherIcon'
+import { iconTone, weatherIcon } from '../lib/weatherIcon'
 import { trackEvent } from '../lib/track'
 import DeltaPill from './DeltaPill'
 import { temperatureBands } from '../lib/chartBands'
@@ -198,12 +198,13 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
                 <span className="hs-day">{dayLabel(dates[g[0]], firstDay)}</span>
                 <div className="hs-group-cols">
                   {g.map((k) => {
-                    const Icon = weatherIcon(labels[k], hours[k] >= 6 && hours[k] < 19)
+                    const day = hours[k] >= 6 && hours[k] < 19
+                    const Icon = weatherIcon(labels[k], day)
                     const d = Math.round(tNow[k] - tPrev[k])
                     return (
                       <div className={`hs-col ${k === 0 ? 'hs-current' : ''}`} key={idx[k]} style={{ width: COL }}>
                         <span className="hs-hour">{k === 0 ? '지금' : `${hours[k]}시`}</span>
-                        <Icon size={22} weight="duotone" className={`wi-${weatherTone(labels[k])}`} />
+                        <Icon size={22} weight="duotone" className={`wic-${iconTone(labels[k], day)}`} />
                         <strong className="hs-temp">{Math.round(tNow[k])}°</strong>
                         <span className={`hs-delta ${d > 0 ? 'warm' : d < 0 ? 'cold' : 'same'}`}>
                           <DeltaPill delta={d} compact sameText="0°" />
