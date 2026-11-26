@@ -9,7 +9,7 @@
 |---|---|
 | 사용자에게 보이는 기능·문구·동작 | `CHANGELOG.md` 새 버전 항목 + `package.json` version 올리기 |
 | 기능 추가·삭제, 파일 추가·이동, 새 설정·환경변수·명령, 배포·릴리스 방식 | `README.md` 의 해당 절 (주요 기능 / 기술 스택 / 프로젝트 구조 / 개발 / 배포 / 안드로이드 앱 / 로드맵) |
-| 안드로이드 네이티브 (`android/`: 위젯, 플러그인, 권한, 매니페스트, 리소스) | 위 둘 + 사용자에게 "APK 릴리스가 필요하다"고 분명히 알린다 (웹 배포만으로는 안 바뀐다) |
+| 안드로이드 네이티브 (`android/`, `capacitor.config.ts`, `native-shell/`) | 위 둘 (버전을 꼭 올린다 — 안 올리면 자동 릴리스가 안 된다) + 사용자에게 "머지하면 APK 가 자동 릴리스되고 앱 안 카드로 간다"고 알린다 |
 | 로드맵 항목을 끝냈다 | `README.md` 로드맵 체크 |
 
 작업을 마치기 전에 README 가 실제 코드와 어긋난 곳이 없는지 한 번 훑는다. 어긋나면 같은 커밋이나 바로 다음 `docs:` 커밋으로 고친다.
@@ -24,7 +24,8 @@
 ## 안드로이드
 
 - 서명 키(`android/keystore.properties`, `weather-release.jks`)는 절대 커밋하지 않는다. 키가 없는 PC 에서는 릴리스를 만들지 않는다.
-- 릴리스는 `bash scripts/release-android.sh` 로만 (태그 `android-v{버전}`, 파일 `eojeboda-weather.apk` 고정 — 앱 안 업데이트와 「앱 받기」 버튼이 기댄다).
+- 릴리스는 `.github/workflows/android-release.yml` 이 main 머지 때 자동으로 한다 (앱 코드 변경 + 새 버전일 때만). 손 릴리스는 `bash scripts/release-android.sh`. 태그 `android-v{버전}`, 파일 `eojeboda-weather.apk` 고정 — 앱 안 업데이트와 「앱 받기」 버튼이 기댄다.
+- 워크플로의 서명·버전 확인 단계(지난 릴리스와 같은 키, 더 큰 versionCode)를 빼거나 약하게 하지 않는다.
 - 디버그 APK 를 사용자 폰에 깔라고 하지 않는다 (서명이 달라 다음 정식 업데이트가 막힌다).
 - 위젯 레이아웃 `widget_weather_compact.xml` 과 `widget_weather_wide.xml` 은 id 를 똑같이 맞춘다 (`WidgetStore` 가 같은 id 로 채운다. 하나에만 있으면 위젯이 "불러올 수 없음"으로 깨진다).
 - 위젯을 바꾸면 디버그 미리보기(`WidgetPreviewActivity`, README 참고)로 나쁜 값(-12°, 긴 동네 이름, 빈 화면, 글자 1.3배)과 작은 크기에서 잘리지 않는지 본다.
