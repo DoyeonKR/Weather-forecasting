@@ -167,7 +167,13 @@ android/app/src/
 ├── main/res/layout/widget_weather_{compact,wide}.xml  # 좁은 판·넓은 판 (id 를 똑같이 맞춘다)
 ├── main/res/drawable/widget_bg_*.xml, ic_w_*.xml      # 날씨별 배경·아이콘
 └── debug/  # 디버그 빌드에만: 위젯 미리보기 화면, 업데이트 시험용 설정
-scripts/release-android.sh  # APK 빌드 + GitHub 릴리스 한 번에 (서명 키 있는 PC 에서)
+scripts/
+├── android-release-notes.sh   # CHANGELOG → 릴리스 노트 (자동·손 릴리스 공통)
+├── setup-release-secrets.sh   # 서명 키를 저장소 비밀값으로 한 번 등록 (키 있는 PC 에서)
+└── release-android.sh         # 손 릴리스 (Actions 를 못 쓸 때)
+.github/workflows/
+├── deploy-pages.yml      # main 머지 → 웹 배포
+└── android-release.yml   # main 머지 → 앱 코드가 바뀌었으면 APK 릴리스, PR 에서는 빌드 확인
 ```
 
 ## 개발
@@ -187,6 +193,7 @@ npm test         # 판단 로직 테스트
 
 `main` 브랜치에 push하면 GitHub Actions(`.github/workflows/deploy-pages.yml`)가
 타입 체크, 빌드, GitHub Pages 배포를 자동으로 수행합니다.
+안드로이드 앱 코드가 바뀌었으면 `.github/workflows/android-release.yml` 이 APK 릴리스도 만듭니다 (아래 "안드로이드 앱").
 
 ## 안드로이드 앱
 
@@ -197,8 +204,8 @@ npm test         # 판단 로직 테스트
 | 바꾼 것 | 필요한 일 | 사용자 쪽 |
 |---|---|---|
 | 웹 화면·문구·기능 (`src/`) | `main` 에 push (웹 배포) | 앱을 다시 열면 바로 반영 |
-| 위젯 (`android/.../widget`, `res/layout`, `res/drawable`) | APK 릴리스 | 앱 안 업데이트 카드 → 설치 |
-| 네이티브 플러그인·권한·앱 이름·아이콘 | APK 릴리스 | 앱 안 업데이트 카드 → 설치 |
+| 위젯 (`android/.../widget`, `res/layout`, `res/drawable`) | `package.json` 버전 올리고 CHANGELOG 쓰고 main 에 머지 (APK 자동 릴리스) | 앱 안 업데이트 카드 → 설치 |
+| 네이티브 플러그인·권한·앱 이름·아이콘 | 위와 같음 | 앱 안 업데이트 카드 → 설치 |
 
 ### 버전 규칙
 
@@ -213,20 +220,34 @@ npm test         # 판단 로직 테스트
 - `android/keystore.properties` + `weather-release.jks` 는 저장소에 올리지 않는다 (`.gitignore`).
 - **잃어버리면 기존 사용자에게 업데이트를 줄 수 없다.** 다른 키로 만든 APK 는 위에 덮어 설치되지 않아서,
   모두 앱을 지우고 새로 깔아야 한다. 따로 백업해 둔다.
-- 그래서 릴리스는 키가 있는 PC 에서만 한다.
+- 자동 릴리스용으로 GitHub 저장소 비밀값에도 들어 있다 (등록은 `scripts/setup-release-secrets.sh`). 비밀값은 백업이 아니다 — 꺼내 볼 수 없으니 원본 파일을 따로 보관한다.
+- 키를 바꾸지 않는다. 워크플로는 지난 릴리스와 서명이 다르면 릴리스를 멈춘다.
 
-### 릴리스 절차
+### 릴리스 절차 (자동)
 
-1. `package.json` 버전을 올리고 `CHANGELOG.md` 에 그 버전 항목을 쓴 커밋을 `main` 에 push
-2. 서명 키가 있는 PC 에서:
-   ```bash
-   bash scripts/release-android.sh
-   ```
-   빌드 → `eojeboda-weather.apk` 로 이름 바꾸기 → CHANGELOG 로 릴리스 노트 → `gh release create` 까지 한다.
-   키가 없거나, 커밋을 안 했거나, push 를 안 했거나, 같은 버전 릴리스가 이미 있으면 멈춘다.
-3. 앱마다 6시간에 한 번 새 버전을 확인하므로, 늦어도 6시간 안에 카드가 뜬다.
+`.github/workflows/android-release.yml` 이 main 에 머지될 때마다 판단한다.
 
-릴리스 노트의 첫 줄이 앱 안 카드에 한 줄 설명으로 나온다 (CHANGELOG 그 버전의 첫 항목).
+| main 에 들어온 변경 | 결과 |
+|---|---|
+| 웹만 (`src/` 등) | APK 릴리스 안 함. 웹 배포만으로 앱에도 반영 |
+| 앱 코드(`android/`, `capacitor.config.ts`, `native-shell/`) + `package.json` 버전 올림 + CHANGELOG 항목 | 서명된 APK 빌드 → 지난 릴리스와 **같은 서명 키·더 큰 versionCode** 인지 확인 → 릴리스 `android-v{버전}` 생성 |
+| 앱 코드를 바꿨는데 버전을 안 올림 | 릴리스 안 함 + 경고 ("버전을 올리세요") |
+| 서명 키 비밀값이 없음 | 릴리스 안 함 + 경고 |
+
+PR 에서 앱 코드를 바꾸면 서명 없이 빌드만 해서 깨지지 않았는지 본다.
+앱마다 6시간에 한 번 새 버전을 확인하므로, 릴리스 뒤 늦어도 6시간 안에 앱 안 카드가 뜬다.
+릴리스 노트는 CHANGELOG 그 버전 항목에서 만든다 (`scripts/android-release-notes.sh`). 첫 줄이 앱 안 카드 설명이 된다.
+
+**처음 한 번 (서명 키 등록)** — 키가 있는 PC 에서:
+```bash
+bash scripts/setup-release-secrets.sh
+```
+`android/keystore.properties` 와 키 파일을 읽어 저장소 비밀값 4개(`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+`ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`)로 등록한다. 값은 화면에 찍지 않는다.
+등록 뒤 바로 릴리스하려면 `gh workflow run android-release.yml -R DoyeonKR/Weather-forecasting`
+(GitHub → Actions → Android release → Run workflow 와 같다. `force` 를 켜면 앱 코드가 안 바뀌어도 릴리스).
+
+**손으로 릴리스 (Actions 를 못 쓸 때)** — 키가 있는 PC 에서 `bash scripts/release-android.sh`. 같은 이름·같은 노트로 만든다.
 
 ### 앱 안 업데이트가 움직이는 방식
 
@@ -266,7 +287,8 @@ cd android && sh ./gradlew assembleDebug   # app/build/outputs/apk/debug/app-deb
 
 | 상황 | 방법 |
 |---|---|
-| 방금 올린 릴리스가 문제 (아직 받은 사람 적음) | `gh release delete android-v{버전} --cleanup-tag` → 앱 안 카드·「앱 받기」가 바로 이전 릴리스를 가리킨다 |
+| 방금 올린 릴리스가 문제 (아직 받은 사람 적음) | `gh release delete android-v{버전} --cleanup-tag` → 앱 안 카드·「앱 받기」가 바로 이전 릴리스를 가리킨다 (다음 머지 때 같은 버전으로 다시 릴리스되지 않게 버전을 올려서 고친다) |
+| 자동 릴리스를 잠시 멈추고 싶음 | GitHub → Actions → Android release → ⋯ → Disable workflow (다시 켜면 이어서 동작) |
 | 이미 새 버전을 깐 사람이 있음 | 낮은 버전은 위에 못 깐다. 코드를 되돌린 뒤 `package.json` 버전을 **올려서** 다시 릴리스 |
 | 웹 화면이 문제 | 웹만 revert 해서 `main` 에 push (APK 필요 없음) |
 

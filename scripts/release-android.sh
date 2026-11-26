@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# 안드로이드 앱(APK) 릴리스 — 서명 키(android/keystore.properties + weather-release.jks)가 있는 PC 에서만.
+# 안드로이드 앱(APK) 손 릴리스 — 평소에는 GitHub Actions(.github/workflows/android-release.yml)가
+# main 에 머지될 때 알아서 한다. 이 스크립트는 Actions 를 못 쓸 때의 대안이다.
+# 서명 키(android/keystore.properties + weather-release.jks)가 있는 PC 에서만.
 #   1) package.json 버전을 올리고 CHANGELOG 를 쓴 커밋을 main 에 push
 #   2) bash scripts/release-android.sh
 # 앱 버전은 package.json 에서 오고(build.gradle), 태그는 android-v{버전}. 앱 안 업데이트(src/lib/appUpdate.ts)가
@@ -28,14 +30,7 @@ APK=android/app/build/outputs/apk/release/app-release.apk
 OUT=$(mktemp -d)
 cp "$APK" "$OUT/$APK_NAME"
 
-# 릴리스 노트: CHANGELOG 의 이 버전 항목(소제목·인용 줄 빼고) + 설치 안내. 첫 줄이 앱 안 알림에 한 줄로 나온다
-{
-  awk -v v="## v$VERSION " 'index($0, v) == 1 { on = 1; next } /^## v/ { on = 0 } on' CHANGELOG.md \
-    | grep -v '^###' | grep -v '^>' | sed '/^$/d'
-  echo
-  echo "설치: 앱이 있으면 앱 안 「업데이트」 버튼으로. 처음이면 아래 $APK_NAME 을 받아 열기 → \"출처를 알 수 없는 앱\" 허용 → 설치."
-  echo "Play 프로텍트 경고가 나오면 「무시하고 설치」를 누르세요."
-} > "$OUT/notes.md"
+bash scripts/android-release-notes.sh "$VERSION" > "$OUT/notes.md"
 
 echo "── 릴리스 노트 ──"; cat "$OUT/notes.md"; echo "────────────────"
 gh release create "$TAG" "$OUT/$APK_NAME" \

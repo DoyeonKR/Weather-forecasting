@@ -1,0 +1,180 @@
+# 안드로이드 앱(APK) 자동 릴리스.
+#  · main 에 머지 → 앱 코드(android/ 등)가 지난 릴리스 뒤로 바뀌었고 package.json 버전이 새 것이면
+#    서명된 APK 를 빌드해 GitHub 릴리스(android-v{버전}, eojeboda-weather.apk)를 만든다.
+#    → 앱 안 업데이트 카드(src/lib/appUpdate.ts)가 6시간 안에 사용자에게 알린다.
+#  · 웹만 바꾼 머지는 아무것도 안 한다 (웹은 deploy-pages.yml 이 배포, 앱은 사이트를 열 뿐이라 바로 반영).
+#  · PR 에서는 서명 없이 빌드만 해서 깨지지 않았는지 본다.
+#  · 손으로: Actions → Android release → Run workflow (force 를 켜면 앱 코드가 안 바뀌어도 릴리스).
+# 서명 키는 저장소 비밀값 4개 (scripts/setup-release-secrets.sh 로 한 번 등록).
+# 원복: gh release delete android-v{버전} --cleanup-tag  (README "안드로이드 앱 > 원복")
+name: Android release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'capacitor.config.ts'
+      - 'native-shell/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/android-release-notes.sh'
+      - '.github/workflows/android-release.yml'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: '앱 코드가 안 바뀌었어도 지금 버전으로 릴리스'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      APK_NAME: eojeboda-weather.apk
+      # 이 경로가 바뀌어야 APK 를 새로 낸다 (나머지는 웹 배포만으로 앱에 반영된다)
+      NATIVE_PATHS: android capacitor.config.ts native-shell
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 지난 릴리스 태그와 비교하려면 전체 이력이 필요하다
+
+      - name: 릴리스할지 정하기
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          FORCE: ${{ inputs.force }}
+          HAS_KEY: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+          MAIN_REPO: ${{ github.repository == 'DoyeonKR/Weather-forecasting' }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="android-v$VERSION"
+          LAST=$(git tag -l 'android-v*' --sort=-v:refname | head -1)
+          changed=true
+          if [ -n "$LAST" ] && git diff --quiet "$LAST" HEAD -- $NATIVE_PATHS; then changed=false; fi
+
+          release=false
+          build=false
+          if [ "$EVENT" = pull_request ]; then
+            build=true
+            reason="PR — 서명 없이 빌드만 확인"
+          elif [ "$MAIN_REPO" != true ]; then
+            reason="포크 저장소 — 릴리스하지 않음"
+          elif git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            reason="$TAG 이 이미 있음"
+            if [ "$changed" = true ] && [ "$TAG" = "$LAST" ]; then
+              echo "::warning::$LAST 뒤로 앱 코드(android/)가 바뀌었는데 package.json 버전이 그대로예요. 사용자에게 보내려면 버전을 올리고 CHANGELOG 를 쓰세요."
+              reason="$reason — 앱 코드가 바뀌었으니 package.json 버전을 올려야 릴리스됩니다"
+            fi
+          elif [ "$changed" = false ] && [ "$FORCE" != true ]; then
+            reason="$LAST 뒤로 앱 코드 변경 없음 — 웹 배포만으로 충분"
+          elif [ "$HAS_KEY" != true ]; then
+            echo "::warning::서명 키 비밀값이 없어 $TAG 을 릴리스하지 못했어요. 키가 있는 PC 에서 'bash scripts/setup-release-secrets.sh' 를 한 번 실행한 뒤 이 워크플로를 다시 돌리세요."
+            reason="서명 키 비밀값 없음 — scripts/setup-release-secrets.sh 를 키가 있는 PC 에서 한 번 실행"
+          else
+            release=true
+            build=true
+            reason="${LAST:-처음} → $TAG"
+          fi
+
+          {
+            echo "version=$VERSION"
+            echo "tag=$TAG"
+            echo "last=$LAST"
+            echo "release=$release"
+            echo "build=$build"
+          } >> "$GITHUB_OUTPUT"
+          echo "### 안드로이드 릴리스: $([ "$release" = true ] && echo "진행" || echo "건너뜀")" >> "$GITHUB_STEP_SUMMARY"
+          echo "$reason" >> "$GITHUB_STEP_SUMMARY"
+          echo "$reason"
+
+      - if: steps.plan.outputs.build == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - if: steps.plan.outputs.build == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21 # Capacitor 8 은 Java 21
+
+      - if: steps.plan.outputs.build == 'true'
+        name: 웹 의존성·Capacitor 동기화
+        run: |
+          npm ci
+          npx cap sync android
+
+      - if: steps.plan.outputs.release == 'true'
+        name: 서명 키 풀기 (러너가 끝나면 지워진다)
+        env:
+          KS_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$KS_BASE64" | base64 -d > android/weather-release.jks
+          # storeFile 은 android/app 기준 경로 (app/build.gradle 의 file())
+          {
+            echo "storeFile=../weather-release.jks"
+            echo "storePassword=$KS_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > android/keystore.properties
+
+      - if: steps.plan.outputs.build == 'true'
+        name: APK 빌드
+        working-directory: android
+        run: bash ./gradlew assembleRelease --no-daemon
+
+      - if: steps.plan.outputs.release == 'true'
+        name: 서명·버전 확인 (지난 릴리스와 같은 키, 더 큰 버전)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LAST: ${{ steps.plan.outputs.last }}
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          [ -f "$APK" ] || { echo "::error::서명된 APK 가 없어요 (unsigned 만 나왔다면 비밀값을 확인)"; exit 1; }
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          cert() { "$BT/apksigner" verify --print-certs "$1" | grep -m1 'SHA-256 digest' | awk '{print $NF}'; }
+          code() { "$BT/aapt2" dump badging "$1" | grep -m1 '^package:' | sed -E "s/.*versionCode='([0-9]+)'.*/\1/"; }
+          NEW_CERT=$(cert "$APK"); NEW_CODE=$(code "$APK")
+          echo "새 APK: versionCode $NEW_CODE, 인증서 $NEW_CERT"
+          if [ -n "$LAST" ]; then
+            mkdir -p /tmp/prev
+            gh release download "$LAST" -p "$APK_NAME" -D /tmp/prev
+            OLD_CERT=$(cert "/tmp/prev/$APK_NAME"); OLD_CODE=$(code "/tmp/prev/$APK_NAME")
+            echo "$LAST: versionCode $OLD_CODE, 인증서 $OLD_CERT"
+            # 키가 다르면 사용자 폰에서 위에 덮어 설치가 안 된다 — 릴리스하면 모두 업데이트가 막힌다
+            [ "$NEW_CERT" = "$OLD_CERT" ] || { echo "::error::서명 키가 $LAST 와 달라요. 등록한 비밀값이 원래 weather-release.jks 인지 확인하세요."; exit 1; }
+            [ "$NEW_CODE" -gt "$OLD_CODE" ] || { echo "::error::versionCode($NEW_CODE)가 $LAST($OLD_CODE)보다 크지 않아요."; exit 1; }
+          fi
+          mkdir -p /tmp/out && cp "$APK" "/tmp/out/$APK_NAME"
+
+      - if: steps.plan.outputs.release == 'true'
+        name: GitHub 릴리스 만들기
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.plan.outputs.version }}
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: |
+          bash scripts/android-release-notes.sh "$VERSION" > /tmp/out/notes.md
+          gh release create "$TAG" "/tmp/out/$APK_NAME" \
+            --target "$GITHUB_SHA" \
+            --title "무능한 날씨예측기 안드로이드 앱 v$VERSION" \
+            --notes-file /tmp/out/notes.md \
+            --latest
+          echo "릴리스 완료: $TAG — 앱 안 업데이트 카드는 앱마다 6시간 안에 뜬다" >> "$GITHUB_STEP_SUMMARY"
+
+      - if: always()
+        name: 서명 키 파일 지우기
+        run: rm -f android/weather-release.jks android/keystore.properties
