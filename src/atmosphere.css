@@ -456,3 +456,89 @@
 /* 안드로이드 앱 받기 (v1.0.107) — 공유 버튼 아래, 링크라 밑줄 없앰 */
 .apk-bottom { margin-top: 10px; text-decoration: none; }
 a.order-reset { display: inline-flex; align-items: center; text-decoration: none; color: inherit; }
+
+/* 앱 안 업데이트 알림 (UpdateBanner) — 화면 아래에 떠 있는 작은 카드. 설정 안내 팝업(.nudge-backdrop 1950)보다 아래 */
+.update-card {
+  position: fixed;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 1900;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(calc(100% - 32px), 420px);
+  padding: 12px 10px 12px 14px;
+  border-radius: 20px;
+  background: #fff;
+  color: #222;
+  box-shadow: 0 14px 40px #00000052;
+  transform: translateX(-50%);
+  animation: update-rise .28s cubic-bezier(.2, .9, .3, 1.1);
+}
+
+.update-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e6effa;
+  color: #1f5fa6;
+}
+
+.update-copy { flex: 1; min-width: 0; }
+
+.update-copy b {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: #1c1c1c;
+}
+
+.update-copy small {
+  display: block;
+  margin-top: 2px;
+  color: #6b6b6b;
+  font-size: 12px;
+  line-height: 1.35;
+  word-break: keep-all;
+}
+
+.update-go {
+  flex: none;
+  min-height: 40px;
+  padding: 0 14px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  background: #1f5fa6;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.update-go:disabled { opacity: .7; }
+
+.update-close {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: #777;
+  cursor: pointer;
+}
+
+@keyframes update-rise { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translateX(-50%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .update-card { animation: none; }
+}
