@@ -99,7 +99,7 @@ jobs:
       - if: steps.plan.outputs.build == 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22 # Capacitor CLI 8 은 Node 22 이상 (웹 배포는 20 이어도 된다)
           cache: npm
 
       - if: steps.plan.outputs.build == 'true'
