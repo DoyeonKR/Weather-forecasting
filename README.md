@@ -26,6 +26,8 @@
 - **위치 즐겨찾기**: 동네 검색으로 등록하면 어디서든 그 지역 날씨·레이더 조회 (localStorage)
 - **날씨 배경 테마**: 현재 날씨와 밤낮에 따라 배경이 자동 변경 (맑음/흐림/비/눈/뇌우/안개, 8종)
 - **PWA**: 홈 화면에 설치하면 전체화면 앱처럼 실행
+- **안드로이드 앱 + 홈 화면 위젯**: 지금 기온·날씨·최고/최저·어제 이맘때와 차이·비 올 확률. 크기(2칸/3칸 이상)에 따라 판이 바뀌고 날씨·낮밤에 따라 배경이 바뀜. 30분마다 갱신
+- **앱 안 업데이트**: 새 버전이 나오면 앱 아래에 카드가 뜨고 눌러서 바로 설치
 
 ## 기술 스택
 
@@ -41,6 +43,8 @@
 | CORS 프록시 | Supabase Edge Function (`kma-proxy`, 비밀값 없음, 5분 캐시) |
 | 지오코딩 | Nominatim(장소 검색), BigDataCloud(역지오코딩) |
 | 호스팅 | GitHub Pages (정적, 서버리스) + GitHub Actions 자동 배포 |
+| 안드로이드 앱 | Capacitor 8 껍데기 (배포된 사이트를 연다) + 네이티브 위젯 (RemoteViews, WorkManager) |
+| 앱 배포 | GitHub Releases 에 APK 직접 배포 (스토어 없음) |
 
 프론트엔드는 전부 무료·무인증 API로 완결되며, 서버 컴포넌트는 CORS 헤더를 붙여주는
 20줄짜리 프록시 함수 하나뿐입니다.
@@ -115,6 +119,8 @@ src/
 │   ├── partners.ts    # 날씨에 맞는 준비물 추천
 │   ├── push.ts        # 웹푸시 구독 (RPC 두 개로만 저장·해제)
 │   ├── track.ts       # 익명 방문 집계
+│   ├── nativeWidget.ts # 안드로이드 앱 안에서만: 위젯에 동네 넘기기·위젯 추가 창·APK 주소
+│   ├── appUpdate.ts   # 안드로이드 앱 안에서만: 새 버전 확인(GitHub 릴리스)·설치 요청
 │   └── geo.ts         # geolocation + 역지오코딩
 ├── components/
 │   ├── RadarMap.tsx      # Leaflet 지도 + 실황/예측 타임라인 (지연 로드)
@@ -130,6 +136,7 @@ src/
 │   ├── PromoLayer.tsx    # 오늘 준비물 추천 레이어
 │   ├── CoupangBanner.tsx # 제휴 배너
 │   ├── PlaceBar.tsx      # 위치 칩 + 장소 검색
+│   ├── UpdateBanner.tsx  # 안드로이드 앱 새 버전 카드 (main.tsx 에서 App 바깥에 붙는다)
 │   └── WhenVisible.tsx   # 화면에 들어올 때만 무거운 자식 마운트
 ├── App.tsx            # 화면 구성
 public/sw.js           # 서비스워커 (캐시 + 푸시 수신 + 구독 갱신)
@@ -144,6 +151,22 @@ supabase/
 │   ├── weather-push/  # 아침·밤·비 시작 알림 발송 (pg_cron)
 │   └── weather-push-test/  # 설정의 "테스트 알림 보내기" (구독 1건에 1분 1회)
 └── (별도 배포) kma-proxy  # Edge Function
+capacitor.config.ts    # 안드로이드 앱 설정 (server.url = 배포된 사이트)
+native-shell/          # 사이트에 못 닿을 때 앱이 보여줄 안내 한 장
+android/app/src/
+├── main/java/com/doyeonkr/weather/
+│   ├── MainActivity.java          # 플러그인 등록
+│   ├── WidgetBridge.java          # 웹 ↔ 위젯 (동네 넘기기, 위젯 추가 창)
+│   ├── AppUpdate.java             # 앱 안 업데이트 (받기 → 확인 → 설치)
+│   ├── UpdateResultReceiver.java  # 설치 결과 (확인 창 띄우기, 실패 안내)
+│   └── widget/
+│       ├── WeatherWidget.java     # 위젯 생명주기 (놓기·크기 변경·치우기)
+│       ├── WidgetStore.java       # 저장된 값으로 위젯 그리기, 크기별 판 고르기
+│       └── WidgetWorker.java      # 30분마다 Open-Meteo 에서 날씨 받기
+├── main/res/layout/widget_weather_{compact,wide}.xml  # 좁은 판·넓은 판 (id 를 똑같이 맞춘다)
+├── main/res/drawable/widget_bg_*.xml, ic_w_*.xml      # 날씨별 배경·아이콘
+└── debug/  # 디버그 빌드에만: 위젯 미리보기 화면, 업데이트 시험용 설정
+scripts/release-android.sh  # APK 빌드 + GitHub 릴리스 한 번에 (서명 키 있는 PC 에서)
 ```
 
 ## 개발
@@ -156,10 +179,95 @@ npm run typecheck # 타입 체크 (tsc -b, 루트 tsconfig 는 files:[] 라 --no
 npm test         # 판단 로직 테스트
 ```
 
+`npm test` 는 `node --test test/` 로 폴더를 넘기는데, 일부 Node 버전은 폴더를 못 읽는다.
+그럴 때는 `node --test test/*.mjs`.
+
 ## 배포
 
 `main` 브랜치에 push하면 GitHub Actions(`.github/workflows/deploy-pages.yml`)가
 타입 체크, 빌드, GitHub Pages 배포를 자동으로 수행합니다.
+
+## 안드로이드 앱
+
+### 무엇을 바꾸면 무엇을 다시 내야 하나
+
+앱은 화면을 안에 넣지 않고 배포된 사이트(`server.url`)를 연다. 그래서 대부분은 웹 배포만으로 바뀐다.
+
+| 바꾼 것 | 필요한 일 | 사용자 쪽 |
+|---|---|---|
+| 웹 화면·문구·기능 (`src/`) | `main` 에 push (웹 배포) | 앱을 다시 열면 바로 반영 |
+| 위젯 (`android/.../widget`, `res/layout`, `res/drawable`) | APK 릴리스 | 앱 안 업데이트 카드 → 설치 |
+| 네이티브 플러그인·권한·앱 이름·아이콘 | APK 릴리스 | 앱 안 업데이트 카드 → 설치 |
+
+### 버전 규칙
+
+- 앱 버전은 `package.json` 의 `version` 에서 자동으로 온다 (`android/app/build.gradle`). 손으로 고치지 않는다.
+- versionCode 는 `1.0.108` → `1000108`. 숫자가 커야 위에 덮어 설치된다.
+- 릴리스 태그는 `android-v{버전}`, 파일 이름은 늘 `eojeboda-weather.apk`. 앱 안 업데이트와 사이트의
+  「앱 받기」 버튼(`releases/latest/download/eojeboda-weather.apk`)이 이 둘에 기대고 있다.
+- 웹만 바꾼 버전(예: 1.0.107)은 안드로이드 릴리스를 만들지 않는다. 그러면 앱 안 카드도 안 뜬다.
+
+### 서명 키
+
+- `android/keystore.properties` + `weather-release.jks` 는 저장소에 올리지 않는다 (`.gitignore`).
+- **잃어버리면 기존 사용자에게 업데이트를 줄 수 없다.** 다른 키로 만든 APK 는 위에 덮어 설치되지 않아서,
+  모두 앱을 지우고 새로 깔아야 한다. 따로 백업해 둔다.
+- 그래서 릴리스는 키가 있는 PC 에서만 한다.
+
+### 릴리스 절차
+
+1. `package.json` 버전을 올리고 `CHANGELOG.md` 에 그 버전 항목을 쓴 커밋을 `main` 에 push
+2. 서명 키가 있는 PC 에서:
+   ```bash
+   bash scripts/release-android.sh
+   ```
+   빌드 → `eojeboda-weather.apk` 로 이름 바꾸기 → CHANGELOG 로 릴리스 노트 → `gh release create` 까지 한다.
+   키가 없거나, 커밋을 안 했거나, push 를 안 했거나, 같은 버전 릴리스가 이미 있으면 멈춘다.
+3. 앱마다 6시간에 한 번 새 버전을 확인하므로, 늦어도 6시간 안에 카드가 뜬다.
+
+릴리스 노트의 첫 줄이 앱 안 카드에 한 줄 설명으로 나온다 (CHANGELOG 그 버전의 첫 항목).
+
+### 앱 안 업데이트가 움직이는 방식
+
+1. 웹(`lib/appUpdate.ts`)이 GitHub API 로 Latest 릴리스를 묻는다. 태그가 `android-v…` 이고 APK 가 붙어 있어야 새 버전으로 본다.
+2. 설치된 앱 버전보다 새로우면 `UpdateBanner` 카드를 띄운다. 닫으면 그 버전은 다시 안 띄운다.
+3. 「업데이트」 → 네이티브 `AppUpdate` 가 **앱에 고정된 주소**에서 APK 를 받는다 (웹은 주소를 넘기지 못한다).
+4. 받은 파일이 같은 앱이고 더 새 버전일 때만 안드로이드 설치 창을 띄운다. 서명이 다르면 안드로이드가 거절한다.
+
+사용자가 겪는 것:
+- 처음 한 번은 「이 출처 허용」 설정 화면으로 간다. 켜고 돌아와서 다시 누르면 된다.
+- 스토어 밖 앱이라 **업데이트마다 Play 프로텍트 경고**가 나온다. 「세부정보」 → 「무시하고 설치」. 카드에 안내가 뜬다.
+- 설치가 끝나면 앱이 닫힌다(안드로이드 기본 동작). 다시 열면 새 버전.
+- 1.0.106 앱에는 이 기능이 없어서, 카드의 「받기」가 브라우저로 APK 를 받게 한다.
+
+이 경고까지 없애려면 Play 스토어에 올려야 한다 (개발자 계정 25달러·심사).
+
+### 빌드·확인 (개발 PC)
+
+```bash
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+export ANDROID_HOME=~/Library/Android/sdk
+npx cap sync android
+cd android && sh ./gradlew assembleDebug   # app/build/outputs/apk/debug/app-debug.apk
+```
+
+- **디버그 APK 는 실제 폰에 깔지 않는다.** 서명이 달라 정식 앱 위에 안 깔리고, 지우고 깔면 다음 정식 업데이트가 막힌다. 에뮬레이터에서만.
+- 위젯 미리보기 (디버그 빌드만): 진짜 위젯과 같은 그림을 정해진 크기에 나쁜 값(-12°, 긴 동네 이름, 빈 화면)으로 그린다.
+  ```bash
+  adb shell am start -n com.doyeonkr.weather/.widget.WidgetPreviewActivity --es page a   # a·b·c
+  ```
+  `--es seed winter` 로 가짜 날씨를 저장하고 `--ez pin true` 로 위젯 추가 창을 띄워 홈 화면에서도 볼 수 있다.
+- 앱 안 업데이트 시험: 개발 서버를 `VITE_RELEASES_API=<가짜 릴리스 JSON 주소> npm run dev` 로 띄우고,
+  디버그 앱에서 `adb shell setprop debug.eojeboda.update_url <APK 주소>` 로 받는 곳을 바꾼다.
+  둘 다 배포본(웹 빌드·릴리스 APK)에서는 동작하지 않는다.
+
+### 원복
+
+| 상황 | 방법 |
+|---|---|
+| 방금 올린 릴리스가 문제 (아직 받은 사람 적음) | `gh release delete android-v{버전} --cleanup-tag` → 앱 안 카드·「앱 받기」가 바로 이전 릴리스를 가리킨다 |
+| 이미 새 버전을 깐 사람이 있음 | 낮은 버전은 위에 못 깐다. 코드를 되돌린 뒤 `package.json` 버전을 **올려서** 다시 릴리스 |
+| 웹 화면이 문제 | 웹만 revert 해서 `main` 에 push (APK 필요 없음) |
 
 ## 로드맵
 
@@ -173,6 +281,9 @@ npm test         # 판단 로직 테스트
 - [x] 비 시작 알림, 기상특보 배너 (v1.0.63 — 특보는 공공데이터포털 사용 승인 후 동작)
 - [x] `lcc.ts` 투영 변환 테스트
 - [x] 에어코리아·기상특보 공공데이터포털 사용 승인 (2026-10-26)
+- [x] 안드로이드 앱(APK) + 홈 화면 위젯 (v1.0.106)
+- [x] 위젯 크기별 판·디자인, 앱 안 업데이트 (v1.0.108)
+- [ ] Play 스토어 등록 (업데이트 때 Play 프로텍트 경고 없애기)
 
 ## 데이터 출처
 
