@@ -103,7 +103,7 @@ src/
 │   ├── sections.ts    # 섹션 순서 저장·이동
 │   ├── reorder.ts     # 롱탭 드래그 정렬 (FLIP 애니메이션)
 │   ├── accent.ts      # 색상 테마 토큰
-│   ├── weatherIcon.ts # 날씨 라벨 → 선형 아이콘·색 계열
+│   ├── weatherIcon.ts # 날씨 라벨 → 선형 아이콘·색 계열 (iconTone → artwork.css 의 .wic-*)
 │   ├── lastWeather.ts # 마지막 날씨 캐시 (재방문 시 바로 표시)
 │   ├── air.ts         # 미세먼지 등급·요약 (Open-Meteo 대기질)
 │   ├── rainSoon.ts    # "내 위치는 곧 비가 올까?" 문장 (15분 강수 예보 + 기상청 실황)
@@ -159,6 +159,7 @@ android/app/src/
 │   ├── WidgetBridge.java          # 웹 ↔ 위젯 (동네 넘기기, 위젯 추가 창)
 │   ├── AppUpdate.java             # 앱 안 업데이트 (받기 → 확인 → 설치)
 │   ├── UpdateResultReceiver.java  # 설치 결과 (확인 창 띄우기, 실패 안내)
+│   ├── ExternalWindows.java       # "새 창" 링크(쿠팡 광고 등)를 쿠팡 앱·브라우저로 (웹뷰는 새 창을 못 연다)
 │   └── widget/
 │       ├── WeatherWidget.java     # 위젯 생명주기 (놓기·크기 변경·치우기)
 │       ├── WidgetStore.java       # 저장된 값으로 위젯 그리기, 크기별 판 고르기
