@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 디버그 빌드에만: 위젯 미리보기 화면 (릴리스 APK 에는 안 들어간다) -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name=".widget.WidgetPreviewActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+    </application>
+</manifest>

@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 홈 화면 위젯 · 넓은 판(약 240dp 이상). 좁으면 widget_weather_compact.
+     기온은 왼쪽에 크게, 아이콘·날씨·최고/최저는 오른쪽 정렬 — 기온이 -12° 처럼 길어져도 글이 줄바꿈되지 않고 … 로 줄어든다.
+     ⚠ 두 판은 id 가 같아야 한다 (WidgetStore 가 같은 id 로 채운다) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg_clear_day"
+    android:clipToOutline="true"
+    android:orientation="vertical"
+    android:paddingStart="18dp"
+    android:paddingTop="14dp"
+    android:paddingEnd="18dp"
+    android:paddingBottom="14dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/w_pin"
+            android:layout_width="11dp"
+            android:layout_height="11dp"
+            android:layout_marginEnd="5dp"
+            android:src="@drawable/ic_w_pin" />
+
+        <TextView
+            android:id="@+id/w_place"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium"
+            android:singleLine="true"
+            android:text="우리 동네"
+            android:textColor="#F2FFFFFF"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/w_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:singleLine="true"
+            android:text="오전 9:04"
+            android:textColor="#8CFFFFFF"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/w_temp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif"
+            android:textStyle="bold"
+            android:includeFontPadding="false"
+            android:letterSpacing="-0.05"
+            android:singleLine="true"
+            android:text="12°"
+            android:textColor="#FFFFFFFF"
+            android:textSize="54dp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/w_icon"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:layout_marginBottom="2dp"
+                android:src="@drawable/ic_w_partly_day" />
+
+            <TextView
+                android:id="@+id/w_cond"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:gravity="end"
+                android:singleLine="true"
+                android:text="구름 조금"
+                android:textColor="#FFFFFFFF"
+                android:textSize="15sp" />
+
+            <TextView
+                android:id="@+id/w_hilo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:ellipsize="end"
+                android:gravity="end"
+                android:singleLine="true"
+                android:text="최고 15° · 최저 6°"
+                android:textColor="#B3FFFFFF"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/w_bottom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/w_compare"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium"
+            android:singleLine="true"
+            android:text="어제보다 2° 따뜻해요"
+            android:textColor="#FFFFD27A"
+            android:textSize="13sp" />
+
+        <ImageView
+            android:id="@+id/w_drop"
+            android:layout_width="11dp"
+            android:layout_height="11dp"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="3dp"
+            android:src="@drawable/ic_w_drop" />
+
+        <TextView
+            android:id="@+id/w_rain"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:text="20%"
+            android:textColor="#CCFFFFFF"
+            android:textSize="12sp" />
+    </LinearLayout>
+</LinearLayout>

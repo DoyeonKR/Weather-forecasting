@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 홈 화면 위젯 · 좁은 판(2칸 폭). 한 줄에 다 넣으면 "대체로 맑음"이 "대체로"에서 잘려(v1.0.106) 위아래로 쌓는다.
+     비 올 확률·기준 시각은 맨 아래 작은 줄(w_meta, 좁은 판에만)로. ⚠ 나머지 id 는 widget_weather_wide 와 같아야 한다 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg_clear_day"
+    android:clipToOutline="true"
+    android:orientation="vertical"
+    android:paddingStart="15dp"
+    android:paddingTop="13dp"
+    android:paddingEnd="15dp"
+    android:paddingBottom="13dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/w_pin"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_marginEnd="4dp"
+            android:src="@drawable/ic_w_pin" />
+
+        <TextView
+            android:id="@+id/w_place"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium"
+            android:singleLine="true"
+            android:text="우리 동네"
+            android:textColor="#F2FFFFFF"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/w_temp"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="sans-serif"
+            android:textStyle="bold"
+            android:includeFontPadding="false"
+            android:letterSpacing="-0.05"
+            android:singleLine="true"
+            android:text="12°"
+            android:textColor="#FFFFFFFF"
+            android:textSize="44dp" />
+
+        <ImageView
+            android:id="@+id/w_icon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="4dp"
+            android:src="@drawable/ic_w_partly_day" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/w_cond"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif-medium"
+        android:singleLine="true"
+        android:text="구름 조금"
+        android:textColor="#FFFFFFFF"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/w_hilo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:singleLine="true"
+        android:text="최고 15° · 최저 6°"
+        android:textColor="#B3FFFFFF"
+        android:textSize="12sp" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <LinearLayout
+        android:id="@+id/w_bottom"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/w_compare"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium"
+            android:singleLine="true"
+            android:text="어제보다 2° 따뜻해요"
+            android:textColor="#FFFFD27A"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <!-- 비 올 확률 · 기준 시각 (높이가 되면). 시각은 받아오기에 실패해 옛 값을 보여줄 때 알아차리라고 둔다 -->
+    <LinearLayout
+        android:id="@+id/w_meta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/w_drop"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_marginEnd="3dp"
+            android:src="@drawable/ic_w_drop" />
+
+        <TextView
+            android:id="@+id/w_rain"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:singleLine="true"
+            android:text="20%"
+            android:textColor="#CCFFFFFF"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/w_time"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:gravity="end"
+            android:singleLine="true"
+            android:text="오전 9:04"
+            android:textColor="#8CFFFFFF"
+            android:textSize="11sp" />
+    </LinearLayout>
+</LinearLayout>
