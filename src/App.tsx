@@ -32,7 +32,7 @@ import {
   Eye,
 } from '@phosphor-icons/react'
 import { locate, type Located } from './lib/geo'
-import { weatherIcon, type UiIcon } from './lib/weatherIcon'
+import { iconTone, weatherIcon, type UiIcon } from './lib/weatherIcon'
 import { loadLast, saveLast } from './lib/lastWeather'
 import { FetchFail } from './lib/http'
 import { todayAhead, yesterdaySameWindow } from './lib/ahead'
@@ -651,7 +651,7 @@ export default function App() {
                   <button
                     key={t.target}
                     type="button"
-                    className={`summary-tile tone-${t.tone}`}
+                    className={`summary-tile tone-${t.tone} t-${t.target}${t.target === 'tomorrow' ? ` sky-${iconTone(tomorrowLabel.label)}` : ''}`}
                     disabled={t.value === '-' || (t.target === 'air' && !air)}
                     aria-label={`${t.label} ${t.value}. ${t.section}으로 이동`}
                     onClick={() => {
