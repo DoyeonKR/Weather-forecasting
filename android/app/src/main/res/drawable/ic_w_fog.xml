@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 위젯 날씨 아이콘: fog (이모지는 기기마다 모양이 달라 벡터로 그린다) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="48dp" android:height="48dp" android:viewportWidth="24" android:viewportHeight="24">
+<path android:strokeColor="#FFE6ECF3" android:strokeWidth="1.8" android:strokeLineCap="round" android:pathData="M5,7h14 M3,11h18 M5,15h14 M8,19h8"/></vector>
