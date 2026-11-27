@@ -6,6 +6,7 @@ import { Bell, ChatCircleText, DeviceMobile, GearSix, House, MapPin, SlidersHori
 import { isNativeApp } from '../lib/nativeWidget'
 import { trackEvent } from '../lib/track'
 import { enableNotify, getNotifyState, type NotifyState } from '../lib/push'
+import { FALLBACK_NOTIFY_PLACE, notifyPlaceName, type NotifyPlace } from '../lib/notifyPlace'
 import { installHint, promptInstall, type InstallHint } from '../lib/install'
 
 /** 설정 화면과 같은 저장값 (Settings.tsx 의 NIGHT_KEY·MORNING_KEY) */
@@ -17,7 +18,6 @@ function savedTime(key: string, fallback: string): string {
   }
 }
 
-type Loc = { lat: number; lon: number; label: string; isFallback?: boolean }
 
 const NEVER_KEY = 'eojeboda.settingsNudge.never'
 const SESSION_KEY = 'eojeboda.settingsNudge.shown'
@@ -46,12 +46,12 @@ function shouldShow(): boolean {
 
 export default function SettingsNudge({
   onOpenSettings,
-  loc,
+  notifyPlace,
   onNotifyChange,
 }: {
   onOpenSettings: () => void
-  /** 알림을 받을 지역 (지금 보고 있는 곳) */
-  loc: Loc
+  /** 알림 기준 지역 = 기본 지역 (lib/notifyPlace). null 이면 아직 위치를 몰라 서울 기본 위치 */
+  notifyPlace: NotifyPlace | null
   /** 여기서 알림을 켜면 설정 화면도 새 상태를 읽게 */
   onNotifyChange: () => void
 }) {
@@ -135,7 +135,7 @@ export default function SettingsNudge({
                 // 권한 창은 이 버튼을 눌렀을 때만 띄운다 (한 번 거절하면 되돌리기 어렵다)
                 setBusy(true)
                 const r = await enableNotify(
-                  { lat: loc.lat, lon: loc.lon, label: loc.label },
+                  notifyPlace ?? FALLBACK_NOTIFY_PLACE,
                   savedTime('eojeboda:nighttime', '2130'),
                   savedTime('eojeboda:morningtime', '0730'),
                 )
@@ -157,7 +157,8 @@ export default function SettingsNudge({
               <Bell size={20} weight="bold" aria-hidden /> {busy ? '켜는 중…' : '알림 바로 켜기'}
             </button>
             <p className="nudge-note">
-              아침·밤 브리핑 + 비·미세먼지·폭염 알림 · {loc.isFallback ? '서울' : loc.label.replace(' (기본 위치)', '')} 기준
+              아침·밤 브리핑 + 비·미세먼지·폭염 알림 · {notifyPlaceName(notifyPlace)} 기준
+              {notifyPlace ? '' : ' (위치를 허용하거나 기본 지역을 정하면 내 동네로 바뀌어요)'}
             </p>
           </div>
         )}

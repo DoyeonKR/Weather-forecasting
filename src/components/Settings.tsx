@@ -18,6 +18,7 @@ import {
   type NotifyState,
 } from '../lib/push'
 import type { Place } from '../lib/places'
+import { FALLBACK_NOTIFY_PLACE, notifyPlaceName, type NotifyPlace } from '../lib/notifyPlace'
 import { DEFAULT_ORDER, SECTION_LABEL, type SectionKey } from '../lib/sections'
 import { PERSONAS, say, type Persona } from '../../supabase/functions/_shared/persona.ts'
 import { DETAIL_KEYS, moveDetailSection } from '../lib/journal'
@@ -36,7 +37,10 @@ const MORNING_TIMES = ['0600', '0630', '0700', '0730', '0800', '0830', '0900']
 const NIGHT_TIMES = ['2100', '2130', '2200', '2230', '2300']
 
 interface Props {
+  /** 지금 화면에 보고 있는 지역 (위젯 안내에 쓴다) */
   loc: { lat: number; lon: number; label: string }
+  /** 날씨 알림 기준 지역 = 기본 지역 (lib/notifyPlace). null 이면 위치를 몰라 서울 기본 위치 */
+  notifyPlace: NotifyPlace | null
   favorites: Place[]
   /** 처음 열 때 보여줄 지역 (current 또는 장소 id) */
   homeId: string
@@ -63,6 +67,7 @@ export default function Settings({
   favorites,
   homeId,
   onSetHome,
+  notifyPlace,
   sectionOrder,
   onSetOrder,
   persona,
@@ -264,7 +269,7 @@ export default function Settings({
         }
         if (!off) setNotice('알림을 끄지 못했어요. 잠시 후 다시 시도해주세요.')
       } else {
-        const r = await enableNotify(loc, nightTime, morningTime)
+        const r = await enableNotify(notifyPlace ?? FALLBACK_NOTIFY_PLACE, nightTime, morningTime)
         setNotify(r === 'ok' ? 'on' : await getNotifyState())
         if (r === 'ok') {
           trackEvent('notify_on', { source: 'settings' })
@@ -302,7 +307,7 @@ export default function Settings({
       setBusy(true)
       setNotice(null)
       try {
-        const r = await enableNotify(loc, nextNight, nextMorning)
+        const r = await enableNotify(notifyPlace ?? FALLBACK_NOTIFY_PLACE, nextNight, nextMorning)
         if (r === 'save-unknown') {
           // 서버에 닿았는지 모르는 상태다. 되돌리면 서버와 반대로 어긋날 수 있으니 그대로 둔다.
           setNotify(await getNotifyState())
@@ -409,7 +414,8 @@ export default function Settings({
                   <p className="muted small notify-desc">
                     아침엔 오늘 날씨 브리핑, 밤엔 내일이 오늘과 크게 다를 때 출근 준비물을
                     알려드려요. 시간은 아래에서 선택하세요.
-                    {notify === 'on' ? ` 지금은 ${loc.label} 기준으로 받는 중.` : ''}
+                    {` 알림은 기본 지역(${notifyPlaceName(notifyPlace)}) 기준이에요${notify === 'on' ? ' — 기본 지역을 바꾸면 알림도 따라가요' : ''}.`}
+                    {notifyPlace ? '' : ' 위치를 허용하거나 아래에서 기본 지역을 정하면 내 동네로 바뀌어요.'}
                     {/* 앱 안 브라우저에서는 "지원 안 됨"보다 "어디서 열면 되는지"가 필요하다 */}
                     {inApp && (notify === 'unsupported' || notify === 'needs-install')
                       ? ` ${inApp.name} 안에서는 알림을 받을 수 없어요. 기본 브라우저(크롬·사파리)에서 열어주세요.`
@@ -686,7 +692,7 @@ export default function Settings({
 
             <details className="settings-sec settings-group">
               <summary className="settings-sec-title"><House size={19} weight="duotone" aria-hidden /> 처음 열 때 보여줄 지역</summary>
-              <p className="muted small notify-desc">앱을 켜면 이 지역 날씨부터 보여드려요.</p>
+              <p className="muted small notify-desc">앱을 켜면 이 지역 날씨부터 보여드려요. 날씨 알림(아침·밤 브리핑)도 이 지역 기준이에요.</p>
               <div className="night-times">
                 <button
                   type="button"
