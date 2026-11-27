@@ -9,6 +9,7 @@ import { iconTone, weatherIcon } from '../lib/weatherIcon'
 import { trackEvent } from '../lib/track'
 import DeltaPill from './DeltaPill'
 import { temperatureBands } from '../lib/chartBands'
+import { RAIN_MIN_MM, columnPrecip, mm, nextRain } from '../lib/rainLane'
 
 interface Props {
   wx: WeatherData
@@ -20,15 +21,14 @@ const STEP_H = 3
 const COL = 52
 const CHART_H = 96
 const PAD_Y = 12
-const RAIN_H = 16
+/** "비" 줄 높이 — 막대(아래 BAR_H) + 위에 예상 강수량 글자 */
+const RAIN_H = 30
+const BAR_H = 15
+/** 비가 이만큼(칸) 넘게 떨어져 있으면 빈 "비" 줄에 "다음 비" 안내를 쓴다 (글자가 들어갈 자리) */
+const NEXT_NOTE_MIN_COLS = 5
 /** 첫 화면 요약이 말하는 범위 (6칸) */
 const FIRST_N = 6
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
-
-/** 강수량 표기 — 1mm 미만은 소수 한 자리 */
-function mm(v: number) {
-  return v < 1 ? `${v.toFixed(1)}mm` : `${Math.round(v)}mm`
-}
 
 function dayLabel(t: Date, today: Date): string {
   const a = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())
@@ -99,8 +99,10 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
   const n = idx.length
   const tNow = idx.map((i) => temp[i])
   const tPrev = idx.map((i) => temp[i - 24])
-  const pr = idx.map((i) => precip[i] ?? 0)
-  const anyRain = pr.some((p) => p > 0)
+  // 칸마다 그 시각부터 3시간 동안의 예상 강수량 (lib/rainLane)
+  const pr = columnPrecip(precip, idx, STEP_H)
+  const anyRain = pr.some((p) => p >= RAIN_MIN_MM)
+  const next = nextRain(pr)
   // 강수확률(%): 예전 캐시에는 없을 수 있다. 30% 미만은 잡음이라 안 보여준다.
   const prob = idx.map((i) => probAll?.[i] ?? null)
   const anyProb = prob.some((p) => p !== null && p >= 30)
@@ -212,7 +214,6 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
                         {anyProb && (
                           <small className="hs-prob">{prob[k] !== null && prob[k]! >= 30 ? `${prob[k]}%` : '\u00a0'}</small>
                         )}
-                        {anyRain && <small className="hs-rain">{pr[k] > 0 ? mm(pr[k]) : '\u00a0'}</small>}
                       </div>
                     )
                   })}
@@ -241,19 +242,23 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
             {tNow.map((t, k) => (
               <circle key={`c${k}`} cx={x(k)} cy={y(t)} r={k === 0 ? 4.5 : 2.6} className={k === 0 ? 'hs-dot first' : 'hs-dot'} />
             ))}
-            {pr.map((p, k) =>
-              p > 0 ? (
-                <rect
-                  key={`p${k}`}
-                  x={x(k) - 10}
-                  y={rainTop + (1 - Math.min(p / maxP, 1)) * RAIN_H}
-                  width={20}
-                  height={Math.max(Math.min(p / maxP, 1) * RAIN_H, 2)}
-                  rx={2}
-                  className="hs-rainbar"
-                  style={{ fill: `url(#${rainId})` }}
-                />
-              ) : null,
+            {/* "비" 줄: 막대 + 위에 예상 강수량(3시간 합) */}
+            {pr.map((p, k) => {
+              if (p < RAIN_MIN_MM) return null
+              const h = Math.max(Math.min(p / maxP, 1) * BAR_H, 2)
+              const top = rainTop + RAIN_H - h
+              return (
+                <g key={`p${k}`}>
+                  <rect x={x(k) - 10} y={top} width={20} height={h} rx={2} className="hs-rainbar" style={{ fill: `url(#${rainId})` }} />
+                  <text x={x(k)} y={top - 3} className="hs-rainamt">{mm(p)}</text>
+                </g>
+              )
+            })}
+            {/* 비가 아직 멀면 빈 줄에 언제·얼마나 오는지 */}
+            {next && next.k >= NEXT_NOTE_MIN_COLS && (
+              <text x={8} y={rainTop + RAIN_H / 2 + 4} className="hs-rainnext">
+                {`다음 비 → ${dayLabel(dates[next.k], firstDay)} ${hours[next.k]}시쯤부터 약 ${mm(next.total)}`}
+              </text>
             )}
           </svg>
         </div>
@@ -263,7 +268,7 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
       <div className="hourly-foot muted small">{summary}</div>
       <table className="sr-only">
         <caption>시간대별 예보. 코랄 실선은 예보, 슬레이트 점선은 하루 전 같은 시각이며, 더 따뜻한 구간은 빨강, 더 쌀쌀한 구간은 파랑입니다.</caption>
-        <thead><tr><th>시각</th><th>날씨</th><th>기온</th><th>하루 전</th><th>강수확률</th><th>강수량</th></tr></thead>
+        <thead><tr><th>시각</th><th>날씨</th><th>기온</th><th>하루 전</th><th>강수확률</th><th>강수량(3시간)</th></tr></thead>
         <tbody>{idx.map((i, k) => <tr key={i}><th>{time[i].replace('T', ' ')}</th><td>{labels[k]}</td><td>{Math.round(tNow[k])}도</td><td>{Math.round(tPrev[k])}도</td><td>{prob[k] === null ? '정보 없음' : `${prob[k]}%`}</td><td>{mm(pr[k])}</td></tr>)}</tbody>
       </table>
     </section>
