@@ -19,7 +19,7 @@ const built = esbuild.buildSync({
 })
 const mod = { exports: {} }
 new Function('module', 'exports', 'require', built.outputFiles[0].text)(mod, mod.exports, require)
-const { parseVersion, isNewer, latestFromRelease, shouldOffer, LEGACY_APP_VERSION } = mod.exports
+const { parseVersion, isNewer, latestFromRelease, shouldOffer, cacheFresh, LEGACY_APP_VERSION } = mod.exports
 
 const release = (o = {}) => ({
   tag_name: 'android-v1.0.108',
@@ -67,4 +67,17 @@ test('배너: 더 새 버전이고 닫은 적 없을 때만', () => {
   assert.equal(shouldOffer('1.0.106', latest, '1.0.108'), false) // 닫았다
   assert.equal(shouldOffer('1.0.106', { version: '1.0.109', notes: '' }, '1.0.108'), true) // 더 새 버전이면 다시
   assert.equal(shouldOffer('1.0.106', null, null), false)
+})
+
+test('확인 결과 저장: 새 버전 있음은 10분, 없음은 2분만 믿는다 (예전 6시간이라 하루 두 번 릴리스 때 카드가 안 떴다)', () => {
+  const now = 1_800_000_000_000
+  const found = { at: now - 9 * 60_000, latest: { version: '1.0.110', notes: '' } }
+  assert.equal(cacheFresh(found, now), true)
+  assert.equal(cacheFresh({ ...found, at: now - 11 * 60_000 }, now), false)
+  assert.equal(cacheFresh({ at: now - 60_000, latest: null }, now), true)
+  assert.equal(cacheFresh({ at: now - 3 * 60_000, latest: null }, now), false)
+  // 예전(6시간) 기준으로 저장된 값도 새 기준으로 다시 본다 → 배포 즉시 다시 확인
+  assert.equal(cacheFresh({ at: now - 5 * 3600_000, latest: { version: '1.0.110', notes: '' } }, now), false)
+  assert.equal(cacheFresh(null, now), false)
+  assert.equal(cacheFresh({ at: now + 60_000, latest: null }, now), false) // 기기 시계를 되돌린 경우
 })

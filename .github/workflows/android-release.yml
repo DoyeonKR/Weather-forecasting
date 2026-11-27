@@ -1,7 +1,7 @@
 # 안드로이드 앱(APK) 자동 릴리스.
 #  · main 에 머지 → 앱 코드(android/ 등)가 지난 릴리스 뒤로 바뀌었고 package.json 버전이 새 것이면
 #    서명된 APK 를 빌드해 GitHub 릴리스(android-v{버전}, eojeboda-weather.apk)를 만든다.
-#    → 앱 안 업데이트 카드(src/lib/appUpdate.ts)가 6시간 안에 사용자에게 알린다.
+#    → 앱 안 업데이트 카드(src/lib/appUpdate.ts)가 앱을 열거나 돌아올 때 곧 사용자에게 알린다.
 #  · 웹만 바꾼 머지는 아무것도 안 한다 (웹은 deploy-pages.yml 이 배포, 앱은 사이트를 열 뿐이라 바로 반영).
 #  · PR 에서는 서명 없이 빌드만 해서 깨지지 않았는지 본다.
 #  · 손으로: Actions → Android release → Run workflow (force 를 켜면 앱 코드가 안 바뀌어도 릴리스).
@@ -173,7 +173,7 @@ jobs:
             --title "무능한 날씨예측기 안드로이드 앱 v$VERSION" \
             --notes-file /tmp/out/notes.md \
             --latest
-          echo "릴리스 완료: $TAG — 앱 안 업데이트 카드는 앱마다 6시간 안에 뜬다" >> "$GITHUB_STEP_SUMMARY"
+          echo "릴리스 완료: $TAG — 앱 안 업데이트 카드는 앱을 열거나 돌아올 때 뜬다 (확인 결과 10분 저장)" >> "$GITHUB_STEP_SUMMARY"
 
       - if: always()
         name: 서명 키 파일 지우기
