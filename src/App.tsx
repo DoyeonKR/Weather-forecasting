@@ -491,6 +491,11 @@ export default function App() {
 
   // 현재 날씨 상태: 기상청 관측(PTY)이 강수를 잡으면 관측값 우선, 아니면 모델 라벨
   const obsLabel = ptyLabel(kmaNow?.pty ?? null)
+  // 기상청 실황의 "지금 비" — 시간대별 그래프 "비" 줄이 예보 양 0이어도 지금 비를 말하게
+  // 기상청 강수형태(PTY): 3 눈 · 7 눈날림 → 눈 그림
+  const observedRain = kmaNow
+    ? { raining: (kmaNow.pty ?? 0) > 0 || (kmaNow.rn1 ?? 0) > 0, rn1: kmaNow.rn1 ?? null, snow: kmaNow.pty === 3 || kmaNow.pty === 7 }
+    : null
   const now = obsLabel ?? codeLabel(wx.nowCode)
   // 실용 멘트·추천·강수확률 칸은 "오늘 남은 시간" 기준 (지나간 비로 우산을 권하지 않게)
   const ahead = todayAhead(wx)
@@ -780,7 +785,7 @@ export default function App() {
             {key === 'places' && (
               <ComparePlaces baseLabel={loc.label} baseWx={wx} favorites={favorites} />
                     )}
-      {key === 'hourly' && <HourlyCard wx={wx} />}
+      {key === 'hourly' && <HourlyCard wx={wx} observed={observedRain} />}
       {key === 'sun' && (
         <section className="card">
           <h2 className="section-title">해·자외선</h2>
@@ -946,7 +951,7 @@ export default function App() {
           <header className="journal-heading">
             <h2 id="flow-title">오늘의 흐름</h2>
           </header>
-          <SectionBoundary name="hourly"><HourlyCard wx={wx} embedded /></SectionBoundary>
+          <SectionBoundary name="hourly"><HourlyCard wx={wx} embedded observed={observedRain} /></SectionBoundary>
           <CommuteCompare wx={wx} prefs={commute} />
         </section>
         <section className="journal-outlook card" aria-labelledby="outlook-title">

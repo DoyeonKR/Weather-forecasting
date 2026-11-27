@@ -32,3 +32,27 @@ test('강수량 표기', () => {
   assert.equal(mm(0.4), '0.4mm')
   assert.equal(mm(3.6), '4mm')
 })
+
+test('"비" 줄 안내: 지금 관측된 비가 가장 먼저 (예보 양 0이어도)', () => {
+  const { laneNote } = mod.exports
+  const pr = [0, 0, 0, 0, 0, 0, 0, 0, 0.6]
+  const prob = [61, 44, 20, null, 0, 0, 0, 0, 30]
+  assert.deepEqual(laneNote(pr, prob, { raining: true, rn1: 0.5 }, 6, 5), { kind: 'now', mm: 0.5 })
+  assert.deepEqual(laneNote(pr, prob, { raining: true, rn1: 0 }, 6, 5), { kind: 'now', mm: null })
+})
+
+test('"비" 줄 안내: 확률은 높은데 양이 0이면 "비 올 수 있어요" (며칠 뒤 다음 비보다 먼저)', () => {
+  const { laneNote } = mod.exports
+  const pr = [0, 0, 0, 0, 0, 0, 0, 0, 0.6]
+  assert.deepEqual(laneNote(pr, [61, 44, 20, 0, 0, 0, 0, 0, 30], { raining: false, rn1: 0 }, 6, 5), { kind: 'chance', prob: 61 })
+  // 확률이 낮으면 다음 비
+  assert.deepEqual(laneNote(pr, [30, 20, 0, 0, 0, 0, 0, 0, 30], null, 6, 5), { kind: 'next', k: 8, total: 0.6 })
+  // 앞쪽 7번째 칸 이후의 높은 확률은 보지 않는다
+  assert.deepEqual(laneNote(pr, [0, 0, 0, 0, 0, 0, 0, 80, 30], null, 6, 5), { kind: 'next', k: 8, total: 0.6 })
+})
+
+test('"비" 줄 안내: 곧 오는 비는 막대가 보이니 안내 없음, 아무것도 없으면 null', () => {
+  const { laneNote } = mod.exports
+  assert.equal(laneNote([0, 0, 1.2, 0, 0, 0], [70, 80, 90, 0, 0, 0], null, 6, 5), null)
+  assert.equal(laneNote([0, 0, 0, 0, 0, 0], [10, 0, 0, 0, 0, 0], null, 6, 5), null)
+})

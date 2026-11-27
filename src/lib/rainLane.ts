@@ -29,3 +29,37 @@ export function nextRain(pr: number[]): { k: number; total: number } | null {
 export function mm(v: number): string {
   return v < 1 ? `${v.toFixed(1)}mm` : `${Math.round(v)}mm`
 }
+
+/**
+ * "비" 줄 앞쪽 안내 — 무엇을 말할지 (우선순위 순).
+ *  1. now    : 기상청 실황이 지금 비라고 한다 → "지금 비" (예보 양이 0이어도 — 모델이 소나기를 놓친다, 2026-11-27 제보)
+ *  2. chance : 앞쪽 칸 강수확률이 50%↑ 인데 예보 양은 0.1mm 미만 → "비 올 수 있어요 · 최대 61%"
+ *              (예전에는 이때 며칠 뒤 "다음 비"만 보여 지금은 비가 안 오는 것처럼 읽혔다)
+ *  3. next   : 비가 멀리 있으면 "다음 비 → 언제·얼마나"
+ *  없으면 null. 가까운 칸에 실제 강수량이 있으면(막대가 보이면) 안내하지 않는다.
+ */
+export type LaneNote =
+  | { kind: 'now'; mm: number | null }
+  | { kind: 'chance'; prob: number }
+  | { kind: 'next'; k: number; total: number }
+
+export const CHANCE_PROB = 50
+
+export function laneNote(
+  pr: number[],
+  prob: (number | null)[],
+  observed: { raining: boolean; rn1: number | null } | null,
+  firstN: number,
+  nextMinCols: number,
+): LaneNote | null {
+  if (observed?.raining) return { kind: 'now', mm: observed.rn1 !== null && observed.rn1 > 0 ? observed.rn1 : null }
+  const next = nextRain(pr)
+  if (next && next.k < nextMinCols) return null // 곧 오는 비는 막대·숫자가 직접 보인다
+  let best = -1
+  for (let k = 0; k < Math.min(firstN, pr.length); k++) {
+    const p = prob[k]
+    if (pr[k] < RAIN_MIN_MM && typeof p === 'number' && p >= CHANCE_PROB) best = Math.max(best, p)
+  }
+  if (best >= 0) return { kind: 'chance', prob: best }
+  return next ? { kind: 'next', k: next.k, total: next.total } : null
+}
