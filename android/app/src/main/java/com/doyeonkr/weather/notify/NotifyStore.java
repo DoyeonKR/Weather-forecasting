@@ -42,7 +42,17 @@ public final class NotifyStore {
         e.apply();
     }
 
-    /** 오늘 이 알림(morning/night)을 보냈나 */
+    /** 조건 알림 (비 시작·미세먼지·폭염/한파) — 웹처럼 처음 켤 때 모두 켠 채로 시작 */
+    static boolean alert(Context c, String kind) { return p(c).getBoolean("a_" + kind, false); }
+    static boolean anyAlert(Context c) { return alert(c, "rain") || alert(c, "air") || alert(c, "temp"); }
+    static boolean alertsChosen(Context c) { return p(c).getBoolean("a_set", false); }
+    static void setAlert(Context c, String kind, boolean on) { p(c).edit().putBoolean("a_" + kind, on).putBoolean("a_set", true).apply(); }
+
+    /** 마지막 비 시작 알림 시각(ms) — 6시간에 한 번 */
+    static long lastRainAlert(Context c) { return p(c).getLong("last_rain", 0); }
+    static void markRainAlert(Context c, long at) { p(c).edit().putLong("last_rain", at).apply(); }
+
+    /** 오늘 이 알림(morning/night/air/temp)을 보냈나 */
     static String lastSent(Context c, String mode) { return p(c).getString("sent_" + mode, ""); }
     static void markSent(Context c, String mode, String day) { p(c).edit().putString("sent_" + mode, day).apply(); }
 

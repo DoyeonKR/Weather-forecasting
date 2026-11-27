@@ -3,7 +3,21 @@
 // 1.0.110 부터 있는 플러그인 — 그 전 앱(1.0.106·1.0.108)에서는 canAppNotify() 가 false 라 "앱을 업데이트" 안내만.
 import { isNativeApp } from './nativeWidget'
 
-export type AppNotifyInfo = { enabled: boolean; allowed: boolean; morning: string; night: string; label: string }
+export type AppNotifyInfo = {
+  enabled: boolean
+  allowed: boolean
+  morning: string
+  night: string
+  label: string
+  /** 조건 알림 (1.0.112+, 그 전 앱은 undefined) */
+  rain?: boolean
+  air?: boolean
+  temp?: boolean
+  /** 배터리 최적화(절전) 대상인가 — true 면 제조사 절전이 알림을 늦출 수 있다 */
+  batteryOptimized?: boolean
+  /** 제조사 (소문자, 예: samsung) */
+  maker?: string
+}
 export type AppNotifyPrefs = {
   lat?: number
   lon?: number
@@ -11,6 +25,9 @@ export type AppNotifyPrefs = {
   persona?: string
   morning?: string
   night?: string
+  rain?: boolean
+  air?: boolean
+  temp?: boolean
 }
 
 interface AppNotifyPlugin {
@@ -20,6 +37,7 @@ interface AppNotifyPlugin {
   update(p: AppNotifyPrefs): Promise<void>
   test(): Promise<{ status: 'sent' | 'failed' | 'blocked' }>
   openSettings(): Promise<void>
+  requestBatteryExemption(): Promise<void>
 }
 
 type CapWindow = { Capacitor?: { isPluginAvailable?: (n: string) => boolean } }
@@ -105,5 +123,15 @@ export async function appNotifyOpenSettings(): Promise<void> {
     await b.p.openSettings()
   } catch {
     // 설정 화면을 못 열면 안내 문구만
+  }
+}
+
+/** 배터리 최적화에서 빼 달라는 시스템 창 (1.0.112+) */
+export async function appNotifyBatteryExemption(): Promise<void> {
+  try {
+    const b = await plugin()
+    await b.p.requestBatteryExemption()
+  } catch {
+    // 그 전 앱에는 없다
   }
 }

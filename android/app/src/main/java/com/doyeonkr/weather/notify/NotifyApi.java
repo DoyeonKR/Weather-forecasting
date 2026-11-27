@@ -15,6 +15,13 @@ public final class NotifyApi {
         r.put("morning", NotifyStore.morning(c));
         r.put("night", NotifyStore.night(c));
         r.put("label", NotifyStore.hasPlace(c) ? NotifyStore.label(c) : "");
+        r.put("rain", NotifyStore.alert(c, "rain"));
+        r.put("air", NotifyStore.alert(c, "air"));
+        r.put("temp", NotifyStore.alert(c, "temp"));
+        // 배터리 최적화(절전)에서 빠져 있나 — 아니면 제조사 절전이 알림을 늦출 수 있어 안내한다
+        android.os.PowerManager pm = c.getSystemService(android.os.PowerManager.class);
+        r.put("batteryOptimized", pm != null && !pm.isIgnoringBatteryOptimizations(c.getPackageName()));
+        r.put("maker", android.os.Build.MANUFACTURER == null ? "" : android.os.Build.MANUFACTURER.toLowerCase(java.util.Locale.ROOT));
         return r;
     }
 
@@ -35,9 +42,18 @@ public final class NotifyApi {
         String persona = d.getString("persona");
         if (persona != null && persona.matches("default|grandma|bro|community")) NotifyStore.savePersona(c, persona);
         NotifyStore.saveTimes(c, d.getString("morning"), d.getString("night"));
+        for (String k : new String[] { "rain", "air", "temp" }) {
+            if (d.has(k)) NotifyStore.setAlert(c, k, d.optBoolean(k, false));
+        }
     }
 
     public static void enable(Context c) {
+        // 웹처럼 처음 켤 때는 조건 알림까지 모두 켠 채로 (설정에서 하나씩 끌 수 있다)
+        if (!NotifyStore.alertsChosen(c)) {
+            NotifyStore.setAlert(c, "rain", true);
+            NotifyStore.setAlert(c, "air", true);
+            NotifyStore.setAlert(c, "temp", true);
+        }
         Notifier.ensureChannel(c);
         NotifyStore.setEnabled(c, true);
         NotifyScheduler.sync(c);

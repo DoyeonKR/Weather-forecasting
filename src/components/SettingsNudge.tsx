@@ -203,7 +203,7 @@ export default function SettingsNudge({
                   trackEvent('notify_on', { source: 'popup-app' })
                   setAppOn(true)
                   onNotifyChange()
-                  setResult('알림을 켰어요! 아침엔 오늘 브리핑, 밤엔 내일 출근 준비가 와요.')
+                  setResult('알림을 켰어요! 아침엔 오늘 브리핑, 밤엔 내일 출근 준비가 와요. 설정에서 시간을 바꿀 수 있어요.')
                 } else if (r === 'denied' || r === 'blocked') {
                   setResult('알림이 막혀 있어요. 설정 > 날씨 알림에서 휴대폰 알림 설정을 열어 허용해 주세요.')
                 } else {

@@ -29,18 +29,18 @@ public final class Brief {
     public static final class Msg {
         public final String title, body;
 
-        Msg(String title, String body) {
+        public Msg(String title, String body) {
             this.title = title;
             this.body = body;
         }
     }
 
-    static double r1(double n) {
+    public static double r1(double n) {
         return Math.round(n * 10) / 10.0;
     }
 
     /** 자바스크립트 숫자 표기와 같게: 3 → "3", 3.5 → "3.5", -0 → "0" */
-    static String num(double v) {
+    public static String num(double v) {
         if (v == 0) return "0";
         if (v == Math.rint(v)) return String.valueOf((long) v);
         return String.valueOf(v);
@@ -50,7 +50,7 @@ public final class Brief {
         return (c >= 71 && c <= 77) || c == 85 || c == 86;
     }
 
-    static String say(Map<String, String> lines, String key) {
+    public static String say(Map<String, String> lines, String key) {
         String s = lines == null ? null : lines.get(key);
         return s == null ? "" : s;
     }

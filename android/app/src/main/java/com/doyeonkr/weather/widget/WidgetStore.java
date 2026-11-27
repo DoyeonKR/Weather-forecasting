@@ -63,7 +63,7 @@ public final class WidgetStore {
         return prefs(c).getLong("at", 0);
     }
 
-    static void saveWeather(Context c, double temp, int code, boolean isDay, double hi, double lo, int rainProb, double delta) {
+    static void saveWeather(Context c, double temp, int code, boolean isDay, double hi, double lo, int rainProb, double delta, long rainAt) {
         prefs(c).edit()
             .putFloat("temp", (float) temp)
             .putInt("code", code)
@@ -71,6 +71,7 @@ public final class WidgetStore {
             .putFloat("hi", (float) hi)
             .putFloat("lo", (float) lo)
             .putInt("rain", rainProb)
+            .putLong("rain_at", rainAt)
             .putFloat("delta", (float) delta)
             .putLong("at", System.currentTimeMillis())
             .apply();
@@ -84,6 +85,8 @@ public final class WidgetStore {
         public long at;
         public double temp, hi, lo, delta;
         public int code, rain = -1;
+        /** 다음 비 시작 시각(ms, 정각), 없으면 0 (WidgetRain) */
+        public long rainAt;
         public boolean day = true;
     }
 
@@ -100,6 +103,7 @@ public final class WidgetStore {
         s.hi = p.getFloat("hi", 0);
         s.lo = p.getFloat("lo", 0);
         s.rain = p.getInt("rain", -1);
+        s.rainAt = p.getLong("rain_at", 0);
         s.delta = p.getFloat("delta", 0);
         return s;
     }
@@ -198,10 +202,12 @@ public final class WidgetStore {
         v.setTextViewText(R.id.w_hilo, "최고 " + Math.round(s.hi) + "° · 최저 " + Math.round(s.lo) + "°");
         v.setTextViewText(R.id.w_compare, compare(s.delta));
         v.setTextColor(R.id.w_compare, compareColor(s.delta));
-        boolean hasRain = s.rain >= 0;
+        // 24시간 안에 비가 오면 "15시 비"·"내일 6시 비"·"지금 비", 아니면 오늘 비 올 확률
+        String next = WidgetRain.label(s.rainAt, System.currentTimeMillis(), java.util.TimeZone.getDefault());
+        boolean hasRain = next != null || s.rain >= 0;
         v.setViewVisibility(R.id.w_drop, hasRain ? View.VISIBLE : View.GONE);
         v.setViewVisibility(R.id.w_rain, hasRain ? View.VISIBLE : View.GONE);
-        v.setTextViewText(R.id.w_rain, hasRain ? s.rain + "%" : "");
+        v.setTextViewText(R.id.w_rain, next != null ? next : hasRain ? s.rain + "%" : "");
         return v;
     }
 

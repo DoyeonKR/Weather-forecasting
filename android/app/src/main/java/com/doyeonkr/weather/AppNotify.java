@@ -25,6 +25,7 @@ import com.getcapacitor.annotation.PermissionCallback;
  *  update  — 기준 지역(기본 지역)·말투·시간이 바뀌면 (켜져 있을 때만 알람을 다시 건다)
  *  test    — 지금 한 통
  *  openSettings — 알림을 막아 뒀을 때 이 앱의 알림 설정 화면
+ *  requestBatteryExemption — 배터리 최적화에서 빼기 (제조사 절전이 알림을 늦출 때)
  */
 @CapacitorPlugin(
     name = "AppNotify",
@@ -96,6 +97,19 @@ public class AppNotify extends Plugin {
             r.put("status", NotifyApi.test(c) ? "sent" : "failed");
             call.resolve(r);
         }).start();
+    }
+
+    /** 배터리 최적화(절전)에서 빼 달라는 시스템 창 — 안 되면 목록 화면으로 */
+    @PluginMethod
+    public void requestBatteryExemption(PluginCall call) {
+        Context c = getContext();
+        try {
+            c.startActivity(new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, android.net.Uri.parse("package:" + c.getPackageName()))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (Exception e) {
+            c.startActivity(new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        }
+        call.resolve();
     }
 
     @PluginMethod

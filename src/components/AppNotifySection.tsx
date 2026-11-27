@@ -1,7 +1,7 @@
 // 설정 > 날씨 알림 — 안드로이드 앱(APK) 안에서만. 웹뷰는 웹 푸시를 못 받아서 앱이 직접 알림을 만든다 (lib/appNotify).
 // 웹(브라우저)에서는 Settings 의 웹 푸시 칸이 그대로 쓰인다. 같은 클래스 이름을 써서 모양은 같다.
-import { useEffect, useState } from 'react'
-import { Moon, Sun } from '@phosphor-icons/react'
+import { useEffect, useRef, useState } from 'react'
+import { Leaf, Moon, Sun, ThermometerHot, Umbrella } from '@phosphor-icons/react'
 import {
   appNotifyDisable,
   appNotifyEnable,
@@ -9,6 +9,7 @@ import {
   appNotifyOpenSettings,
   appNotifyTest,
   appNotifyUpdate,
+  appNotifyBatteryExemption,
   canAppNotify,
   type AppNotifyInfo,
 } from '../lib/appNotify'
@@ -48,6 +49,15 @@ export default function AppNotifySection({
 
   useEffect(() => {
     if (open && supported) appNotifyInfo().then(setInfo)
+  }, [open, supported])
+  // 휴대폰 설정(알림 허용·배터리 최적화)에 갔다 돌아오면 다시 읽는다 — 누른 직후에는 아직 고르는 중이다
+  useEffect(() => {
+    if (!open || !supported) return
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') appNotifyInfo().then(setInfo)
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
   }, [open, supported])
 
   const on = !!info?.enabled && !!info?.allowed
@@ -92,6 +102,37 @@ export default function AppNotifySection({
     try {
       // 꺼져 있으면 저장만, 켜져 있으면 알람을 새 시간으로 다시 건다
       await appNotifyUpdate(kind === 'morning' ? { morning: v } : { night: v })
+      setInfo(await appNotifyInfo())
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // 배터리 최적화 창은 앱 위에 뜨는 작은 창이라 돌아와도 visibilitychange 가 없다 → 누른 뒤 1분 동안 1초마다 확인
+  const batteryPoll = useRef<number | null>(null)
+  useEffect(() => () => {
+    if (batteryPoll.current) window.clearInterval(batteryPoll.current)
+  }, [])
+  function exemptBattery() {
+    void appNotifyBatteryExemption()
+    if (batteryPoll.current) window.clearInterval(batteryPoll.current)
+    let left = 60
+    batteryPoll.current = window.setInterval(async () => {
+      const i = await appNotifyInfo()
+      if (i && !i.batteryOptimized) setInfo(i)
+      if ((i && !i.batteryOptimized) || --left <= 0) {
+        if (batteryPoll.current) window.clearInterval(batteryPoll.current)
+        batteryPoll.current = null
+      }
+    }, 1000)
+  }
+
+  /** 조건 알림 하나 켜기·끄기 (켜져 있으면 앱이 한 시간쯤마다 확인하는 일을 다시 건다) */
+  async function toggleAlert(kind: 'rain' | 'air' | 'temp') {
+    if (!info) return
+    setBusy(true)
+    try {
+      await appNotifyUpdate({ [kind]: !info[kind] })
       setInfo(await appNotifyInfo())
     } finally {
       setBusy(false)
@@ -191,9 +232,53 @@ export default function AppNotifySection({
               테스트 알림 보내기
             </button>
           )}
+          {/* 조건 알림 — 1.0.112+ 앱만 (그 전 앱은 info.rain 이 없다) */}
+          {info?.rain !== undefined &&
+            (
+              [
+                ['rain', Umbrella, '비 시작 알림', '한 시간 안에 비가 시작될 것 같으면 알려드려요. 07~21시에만, 6시간에 한 번까지.'],
+                ['air', Leaf, '미세먼지 나쁨 알림', '지금 나쁨 이상이면 하루 한 번.'],
+                ['temp', ThermometerHot, '폭염·한파 알림', '낮 최고 33° 이상이나 아침 최저 -5° 이하면 하루 한 번.'],
+              ] as const
+            ).map(([kind, Icon, title, desc]) => (
+              <div className="notify-row rain-row" key={kind}>
+                <div>
+                  <h4 className="settings-sub-title"><Icon size={18} weight="duotone" aria-hidden /> {title}</h4>
+                  <p className="muted small notify-desc">
+                    {desc}
+                    {on ? '' : ' 위의 날씨 알림을 먼저 켜주세요.'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={`notify-toggle ${on && info[kind] ? 'on' : ''}`}
+                  onClick={() => toggleAlert(kind)}
+                  disabled={busy || !on}
+                  aria-label={info[kind] ? `${title} 끄기` : `${title} 켜기`}
+                  role="switch"
+                  aria-checked={on && !!info[kind]}
+                >
+                  <span className="notify-knob" />
+                </button>
+              </div>
+            ))}
+          {/* 제조사 절전이 알림을 늦출 수 있다 — 배터리 최적화 대상이면 한 번에 빼는 버튼 */}
+          {on && info?.batteryOptimized && (
+            <div className="notify-battery">
+              <p className="muted small notify-desc">
+                알림이 늦게 오거나 안 오면 이 앱을 배터리 최적화에서 빼 주세요.
+                {info.maker === 'samsung'
+                  ? ' 삼성 폰은 설정 > 배터리 > 백그라운드 사용 제한에서 이 앱이 「절전 앱」·「깊은 절전 앱」에 없는지도 확인해 주세요.'
+                  : ''}
+              </p>
+              <button type="button" className="order-reset test-push" onClick={exemptBattery}>
+                배터리 최적화에서 빼기
+              </button>
+            </div>
+          )}
           <p className="muted small notify-desc">
-            비 시작·미세먼지·폭염 알림은 아직 크롬에서 연 사이트에서만 받을 수 있어요. 크롬 사이트에서도 날씨 알림을
-            켜 두었다면 아침·밤 브리핑이 두 번 올 수 있으니, 한쪽만 켜 두세요.
+            {info?.rain === undefined ? '비 시작·미세먼지·폭염 알림은 아직 크롬에서 연 사이트에서만 받을 수 있어요. ' : ''}
+            크롬 사이트에서도 날씨 알림을 켜 두었다면 같은 알림이 두 번 올 수 있으니, 한쪽만 켜 두세요.
           </p>
         </>
       )}
