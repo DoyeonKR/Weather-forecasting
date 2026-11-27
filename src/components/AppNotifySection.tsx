@@ -192,7 +192,8 @@ export default function AppNotifySection({
             </button>
           )}
           <p className="muted small notify-desc">
-            휴대폰이 절전 중이면 몇 분 늦게 올 수 있어요. 비 시작·미세먼지·폭염 알림은 아직 크롬에서 연 사이트에서만 받을 수 있어요.
+            비 시작·미세먼지·폭염 알림은 아직 크롬에서 연 사이트에서만 받을 수 있어요. 크롬 사이트에서도 날씨 알림을
+            켜 두었다면 아침·밤 브리핑이 두 번 올 수 있으니, 한쪽만 켜 두세요.
           </p>
         </>
       )}
