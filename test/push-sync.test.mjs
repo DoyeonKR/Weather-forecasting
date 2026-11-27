@@ -22,7 +22,7 @@ const SUWON = { lat: 37.27, lon: 127.0, label: '수원시 매산로1가' }
 const SEOUL = { p_lat: 37.5665, p_lon: 126.978, p_label: '서울 (기본 위치)' }
 
 /** 가짜 브라우저: 구독 하나, 캐시, localStorage, fetch 기록 */
-function fakeBrowser({ subscribed = true, permission = 'granted', prefs = null, ls = {} } = {}) {
+function fakeBrowser({ subscribed = true, permission = 'granted', prefs = null, ls = {}, noPush = false } = {}) {
   const store = new Map()
   if (prefs) store.set(PREFS_URL, JSON.stringify(prefs))
   const calls = []
@@ -36,7 +36,8 @@ function fakeBrowser({ subscribed = true, permission = 'granted', prefs = null, 
         },
       }
     : null
-  const reg = { pushManager: { getSubscription: async () => sub } }
+  // noPush: 안드로이드 앱 웹뷰 — 서비스워커는 있는데 pushManager 가 없다
+  const reg = noPush ? {} : { pushManager: { getSubscription: async () => sub } }
   const g = {
     window: { setTimeout, PushManager: function () {} },
     navigator: { serviceWorker: { getRegistration: async () => reg, ready: Promise.resolve(reg) } },
@@ -127,4 +128,15 @@ test('끄기 바로 뒤에 지역 맞추기가 와도 지운 구독을 되살리
   assert.equal(await off, true)
   assert.equal(await sync, 'no-sub')
   assert.deepEqual(b.calls.map((c) => c.name), ['weather_push_remove'])
+})
+
+test('안드로이드 앱(웹뷰, pushManager 없음)에서 말투 바꾸기: 실패가 아니라 기기에만 저장 (예전엔 TypeError → "저장 실패")', async () => {
+  const ls = {}
+  const b = fakeBrowser({ noPush: true, ls })
+  assert.equal(await b.push.setPushAlerts({ persona: 'grandma', air: false, temp: false }), 'no-sub')
+  assert.equal(ls['eojeboda.persona'], 'grandma')
+  assert.equal(b.calls.length, 0)
+  // 같은 이유로 지역 맞추기·테스트 알림도 터지지 않는다
+  assert.equal(await b.push.syncNotifyPlace({ lat: 37.27, lon: 127, label: '수원시' }), 'no-sub')
+  assert.equal(await b.push.sendTestPush(), 'no-sub')
 })

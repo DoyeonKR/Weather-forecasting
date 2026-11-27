@@ -63,6 +63,16 @@ function isIos(): boolean {
   }
 }
 
+/**
+ * 이 등록의 웹 푸시 구독. 웹 푸시가 없는 곳이면 null —
+ * 안드로이드 앱(웹뷰)은 서비스워커는 있어도 pushManager 가 없어서, 그냥 부르면 TypeError 로 "저장 실패"가 났다
+ * (앱에서 말투를 바꿔도 안 바뀌던 원인, 2026-11-27).
+ */
+async function currentSub(reg: ServiceWorkerRegistration | null | undefined): Promise<PushSubscription | null> {
+  if (!reg || !reg.pushManager) return null
+  return reg.pushManager.getSubscription()
+}
+
 export async function getNotifyState(): Promise<NotifyState> {
   // iOS 는 홈 화면에 추가한 웹앱 안에서만 알림을 지원한다 (영구 미지원처럼 안내하지 않는다)
   const needsInstall = isIos() && !isStandalone()
@@ -74,7 +84,7 @@ export async function getNotifyState(): Promise<NotifyState> {
       if (needsInstall) return 'needs-install'
       return import.meta.env.PROD ? 'off' : 'unsupported'
     }
-    const sub = await reg.pushManager.getSubscription()
+    const sub = await currentSub(reg)
     // 이미 켜져 있으면 어떤 환경이든 끌 수는 있어야 한다
     if (sub) return 'on'
     if (needsInstall) return 'needs-install'
@@ -113,7 +123,7 @@ async function subscribeWithRetry(reg: ServiceWorkerRegistration): Promise<PushS
     return await reg.pushManager.subscribe(opts)
   } catch (err) {
     if ((err as Error)?.name !== 'InvalidStateError') throw err
-    const stale = await reg.pushManager.getSubscription()
+    const stale = await currentSub(reg)
     if (stale) await stale.unsubscribe().catch(() => {})
     return await reg.pushManager.subscribe(opts)
   }
@@ -233,7 +243,7 @@ async function setAlertsOnServer(endpoint: string, a: PushAlerts): Promise<boole
 export async function setPushAlerts(a: PushAlerts): Promise<'ok' | 'no-sub' | 'failed'> {
   try {
     const reg = 'serviceWorker' in navigator ? await readyWithTimeout(1500) : null
-    const sub = reg ? await reg.pushManager.getSubscription() : null
+    const sub = await currentSub(reg)
     if (!sub) {
       await saveAlerts(a)
       return 'no-sub'
@@ -291,7 +301,7 @@ async function setRainOnServer(endpoint: string, on: boolean): Promise<boolean> 
 export async function setRainAlert(on: boolean): Promise<'ok' | 'no-sub' | 'failed'> {
   try {
     const reg = await readyWithTimeout()
-    const sub = reg ? await reg.pushManager.getSubscription() : null
+    const sub = await currentSub(reg)
     if (!sub) return 'no-sub'
     if (!(await setRainOnServer(sub.endpoint, on))) return 'failed'
     await saveRainFlag(on)
@@ -339,7 +349,7 @@ async function enableNotifyNow(
     // 저장에 실패했을 때 무엇을 되돌릴지 판단하는 기준.
     // "구독이 있었나" 가 아니라 "이번에 endpoint 가 새로 생겼나" 로 본다.
     // subscribeWithRetry 가 낡은 구독을 정리하고 다시 만든 경우도 여기서 잡힌다.
-    const before = await reg.pushManager.getSubscription()
+    const before = await currentSub(reg)
     const prevEndpoint = before ? before.endpoint : null
     const sub = await subscribeWithRetry(reg)
     if (sub.endpoint !== prevEndpoint) created = sub
@@ -418,7 +428,7 @@ async function disableNotifyNow(): Promise<boolean> {
     // 워커가 아직 없어서 아무것도 안 하고 성공한 척 끝난다.
     const reg = await readyWithTimeout()
     if (!reg) return false
-    const sub = await reg.pushManager.getSubscription()
+    const sub = await currentSub(reg)
     if (!sub) {
       // 브라우저 구독만 사라지고 서버 행은 남아 있을 수 있다. 그대로 두면 내일 아침에도 온다.
       const prefs = await readPrefs()
@@ -483,7 +493,7 @@ export async function syncNotifyPlace(place: { lat: number; lon: number; label: 
     try {
       // ready 를 기다리지 않는다 — 워커가 없으면 구독도 없다
       const reg = await navigator.serviceWorker.getRegistration()
-      const sub = reg ? await reg.pushManager.getSubscription() : null
+      const sub = await currentSub(reg)
       if (!sub) return 'no-sub'
       const prefs = (await readPrefs()) as SavedPrefs | null
       if (prefs?.p_endpoint === sub.endpoint && !placeChanged(prefs, place)) return 'same'
@@ -500,7 +510,7 @@ export async function syncNotifyPlace(place: { lat: number; lon: number; label: 
         p_morning_time: savedSlot(prefs, 'p_morning_time'),
       }
       // 보내기 직전에 한 번 더 — 다른 탭에서 방금 껐다면 되살리지 않는다
-      const still = await reg!.pushManager.getSubscription()
+      const still = await currentSub(reg)
       if (!still || still.endpoint !== sub.endpoint) return 'no-sub'
       const res = await fetch(`${SB_URL}/rest/v1/rpc/weather_push_save`, {
         method: 'POST',
@@ -521,7 +531,7 @@ export async function syncNotifyPlace(place: { lat: number; lon: number; label: 
 export async function sendTestPush(): Promise<'ok' | 'no-sub' | 'too-soon' | 'failed'> {
   try {
     const reg = await readyWithTimeout()
-    const sub = reg ? await reg.pushManager.getSubscription() : null
+    const sub = await currentSub(reg)
     if (!sub) return 'no-sub'
     const res = await fetch(`${SB_URL}/functions/v1/weather-push-test`, {
       method: 'POST',
