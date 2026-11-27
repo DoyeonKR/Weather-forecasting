@@ -126,6 +126,7 @@ src/
 │   ├── nativeWidget.ts # 안드로이드 앱 안에서만: 위젯에 동네 넘기기·위젯 추가 창·APK 주소
 │   ├── appUpdate.ts   # 안드로이드 앱 안에서만: 새 버전 확인(GitHub 릴리스)·설치 요청
 │   ├── appNotify.ts   # 안드로이드 앱 안에서만: 앱이 직접 띄우는 날씨 알림 켜기·끄기·지역/말투/시간 넘기기·테스트
+│   ├── freshWeb.ts    # 새 배포가 있으면 다시 불러오기 (앱은 뒤로 보냈다 열어도 예전 코드를 쓴다)
 │   └── geo.ts         # geolocation + 역지오코딩
 ├── components/
 │   ├── RadarMap.tsx      # Leaflet 지도 + 실황/예측 타임라인 (지연 로드)
@@ -221,7 +222,7 @@ npm test         # 판단 로직 테스트
 
 | 바꾼 것 | 필요한 일 | 사용자 쪽 |
 |---|---|---|
-| 웹 화면·문구·기능 (`src/`) | `main` 에 push (웹 배포) | 앱을 다시 열면 바로 반영 |
+| 웹 화면·문구·기능 (`src/`) | `main` 에 push (웹 배포) | 앱을 30초 넘게 뒤에 뒀다 돌아오거나 새로 켜면 반영 (`lib/freshWeb.ts`) |
 | 위젯 (`android/.../widget`, `res/layout`, `res/drawable`) | `package.json` 버전 올리고 CHANGELOG 쓰고 main 에 머지 (APK 자동 릴리스) | 앱 안 업데이트 카드 → 설치 |
 | 네이티브 플러그인·권한·앱 이름·아이콘 | 위와 같음 | 앱 안 업데이트 카드 → 설치 |
 | 알림 문구·기준 (`weather-push` 의 `morningMsg`·`nightMsg`·`runRain`) | 서버(Supabase 배포)와 앱 `notify/Brief.java`·`Conditions.java` 를 **같이** 고친다 → APK 릴리스 | 웹 알림은 바로, 앱 알림은 업데이트 뒤 |
