@@ -830,6 +830,7 @@ export default function App() {
     {!statsOpen && (
       <SettingsNudge
         notifyPlace={pushPlace}
+        persona={persona}
         onOpenSettings={() => setSettingsSignal((n) => n + 1)}
         onNotifyChange={() => setNotifySignal((n) => n + 1)}
       />
