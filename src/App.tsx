@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowClockwise,
   CalendarBlank,
@@ -37,7 +37,8 @@ import { loadLast, saveLast } from './lib/lastWeather'
 import { FetchFail } from './lib/http'
 import { todayAhead, yesterdaySameWindow } from './lib/ahead'
 import { buildGlance } from './lib/glance'
-import { getPushAlerts, readPersonaSync } from './lib/push'
+import { getPushAlerts, readPersonaSync, syncNotifyPlace } from './lib/push'
+import { notifyPlace, type NotifyPlace } from './lib/notifyPlace'
 import { useVoice } from './lib/useVoice'
 import type { Persona } from '../supabase/functions/_shared/persona.ts'
 import { buildSummary, type SummaryTarget } from './lib/summary'
@@ -122,6 +123,11 @@ export default function App() {
   // 지난번에 받아 둔 날씨가 있으면 스피너 없이 그것부터 보여주고 곧바로 새로 받는다
   const [boot] = useState(() => loadLast(selectedId))
   const [loc, setLoc] = useState<Located | null>(boot?.loc ?? null)
+  /** 마지막으로 받은 실제 현재 위치 (권한이 없어 받은 "서울 기본 위치"는 넣지 않는다) — 알림 기준 지역에 쓴다 */
+  const [currentFix, setCurrentFix] = useState<NotifyPlace | null>(() => {
+    const c = loadLast('current')?.loc
+    return c && !c.isFallback ? { lat: c.lat, lon: c.lon, label: c.label } : null
+  })
   const [wx, setWx] = useState<WeatherData | null>(boot?.wx ?? null)
   const [kmaNow, setKmaNow] = useState<KmaNow | null>(boot?.kmaNow ?? null)
   const [visitors, setVisitors] = useState<number | null>(null)
@@ -145,6 +151,12 @@ export default function App() {
   const [settingsSignal, setSettingsSignal] = useState(0)
   /** 설정 밖(안내 팝업)에서 알림을 켜면 올린다 → 설정이 상태를 다시 읽는다 */
   const [notifySignal, setNotifySignal] = useState(0)
+  // 날씨 알림 기준 지역 = 기본 지역 (화면에서 둘러보는 지역이 아니다). 이미 켜 둔 알림도 여기에 맞춘다 —
+  // 앱을 열 때, 기본 지역·즐겨찾기·현재 위치가 바뀔 때. 예전에 서울로 굳은 구독도 이걸로 고쳐진다
+  const pushPlace = useMemo(() => notifyPlace(homeId, favorites, currentFix), [homeId, favorites, currentFix])
+  useEffect(() => {
+    void syncNotifyPlace(pushPlace)
+  }, [pushPlace, notifySignal])
   const [air, setAir] = useState<AirNow | null>(boot?.air ?? null)
   const [feel, setFeel] = useState(loadFeel)
   // 앱 전체 말투 (서버 저장은 설정 화면에서, 화면 적용은 useVoice)
@@ -225,6 +237,7 @@ export default function App() {
           where = await locate(wantPrompt)
           // GPS 를 기다리는 동안 사용자가 다른 지역을 골랐으면 이 결과는 버린다
           if (seq !== loadSeq.current) return
+          if (!where.isFallback) setCurrentFix({ lat: where.lat, lon: where.lon, label: where.label })
           // 사용자가 "현재 위치"를 눌렀는데 못 가져왔다면 아무 일도 없는 것처럼 보이면 안 된다
           if (where.isFallback && wantPrompt) {
             setToast(
@@ -811,7 +824,7 @@ export default function App() {
     {/* 상단 브리핑 띠: .shell(overflow: hidden) 바깥에 고정. 지역·날씨가 바뀌면 같이 바뀐다 */}
     {!statsOpen && (
       <SettingsNudge
-        loc={loc}
+        notifyPlace={pushPlace}
         onOpenSettings={() => setSettingsSignal((n) => n + 1)}
         onNotifyChange={() => setNotifySignal((n) => n + 1)}
       />
@@ -851,6 +864,7 @@ export default function App() {
           </button>
           <Settings
             loc={{ lat: loc.lat, lon: loc.lon, label: loc.label }}
+            notifyPlace={pushPlace}
             favorites={favorites}
             homeId={homeId}
             onSetHome={setHome}

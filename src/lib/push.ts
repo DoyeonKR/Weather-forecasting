@@ -3,6 +3,7 @@
 // (테이블을 열어두면 endpoint 를 아는 쪽이 남의 알림 지역을 덮어쓰거나 통째로 지울 수 있다.
 //  스키마와 함수 정의는 supabase/sql/weather_push_subs.sql 참고)
 import { SB_ANON, SB_URL } from './track'
+import { placeChanged } from './notifyPlace'
 import { isPersona, type Persona } from '../../supabase/functions/_shared/persona.ts'
 
 const VAPID_PUBLIC =
@@ -300,16 +301,39 @@ export async function setRainAlert(on: boolean): Promise<'ok' | 'no-sub' | 'fail
   }
 }
 
-/** 알림 켜기 — 권한 요청 후 구독을 서버에 저장. 슬롯 형식 'HHmm' (예 '0730', '2130') */
+// 켜기·끄기·지역 맞추기를 한 줄로 세운다. 지역 맞추기(weather_push_save 는 행이 없으면 새로 만든다)가
+// 끄기 바로 뒤에 닿으면 지운 구독이 되살아나 끈 알림이 계속 온다.
+let queue: Promise<unknown> = Promise.resolve()
+function serial<T>(fn: () => Promise<T>): Promise<T> {
+  const run = queue.then(fn, fn)
+  queue = run.catch(() => {})
+  return run
+}
+
+/** 알림 켜기 — 권한 요청 후 구독을 서버에 저장. 슬롯 형식 'HHmm' (예 '0730', '2130')
+ *  loc 는 알림 기준 지역(lib/notifyPlace) — 화면에 보고 있는 지역이 아니다 */
 export async function enableNotify(
   loc: { lat: number; lon: number; label: string },
   nightTime = '2130',
   morningTime = '0730',
 ): Promise<EnableResult> {
-  let created: PushSubscription | null = null
+  // 권한 창은 누른 순간(사용자 제스처) 안에서 띄워야 해서 줄 서기 전에 묻는다
   try {
     const perm = await Notification.requestPermission()
     if (perm !== 'granted') return 'denied'
+  } catch {
+    return 'save-failed'
+  }
+  return serial(() => enableNotifyNow(loc, nightTime, morningTime))
+}
+
+async function enableNotifyNow(
+  loc: { lat: number; lon: number; label: string },
+  nightTime: string,
+  morningTime: string,
+): Promise<EnableResult> {
+  let created: PushSubscription | null = null
+  try {
     const reg = await readyWithTimeout()
     if (!reg) return 'no-sw'
     // 저장에 실패했을 때 무엇을 되돌릴지 판단하는 기준.
@@ -384,7 +408,11 @@ export async function enableNotify(
 }
 
 /** 알림 끄기 — 서버 구독 삭제 후 브라우저 구독 해제. 실패하면 false */
-export async function disableNotify(): Promise<boolean> {
+export function disableNotify(): Promise<boolean> {
+  return serial(disableNotifyNow)
+}
+
+async function disableNotifyNow(): Promise<boolean> {
   try {
     // 켜기와 같은 방식으로 기다린다. getRegistration 만 쓰면 앱을 켜자마자 끌 때
     // 워커가 아직 없어서 아무것도 안 하고 성공한 척 끝난다.
@@ -408,6 +436,85 @@ export async function disableNotify(): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+type SavedPrefs = {
+  p_endpoint?: string
+  p_lat?: number
+  p_lon?: number
+  p_label?: string
+  p_night_time?: string
+  p_morning_time?: string
+}
+const SLOT = /^\d{4}$/
+
+/** 저장된 알림 시간. 없으면 설정 화면이 쓰는 값(localStorage, 없으면 기본값) — 알림을 켤 때 보낸 값과 같다 */
+function savedSlot(prefs: SavedPrefs | null, key: 'p_night_time' | 'p_morning_time'): string {
+  const v = prefs?.[key]
+  if (typeof v === 'string' && SLOT.test(v)) return v
+  const [ls, fallback] = key === 'p_night_time' ? ['eojeboda:nighttime', '2130'] : ['eojeboda:morningtime', '0730']
+  try {
+    const t = localStorage.getItem(ls)
+    if (t && SLOT.test(t)) return t
+  } catch {
+    // 아래 기본값
+  }
+  return fallback
+}
+
+export type SyncResult = 'updated' | 'same' | 'no-sub' | 'skipped' | 'failed'
+
+/**
+ * 이미 켜 둔 알림의 기준 지역을 기본 지역에 맞춘다 (앱을 열 때, 기본 지역·현재 위치가 바뀔 때).
+ * 예전에 "서울 (기본 위치)"나 둘러보던 지역으로 저장된 구독도 이걸로 고쳐진다.
+ *  · 구독이 이미 있을 때만 — 권한을 묻거나 새로 구독하지 않는다
+ *  · 지역만 바꾼다 — 시간은 저장된 값 그대로, 비·조건 알림은 서버가 건드리지 않는다
+ *  · place 가 null(위치를 모름)이면 아무것도 안 한다 — 저장된 실제 위치를 서울로 덮지 않는다
+ */
+export async function syncNotifyPlace(place: { lat: number; lon: number; label: string } | null): Promise<SyncResult> {
+  if (!place) return 'skipped'
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || typeof Notification === 'undefined') return 'skipped'
+    if (Notification.permission !== 'granted') return 'skipped'
+  } catch {
+    return 'skipped'
+  }
+  return serial(async () => {
+    try {
+      // ready 를 기다리지 않는다 — 워커가 없으면 구독도 없다
+      const reg = await navigator.serviceWorker.getRegistration()
+      const sub = reg ? await reg.pushManager.getSubscription() : null
+      if (!sub) return 'no-sub'
+      const prefs = (await readPrefs()) as SavedPrefs | null
+      if (prefs?.p_endpoint === sub.endpoint && !placeChanged(prefs, place)) return 'same'
+      const j = sub.toJSON()
+      if (!j.endpoint || !j.keys?.p256dh || !j.keys?.auth) return 'skipped'
+      const body = {
+        p_endpoint: j.endpoint,
+        p_p256dh: j.keys.p256dh,
+        p_auth: j.keys.auth,
+        p_lat: place.lat,
+        p_lon: place.lon,
+        p_label: place.label.slice(0, 60),
+        p_night_time: savedSlot(prefs, 'p_night_time'),
+        p_morning_time: savedSlot(prefs, 'p_morning_time'),
+      }
+      // 보내기 직전에 한 번 더 — 다른 탭에서 방금 껐다면 되살리지 않는다
+      const still = await reg!.pushManager.getSubscription()
+      if (!still || still.endpoint !== sub.endpoint) return 'no-sub'
+      const res = await fetch(`${SB_URL}/rest/v1/rpc/weather_push_save`, {
+        method: 'POST',
+        headers: { apikey: SB_ANON, Authorization: `Bearer ${SB_ANON}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) return 'failed'
+      // 서비스워커가 구독을 새로 만들 때도 이 지역을 쓰게 (안 고치면 옛 지역이 되살아난다)
+      await savePrefs(body)
+      return 'updated'
+    } catch {
+      return 'failed'
+    }
+  })
 }
 
 /** 이 기기로 테스트 알림 한 통 (1분에 한 번). 실제로 도착하는지 사용자가 바로 확인할 수 있게 */
