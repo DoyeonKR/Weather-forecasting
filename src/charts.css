@@ -97,3 +97,7 @@
 .air-outlook li i { height: 10px; border-radius: 3px; }
 .air-outlook li b { white-space: normal; text-align: center; }
 .air-outlook li > span { font-size: 11px; text-align: center; }
+
+/* "비" 줄 — 막대 위 예상 강수량(3시간 합), 비가 멀면 "다음 비" 안내 (HourlyCard, lib/rainLane) */
+.hs-rainamt { fill: var(--chart-rain); font-size: 10px; font-weight: 700; text-anchor: middle; font-variant-numeric: tabular-nums; }
+.hs-rainnext { fill: var(--chart-rain); font-size: 11.5px; font-weight: 700; }
