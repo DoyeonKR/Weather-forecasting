@@ -9,11 +9,13 @@ import { iconTone, weatherIcon } from '../lib/weatherIcon'
 import { trackEvent } from '../lib/track'
 import DeltaPill from './DeltaPill'
 import { temperatureBands } from '../lib/chartBands'
-import { RAIN_MIN_MM, columnPrecip, mm, nextRain } from '../lib/rainLane'
+import { RAIN_MIN_MM, columnPrecip, laneNote, mm } from '../lib/rainLane'
 
 interface Props {
   wx: WeatherData
   embedded?: boolean
+  /** 기상청 실황 — 지금 비가 오는지(관측). 예보 양이 0이어도 관측이 비면 "지금 비"로 보여준다. 국외·실패면 null */
+  observed?: { raining: boolean; rn1: number | null; snow?: boolean } | null
 }
 
 const STEP_H = 3
@@ -41,7 +43,7 @@ function dayLabel(t: Date, today: Date): string {
   return md
 }
 
-export default function HourlyCard({ wx, embedded = false }: Props) {
+export default function HourlyCard({ wx, embedded = false, observed = null }: Props) {
   const rainId = `hourly-rain-${useId().replace(/:/g, '')}`
   const { time, temp, precip, code, prob: probAll } = wx.hourly
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -101,14 +103,19 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
   const tPrev = idx.map((i) => temp[i - 24])
   // 칸마다 그 시각부터 3시간 동안의 예상 강수량 (lib/rainLane)
   const pr = columnPrecip(precip, idx, STEP_H)
-  const anyRain = pr.some((p) => p >= RAIN_MIN_MM)
-  const next = nextRain(pr)
+  const anyRainAmount = pr.some((p) => p >= RAIN_MIN_MM)
   // 강수확률(%): 예전 캐시에는 없을 수 있다. 30% 미만은 잡음이라 안 보여준다.
   const prob = idx.map((i) => probAll?.[i] ?? null)
   const anyProb = prob.some((p) => p !== null && p >= 30)
+  // "비" 줄 앞쪽 안내: 지금 관측된 비 > 비 올 수 있어요(확률↑·양 0) > 다음 비 (lib/rainLane)
+  const note = laneNote(pr, prob, observed, FIRST_N, NEXT_NOTE_MIN_COLS)
+  // 양이 한 번도 없어도 지금 비가 오거나 올 수 있으면 "비" 줄을 보여준다
+  const anyRain = anyRainAmount || note !== null
   const dates = idx.map((i) => new Date(time[i]))
   const hours = dates.map((d) => d.getHours())
   const labels = idx.map((i) => codeLabel(code?.[i] ?? wx.nowCode).label)
+  // "지금" 칸 그림도 관측을 따른다 — 예보가 맑음이어도 지금 비가 오면 비 (위 날씨 카드와 같게)
+  if (observed?.raining) labels[0] = observed.snow ? '눈' : '비'
   const firstDay = dates[0]
   /** 새 날이 시작되는 칸 (첫 칸 포함) */
   const dayStarts = idx.map((_, k) => k === 0 || dates[k].getDate() !== dates[k - 1].getDate())
@@ -254,10 +261,14 @@ export default function HourlyCard({ wx, embedded = false }: Props) {
                 </g>
               )
             })}
-            {/* 비가 아직 멀면 빈 줄에 언제·얼마나 오는지 */}
-            {next && next.k >= NEXT_NOTE_MIN_COLS && (
+            {/* 빈 줄 앞쪽 안내 — 지금 비(관측) / 비 올 수 있어요(확률) / 다음 비(멀리) */}
+            {note && (
               <text x={8} y={rainTop + RAIN_H / 2 + 4} className="hs-rainnext">
-                {`다음 비 → ${dayLabel(dates[next.k], firstDay)} ${hours[next.k]}시쯤부터 약 ${mm(next.total)}`}
+                {note.kind === 'now'
+                  ? `지금 비 와요 · 기상청 관측${note.mm !== null ? ` (최근 1시간 ${mm(note.mm)})` : ''}`
+                  : note.kind === 'chance'
+                    ? `비 올 수 있어요 · 최대 ${note.prob}% (예보 양은 0.1mm 미만)`
+                    : `다음 비 → ${dayLabel(dates[note.k], firstDay)} ${hours[note.k]}시쯤부터 약 ${mm(note.total)}`}
               </text>
             )}
           </svg>
