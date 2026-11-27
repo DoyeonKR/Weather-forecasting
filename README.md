@@ -16,7 +16,8 @@
 - **출퇴근길·평년 비교**: 출근/퇴근 시각을 하루 전과, 오늘 기온을 최근 10년 이맘때와
 - **내 체감 보정**: "어제 어땠어요?" 답으로 옷차림 추천을 사람마다 조금씩 옮김 (기기에만 저장)
 - **공유 카드**: "어제보다 2° 추워요"를 그림으로 만들어 공유
-- **알림**: 아침 브리핑·내일 준비·비 시작 알림(선택), 기상특보 배너. 설정의 기본 지역 기준 (기본 지역을 바꾸면 알림도 따라감)
+- **알림**: 아침 브리핑·내일 준비·비 시작 알림(선택), 기상특보 배너. 설정의 기본 지역 기준 (기본 지역을 바꾸면 알림도 따라감).
+  안드로이드 앱은 웹 푸시를 못 받아 앱이 직접 아침 브리핑·밤 내일 준비를 띄운다 (비·미세먼지·폭염 조건 알림은 웹만)
 - **오늘 vs 어제**: 최고·최저 기온, 강수량, 강수확률을 어제 수치와 ▲▼ 배지로 나란히
 - **오늘의 실용 멘트**: 우산 챙기기, 옷차림, 자외선 지수(선크림) 등 상황별 조언 최대 3개
 - **비구름 레이더 (기상청 원본)**: 지도 위에 "곧 비가 올까?" 문장·색 범례·크게 보기를 얹고, OpenStreetMap 위에 기상청 레이더를 직접 오버레이.
@@ -122,6 +123,7 @@ src/
 │   ├── track.ts       # 익명 방문 집계
 │   ├── nativeWidget.ts # 안드로이드 앱 안에서만: 위젯에 동네 넘기기·위젯 추가 창·APK 주소
 │   ├── appUpdate.ts   # 안드로이드 앱 안에서만: 새 버전 확인(GitHub 릴리스)·설치 요청
+│   ├── appNotify.ts   # 안드로이드 앱 안에서만: 앱이 직접 띄우는 날씨 알림 켜기·끄기·지역/말투/시간 넘기기·테스트
 │   └── geo.ts         # geolocation + 역지오코딩
 ├── components/
 │   ├── RadarMap.tsx      # Leaflet 지도 + 실황/예측 타임라인 (지연 로드)
@@ -138,6 +140,7 @@ src/
 │   ├── CoupangBanner.tsx # 제휴 배너
 │   ├── PlaceBar.tsx      # 위치 칩 + 장소 검색
 │   ├── UpdateBanner.tsx  # 안드로이드 앱 새 버전 카드 (main.tsx 에서 App 바깥에 붙는다)
+│   ├── AppNotifySection.tsx # 설정 > 날씨 알림 — 안드로이드 앱 안에서만 (웹은 Settings 의 웹 푸시 칸)
 │   └── WhenVisible.tsx   # 화면에 들어올 때만 무거운 자식 마운트
 ├── App.tsx            # 화면 구성
 public/sw.js           # 서비스워커 (캐시 + 푸시 수신 + 구독 갱신)
@@ -161,14 +164,26 @@ android/app/src/
 │   ├── AppUpdate.java             # 앱 안 업데이트 (받기 → 확인 → 설치)
 │   ├── UpdateResultReceiver.java  # 설치 결과 (확인 창 띄우기, 실패 안내)
 │   ├── ExternalWindows.java       # "새 창" 링크(쿠팡 광고 등)를 쿠팡 앱·브라우저로 (웹뷰는 새 창을 못 연다)
+│   ├── AppNotify.java             # 앱 날씨 알림 플러그인 (웹 ↔ notify/)
+│   ├── notify/
+│   │   ├── Brief.java             # 알림 문구 — 서버 weather-push 의 morningMsg·nightMsg 를 옮긴 것 (BriefTest)
+│   │   ├── Slot.java              # 알림 시각 계산 (늦으면 건너뛰기·업데이트 뒤 따라잡기, SlotTest)
+│   │   ├── Forecast.java          # Open-Meteo 예보·미세먼지 받기 (서버 fetchDaily·fetchAirWorst 와 같은 항목)
+│   │   ├── NotifyScheduler.java   # 아침·밤 정확한 알람 + 3시간마다 예보 미리 받기
+│   │   ├── NotifyRunner.java      # 알람 → 예보(못 받으면 받아 둔 것) → 알림
+│   │   ├── NotifyAlarmReceiver.java · NotifyBootReceiver.java · NotifyRefreshWorker.java
+│   │   └── NotifyStore.java · Notifier.java · Lines.java · NotifyApi.java
 │   └── widget/
 │       ├── WeatherWidget.java     # 위젯 생명주기 (놓기·크기 변경·치우기)
 │       ├── WidgetStore.java       # 저장된 값으로 위젯 그리기, 크기별 판 고르기
 │       └── WidgetWorker.java      # 30분마다 Open-Meteo 에서 날씨 받기
 ├── main/res/layout/widget_weather_{compact,wide}.xml  # 좁은 판·넓은 판 (id 를 똑같이 맞춘다)
 ├── main/res/drawable/widget_bg_*.xml, ic_w_*.xml      # 날씨별 배경·아이콘
+├── main/res/raw/persona_lines.json  # 알림 말투 문구 — persona.ts 에서 생성 (손으로 고치지 않는다)
+├── test/java/.../notify/             # BriefTest·SlotTest (./gradlew testDebugUnitTest)
 └── debug/  # 디버그 빌드에만: 위젯 미리보기 화면, 업데이트 시험용 설정
 scripts/
+├── export-persona-lines.mjs   # persona.ts → 앱 알림 말투 문구 (test/persona-lines.test.mjs 가 어긋남을 잡는다)
 ├── android-release-notes.sh   # CHANGELOG → 릴리스 노트 (자동·손 릴리스 공통)
 ├── setup-release-secrets.sh   # 서명 키를 저장소 비밀값으로 한 번 등록 (키 있는 PC 에서)
 └── release-android.sh         # 손 릴리스 (Actions 를 못 쓸 때)
@@ -207,6 +222,8 @@ npm test         # 판단 로직 테스트
 | 웹 화면·문구·기능 (`src/`) | `main` 에 push (웹 배포) | 앱을 다시 열면 바로 반영 |
 | 위젯 (`android/.../widget`, `res/layout`, `res/drawable`) | `package.json` 버전 올리고 CHANGELOG 쓰고 main 에 머지 (APK 자동 릴리스) | 앱 안 업데이트 카드 → 설치 |
 | 네이티브 플러그인·권한·앱 이름·아이콘 | 위와 같음 | 앱 안 업데이트 카드 → 설치 |
+| 알림 문구·기준 (`weather-push` 의 `morningMsg`·`nightMsg`) | 서버(Supabase 배포)와 앱 `notify/Brief.java` 를 **같이** 고친다 → APK 릴리스 | 웹 알림은 바로, 앱 알림은 업데이트 뒤 |
+| 말투 문구 (`persona.ts`) | `node scripts/export-persona-lines.mjs` 로 앱 문구도 다시 만든다 (안 하면 테스트 실패) → APK 릴리스 | 위와 같음 |
 
 ### 버전 규칙
 
@@ -267,6 +284,24 @@ bash scripts/setup-release-secrets.sh
 
 이 경고까지 없애려면 Play 스토어에 올려야 한다 (개발자 계정 25달러·심사).
 
+### 앱 날씨 알림
+
+웹뷰(앱 화면)는 웹 푸시를 받지 못한다. 그래서 앱은 서버 푸시 대신 **휴대폰이 직접** 정해 둔 시각에 예보를 받아 알림을 띄운다.
+
+| 항목 | 내용 |
+|---|---|
+| 종류 | 아침 오늘 브리핑, 밤 내일 출근 준비(오늘과 크게 다를 때만). 비 시작·미세먼지·폭염 조건 알림은 아직 웹만 (서버의 기상청 키가 필요) |
+| 문구 | 서버 `morningMsg`·`nightMsg` 를 `notify/Brief.java` 로 옮김. 말투는 `persona.ts` 에서 만든 `res/raw/persona_lines.json` |
+| 기준 지역·말투 | 웹의 `pushPlace`(기본 지역)·말투를 `AppNotify.update` 로 넘긴다 — 위젯 지역(보고 있는 곳)과 다르다 |
+| 시각 | `USE_EXACT_ALARM`(13+)·`SCHEDULE_EXACT_ALARM`(12 이하)로 정확한 알람. 없으면 최대 1시간 늦는다 (에뮬레이터 확인) |
+| 절전·인터넷 | 3시간마다 예보를 받아 둔다. 알람 때 못 받으면 받아 둔 예보로, 그것도 없으면 15분 뒤 다시 (2시간 넘게 늦으면 그날은 건너뜀) |
+| 재부팅·업데이트 | `NotifyBootReceiver` 가 알람을 다시 건다 |
+| 권한 | 안드로이드 13+ 는 처음 켤 때 알림 허용을 묻는다. 거절하면 휴대폰 알림 설정으로 가는 버튼 |
+| 이전 앱 | 1.0.108 이하에는 플러그인이 없어 스위치가 꺼진 채 "앱을 업데이트하면 켤 수 있어요" |
+
+⚠ `USE_EXACT_ALARM` 은 Play 스토어에서는 알람·캘린더 앱만 쓸 수 있다. 스토어에 올리게 되면 이 권한을 빼고
+FCM(서버 푸시)으로 옮길지 다시 정한다 (Firebase 프로젝트·Supabase 배포 필요).
+
 ### 빌드·확인 (개발 PC)
 
 ```bash
@@ -282,6 +317,10 @@ cd android && sh ./gradlew assembleDebug   # app/build/outputs/apk/debug/app-deb
   adb shell am start -n com.doyeonkr.weather/.widget.WidgetPreviewActivity --es page a   # a·b·c
   ```
   `--es seed winter` 로 가짜 날씨를 저장하고 `--ez pin true` 로 위젯 추가 창을 띄워 홈 화면에서도 볼 수 있다.
+- 앱 알림 시험 (디버그 빌드만): `adb shell setprop debug.eojeboda.meteo http://localhost:8765/meteo` 로 예보를
+  `forecast.json`·`air.json` 고정 파일에서 받게 한다 (`adb reverse tcp:8765 tcp:8765`). 알림 시각을 몇 분 뒤로 잡고
+  `adb shell dumpsys deviceidle force-idle` 로 절전 중에도 오는지, `dumpsys alarm | grep NOTIFY_ALARM` 으로 알람이 걸렸는지 본다.
+  네이티브 단위 테스트: `cd android && ./gradlew testDebugUnitTest`
 - 앱 안 업데이트 시험: 개발 서버를 `VITE_RELEASES_API=<가짜 릴리스 JSON 주소> npm run dev` 로 띄우고,
   디버그 앱에서 `adb shell setprop debug.eojeboda.update_url <APK 주소>` 로 받는 곳을 바꾼다.
   둘 다 배포본(웹 빌드·릴리스 APK)에서는 동작하지 않는다.

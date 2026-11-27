@@ -39,6 +39,7 @@ import { todayAhead, yesterdaySameWindow } from './lib/ahead'
 import { buildGlance } from './lib/glance'
 import { getPushAlerts, readPersonaSync, syncNotifyPlace } from './lib/push'
 import { notifyPlace, type NotifyPlace } from './lib/notifyPlace'
+import { syncAppNotify } from './lib/appNotify'
 import { useVoice } from './lib/useVoice'
 import type { Persona } from '../supabase/functions/_shared/persona.ts'
 import { buildSummary, type SummaryTarget } from './lib/summary'
@@ -161,6 +162,10 @@ export default function App() {
   const [feel, setFeel] = useState(loadFeel)
   // 앱 전체 말투 (서버 저장은 설정 화면에서, 화면 적용은 useVoice)
   const [persona, setPersona] = useState<Persona>(readPersonaSync)
+  // 안드로이드 앱: 앱이 직접 만드는 알림도 같은 기준 지역·말투로 (켜져 있으면 알람도 다시 건다)
+  useEffect(() => {
+    syncAppNotify(pushPlace, persona)
+  }, [pushPlace, persona])
   useEffect(() => {
     getPushAlerts().then((a) => {
       setPersona(a.persona)

@@ -132,9 +132,9 @@ jobs:
           } > android/keystore.properties
 
       - if: steps.plan.outputs.build == 'true'
-        name: APK 빌드
+        name: APK 빌드 (네이티브 단위 테스트 포함 — 알림 문구·시각)
         working-directory: android
-        run: bash ./gradlew assembleRelease --no-daemon
+        run: bash ./gradlew testDebugUnitTest assembleRelease --no-daemon
 
       - if: steps.plan.outputs.release == 'true'
         name: 서명·버전 확인 (지난 릴리스와 같은 키, 더 큰 버전)
