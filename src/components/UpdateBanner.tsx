@@ -22,13 +22,18 @@ export default function UpdateBanner() {
 
   useEffect(() => {
     let alive = true
+    const check = () => checkForUpdate().then((l) => alive && setLatest(l))
     // 첫 화면을 그리는 데 방해되지 않게 조금 뒤에 묻는다
-    const t = window.setTimeout(() => {
-      checkForUpdate().then((l) => alive && setLatest(l))
-    }, 2500)
+    const t = window.setTimeout(check, 2500)
+    // 앱을 뒤에 둔 채 쓰는 사람은 "처음 열 때"가 드물다 — 앱으로 돌아올 때마다 다시 본다 (10분 안이면 저장해 둔 결과)
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') check()
+    }
+    document.addEventListener('visibilitychange', onVisible)
     return () => {
       alive = false
       window.clearTimeout(t)
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [])
 

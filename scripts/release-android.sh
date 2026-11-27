@@ -38,4 +38,4 @@ gh release create "$TAG" "$OUT/$APK_NAME" \
   --title "무능한 날씨예측기 안드로이드 앱 v$VERSION" \
   --notes-file "$OUT/notes.md" \
   --latest
-echo "✔ $TAG 릴리스 완료 — 앱 안 알림은 최대 6시간 안에 뜬다 (앱마다 6시간에 한 번 확인)"
+echo "✔ $TAG 릴리스 완료 — 앱 안 카드는 앱을 열거나 돌아올 때 뜬다 (확인 결과 10분 저장)"

@@ -14,7 +14,19 @@ const APK_NAME = 'eojeboda-weather.apk'
 export const LEGACY_APP_VERSION = '1.0.106'
 const CACHE_KEY = 'eojeboda.update.latest'
 const DISMISS_KEY = 'eojeboda.update.dismissed'
-const CACHE_MS = 6 * 60 * 60 * 1000 // GitHub API 는 IP 당 시간 60번 제한 — 6시간에 한 번만 묻는다
+// 확인 결과를 얼마나 믿을까. 예전 6시간은 너무 길었다 — 하루에 두 번 릴리스하면(1.0.110 → 1.0.112, 5시간 간격)
+// 먼저 확인해 둔 기기에는 새 카드가 몇 시간 동안 안 떴다(2026-11-27 제보).
+// GitHub API 는 IP 당 시간 60번 — 한 기기가 10분에 한 번이면 시간 6번이라 넉넉하다.
+const CACHE_MS = 10 * 60 * 1000
+// "새 버전 없음"은 더 짧게 — 릴리스를 막 만들고 APK 를 붙이기 직전 몇 초에 물으면 없음으로 보이기 때문
+const NONE_CACHE_MS = 2 * 60 * 1000
+
+/** 저장해 둔 확인 결과를 아직 써도 되나 (새 버전 있음 10분, 없음 2분) */
+export function cacheFresh(cached: { at: number; latest: Latest | null } | null, now: number): boolean {
+  if (!cached || typeof cached.at !== 'number') return false
+  const age = now - cached.at
+  return age >= 0 && age < (cached.latest ? CACHE_MS : NONE_CACHE_MS)
+}
 
 /** "1.0.108" · "v1.0.108" · "android-v1.0.108" → [1, 0, 108]. 형식이 아니면 null */
 export function parseVersion(v: string): number[] | null {
@@ -104,7 +116,7 @@ function readJson<T>(key: string): T | null {
 
 async function fetchLatest(): Promise<Latest | null> {
   const cached = readJson<{ at: number; latest: Latest | null }>(CACHE_KEY)
-  if (cached && Date.now() - cached.at < CACHE_MS) return cached.latest
+  if (cached && cacheFresh(cached, Date.now())) return cached.latest
   try {
     const res = await fetch(RELEASES_API, { headers: { Accept: 'application/vnd.github+json' }, cache: 'no-store' })
     if (!res.ok) return cached?.latest ?? null
