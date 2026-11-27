@@ -68,8 +68,8 @@ public class WidgetWorker extends Worker {
             return Result.success();
         }
         String q = String.format(Locale.US,
-            "/v1/forecast?latitude=%.4f&longitude=%.4f&timezone=auto&past_days=1&forecast_days=1"
-                + "&current=temperature_2m,weather_code,is_day&hourly=temperature_2m"
+            "/v1/forecast?latitude=%.4f&longitude=%.4f&timezone=auto&past_days=1&forecast_days=2"
+                + "&current=temperature_2m,weather_code,is_day&hourly=temperature_2m,precipitation"
                 + "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max",
             WidgetStore.lat(c), WidgetStore.lon(c));
         for (String host : HOSTS) {
@@ -84,12 +84,20 @@ public class WidgetWorker extends Worker {
                 JSONArray hourly = j.getJSONObject("hourly").getJSONArray("temperature_2m");
                 double delta = hourly.isNull(hour) ? 0 : temp - hourly.getDouble(hour);
                 JSONObject daily = j.getJSONObject("daily");
-                int today = daily.getJSONArray("temperature_2m_max").length() - 1;
+                // daily 는 [어제, 오늘, 내일] (past_days=1, forecast_days=2) — 오늘은 1 번
+                int today = 1;
                 double hi = daily.getJSONArray("temperature_2m_max").getDouble(today);
                 double lo = daily.getJSONArray("temperature_2m_min").getDouble(today);
                 JSONArray pr = daily.getJSONArray("precipitation_probability_max");
                 int rain = pr.isNull(today) ? -1 : pr.getInt(today);
-                WidgetStore.saveWeather(c, temp, code, day, hi, lo, rain, delta);
+                // 다음 비: 지금부터 24시간 안 — hourly 는 어제 0시부터라 지금은 24 + hour 번째 칸
+                JSONArray hp = j.getJSONObject("hourly").getJSONArray("precipitation");
+                double[] precip = new double[hp.length()];
+                for (int k = 0; k < precip.length; k++) precip[k] = hp.isNull(k) ? 0 : hp.getDouble(k);
+                int after = WidgetRain.hoursUntil(precip, 24 + hour);
+                long hourStart = System.currentTimeMillis() / 3_600_000L * 3_600_000L; // 지금 시각의 정각 (분·초 버림)
+                long rainAt = after < 0 ? 0 : hourStart + after * 3_600_000L;
+                WidgetStore.saveWeather(c, temp, code, day, hi, lo, rain, delta, rainAt);
                 WidgetStore.renderAll(c);
                 return Result.success();
             } catch (Exception ignored) {

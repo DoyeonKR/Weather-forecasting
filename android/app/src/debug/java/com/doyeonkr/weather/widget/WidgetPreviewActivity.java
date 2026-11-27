@@ -17,6 +17,7 @@ import com.doyeonkr.weather.widget.WidgetStore.Snapshot;
  * 날씨 값을 일부러 나쁜 경우(-12°, 긴 동네 이름, 빈 화면)로 넣어 글이 잘리는지 본다.
  *   adb shell am start -n com.doyeonkr.weather/.widget.WidgetPreviewActivity --es page a|b|c
  * 진짜 홈 화면에서 크기별 판 바뀜을 볼 때: --es seed winter|today (저장소에 가짜 날씨) · --ez pin true (위젯 추가 창)
+ * 앱 조건 알림을 지금 한 번 돌릴 때: --ez conditions true (한 시간마다 도는 일을 기다리지 않고)
  */
 public class WidgetPreviewActivity extends Activity {
     private LinearLayout col;
@@ -28,12 +29,17 @@ public class WidgetPreviewActivity extends Activity {
         if (seed != null) {
             boolean w = seed.equals("winter");
             WidgetStore.savePlace(this, 37.27, 127.0, w ? "서울특별시 강남구 역삼동" : "수원시 매산로1가");
-            WidgetStore.saveWeather(this, w ? -12 : 6, w ? 3 : 1, true, w ? -8 : 14, w ? -15 : 3, w ? 80 : 0, w ? -6.3 : 9);
+            long hour = System.currentTimeMillis() / 3_600_000L * 3_600_000L;
+            WidgetStore.saveWeather(this, w ? -12 : 6, w ? 3 : 1, true, w ? -8 : 14, w ? -15 : 3, w ? 80 : 0, w ? -6.3 : 9, w ? hour + 3 * 3_600_000L : 0);
             WidgetStore.renderAll(this);
         }
         if (getIntent().getBooleanExtra("pin", false) && android.os.Build.VERSION.SDK_INT >= 26) {
             android.appwidget.AppWidgetManager m = getSystemService(android.appwidget.AppWidgetManager.class);
             m.requestPinAppWidget(new android.content.ComponentName(this, WeatherWidget.class), null, null);
+        }
+        if (getIntent().getBooleanExtra("conditions", false)) {
+            android.content.Context app = getApplicationContext();
+            new Thread(() -> com.doyeonkr.weather.notify.NotifyConditionWorker.run(app, System.currentTimeMillis())).start();
         }
         String page = getIntent().getStringExtra("page");
         if (page == null) page = "a";
@@ -47,6 +53,12 @@ public class WidgetPreviewActivity extends Activity {
 
         Snapshot today = snap("수원시 매산로1가", 6, 1, true, 14, 3, 9, 0);
         Snapshot winter = snap("서울특별시 강남구 역삼동", -12, 3, true, -8, -15, -6.3, 80);
+        // 다음 비가 가장 긴 글자("내일 23시 비")일 때 — 내일 같은 시각 + 하루 끝쪽
+        java.util.Calendar tm = java.util.Calendar.getInstance();
+        tm.add(java.util.Calendar.DAY_OF_MONTH, 1);
+        tm.set(java.util.Calendar.HOUR_OF_DAY, 23);
+        tm.set(java.util.Calendar.MINUTE, 0);
+        winter.rainAt = Math.min(tm.getTimeInMillis(), System.currentTimeMillis() + 23 * 3_600_000L);
         switch (page) {
             case "a":
                 row("오늘 값 · 160×185 / 240×185", today, 160, 185, today, 240, 185);

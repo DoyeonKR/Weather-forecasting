@@ -74,6 +74,71 @@ final class Forecast {
             d.getJSONArray("uv_index_max").isNull(i) ? 0 : d.getJSONArray("uv_index_max").getDouble(i));
     }
 
+    /** 15분 강수 예보 (웹 lib/rainSoon.ts 와 같은 요청 + 눈 여부). 실패하면 null */
+    static final class Minutely {
+        final long[] times;
+        final double[] precip, snowfall;
+
+        Minutely(long[] t, double[] p, double[] s) {
+            times = t;
+            precip = p;
+            snowfall = s;
+        }
+    }
+
+    static Minutely minutely(Context c, double lat, double lon, int timeoutMs) {
+        String q = String.format(Locale.US,
+            "/v1/forecast?latitude=%.4f&longitude=%.4f&minutely_15=precipitation,snowfall&past_minutely_15=2&forecast_minutely_15=8&timeformat=unixtime&timezone=auto",
+            lat, lon);
+        String debug = debugBase(c);
+        String body = null;
+        if (debug != null) body = get(debug + "/minutely.json", timeoutMs);
+        else for (String h : HOSTS) {
+            body = get("https://" + h + q, timeoutMs);
+            if (body != null && body.contains("minutely_15")) break;
+        }
+        if (body == null) return null;
+        try {
+            JSONObject m = new JSONObject(body).getJSONObject("minutely_15");
+            JSONArray t = m.getJSONArray("time"), p = m.getJSONArray("precipitation");
+            JSONArray sn = m.optJSONArray("snowfall");
+            int n = Math.min(t.length(), p.length());
+            long[] times = new long[n];
+            double[] precip = new double[n], snow = new double[n];
+            for (int i = 0; i < n; i++) {
+                times[i] = t.getLong(i);
+                precip[i] = p.isNull(i) ? 0 : p.getDouble(i);
+                snow[i] = sn == null || i >= sn.length() || sn.isNull(i) ? 0 : sn.getDouble(i);
+            }
+            return new Minutely(times, precip, snow);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** 지금 시각 미세먼지 등급 0~3 (서버 fetchAirNow). 실패하면 null */
+    static Integer airNow(Context c, double lat, double lon, int timeoutMs) {
+        try {
+            String debug = debugBase(c);
+            String url = debug != null ? debug + "/air.json" : String.format(Locale.US,
+                "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%.4f&longitude=%.4f&timezone=auto&forecast_days=1&hourly=pm10,pm2_5",
+                lat, lon);
+            String body = get(url, timeoutMs);
+            if (body == null) return null;
+            JSONObject j = new JSONObject(body);
+            int off = j.optInt("utc_offset_seconds", 9 * 3600);
+            java.util.Calendar cal = java.util.Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+            cal.setTimeInMillis(System.currentTimeMillis() + off * 1000L);
+            int i = cal.get(java.util.Calendar.HOUR_OF_DAY);
+            JSONObject h = j.getJSONObject("hourly");
+            JSONArray pm10 = h.getJSONArray("pm10"), pm25 = h.getJSONArray("pm2_5");
+            if (i >= pm10.length() || i >= pm25.length() || pm10.isNull(i) || pm25.isNull(i)) return null;
+            return Conditions.airGrade(pm10.getDouble(i), pm25.getDouble(i));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     /** 오늘 낮(9~21시) 미세먼지 최악 등급 0~3 (서버 fetchAirWorst). 실패하면 null */
     static Integer airWorst(Context c, double lat, double lon, int timeoutMs) {
         try {

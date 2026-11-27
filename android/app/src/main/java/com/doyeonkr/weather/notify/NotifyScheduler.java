@@ -26,6 +26,7 @@ public final class NotifyScheduler {
     static final String ACTION = "com.doyeonkr.weather.NOTIFY_ALARM";
     static final String EXTRA_MODE = "mode";
     private static final String REFRESH = "weather-notify-refresh";
+    private static final String CONDITIONS = "weather-notify-conditions";
 
     private NotifyScheduler() {}
 
@@ -41,6 +42,15 @@ public final class NotifyScheduler {
             .setConstraints(new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .build();
         WorkManager.getInstance(c).enqueueUniquePeriodicWork(REFRESH, ExistingPeriodicWorkPolicy.KEEP, req);
+        // 조건 알림(비 시작·미세먼지·폭염/한파) — 하나라도 켜져 있을 때만 한 시간쯤마다
+        if (NotifyStore.anyAlert(c)) {
+            PeriodicWorkRequest cond = new PeriodicWorkRequest.Builder(NotifyConditionWorker.class, 1, TimeUnit.HOURS)
+                .setConstraints(new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+                .build();
+            WorkManager.getInstance(c).enqueueUniquePeriodicWork(CONDITIONS, ExistingPeriodicWorkPolicy.KEEP, cond);
+        } else {
+            WorkManager.getInstance(c).cancelUniqueWork(CONDITIONS);
+        }
     }
 
     static void schedule(Context c, String mode) {
@@ -77,6 +87,7 @@ public final class NotifyScheduler {
             am.cancel(pending(c, "night"));
         }
         WorkManager.getInstance(c).cancelUniqueWork(REFRESH);
+        WorkManager.getInstance(c).cancelUniqueWork(CONDITIONS);
     }
 
     private static PendingIntent pending(Context c, String mode) {

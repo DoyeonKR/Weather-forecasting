@@ -87,4 +87,6 @@
          ⚠ USE_EXACT_ALARM 은 Play 스토어에서는 알람·캘린더 앱만 허용 — 스토어에 올릴 때는 다시 판단 (지금은 APK 직접 배포) -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- 앱 알림: 배터리 최적화에서 빼 달라고 물을 때 (사용자가 누를 때만, Play 스토어라면 다시 판단) -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 </manifest>
