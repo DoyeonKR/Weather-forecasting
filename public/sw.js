@@ -202,8 +202,11 @@ self.addEventListener('fetch', (e) => {
     )
     return
   }
+  // 페이지(HTML)는 늘 서버에 확인한다 — GitHub Pages 가 max-age=600 이라 그냥 받으면 배포 뒤 10분 동안 예전
+  // 페이지(=예전 코드)를 썼다. 바뀌지 않았으면 304 만 오므로 가볍다. 오프라인이면 아래 catch 로 캐시를 쓴다.
+  const isPage = request.mode === 'navigate' || request.destination === 'document'
   e.respondWith(
-    fetch(request)
+    fetch(request, isPage ? { cache: 'no-cache' } : undefined)
       .then((res) => {
         // 성공한 동일 출처 응답만 캐시에 넣는다 (404·리디렉션·공용 와이파이 로그인 페이지 방지)
         if (res.ok && res.type === 'basic' && !res.redirected) {

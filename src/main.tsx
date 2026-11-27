@@ -5,9 +5,12 @@ import { RootBoundary } from './components/ErrorBoundary.tsx'
 import UpdateBanner from './components/UpdateBanner.tsx'
 import { trackVisit } from './lib/track.ts'
 import { captureInstallPrompt } from './lib/install.ts'
+import { watchFreshWeb } from './lib/freshWeb.ts'
 
 trackVisit()
 captureInstallPrompt()
+// 새로 배포된 웹이 있으면 다시 불러온다 (앱은 뒤로 보냈다 열어도 예전 코드를 계속 쓴다)
+watchFreshWeb()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
