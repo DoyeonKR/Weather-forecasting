@@ -204,9 +204,6 @@ npm run typecheck # 타입 체크 (tsc -b, 루트 tsconfig 는 files:[] 라 --no
 npm test         # 판단 로직 테스트
 ```
 
-`npm test` 는 `node --test test/` 로 폴더를 넘기는데, 일부 Node 버전은 폴더를 못 읽는다.
-그럴 때는 `node --test test/*.mjs`.
-
 ## 배포
 
 `main` 브랜치에 push하면 GitHub Actions(`.github/workflows/deploy-pages.yml`)가

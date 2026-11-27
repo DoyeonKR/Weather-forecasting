@@ -8,6 +8,7 @@ import { trackEvent } from '../lib/track'
 import { enableNotify, getNotifyState, type NotifyState } from '../lib/push'
 import { FALLBACK_NOTIFY_PLACE, notifyPlaceName, type NotifyPlace } from '../lib/notifyPlace'
 import { installHint, promptInstall, type InstallHint } from '../lib/install'
+import { appNotifyEnable, appNotifyInfo, canAppNotify } from '../lib/appNotify'
 
 /** 설정 화면과 같은 저장값 (Settings.tsx 의 NIGHT_KEY·MORNING_KEY) */
 function savedTime(key: string, fallback: string): string {
@@ -22,8 +23,9 @@ function savedTime(key: string, fallback: string): string {
 const NEVER_KEY = 'eojeboda.settingsNudge.never'
 const SESSION_KEY = 'eojeboda.settingsNudge.shown'
 
-// 앱(APK) 안에서는 푸시 알림 대신 홈 화면 위젯을 소개한다
+// 앱(APK) 안에서는 웹 푸시 대신 앱 알림(1.0.110+)·홈 화면 위젯을 소개한다
 const WIDGET_FEATURE = { Icon: House, title: '홈 화면 위젯', desc: '앱을 열지 않아도 지금 기온·어제와 차이' }
+const APP_NOTIFY_FEATURE = { Icon: Bell, title: '날씨 알림', desc: '아침 오늘 브리핑, 밤 내일 출근 준비' }
 
 const FEATURES = [
   { Icon: Bell, title: '푸시 알림', desc: '아침·밤 브리핑, 비·미세먼지 알림' },
@@ -47,9 +49,12 @@ function shouldShow(): boolean {
 export default function SettingsNudge({
   onOpenSettings,
   notifyPlace,
+  persona,
   onNotifyChange,
 }: {
   onOpenSettings: () => void
+  /** 앱 알림을 여기서 켤 때 넘길 말투 */
+  persona: string
   /** 알림 기준 지역 = 기본 지역 (lib/notifyPlace). null 이면 아직 위치를 몰라 서울 기본 위치 */
   notifyPlace: NotifyPlace | null
   /** 여기서 알림을 켜면 설정 화면도 새 상태를 읽게 */
@@ -64,6 +69,13 @@ export default function SettingsNudge({
   useEffect(() => {
     if (open) getNotifyState().then(setNotify)
   }, [open])
+  // 앱(1.0.110+): 웹 푸시 대신 앱이 직접 띄우는 알림 — 꺼져 있으면 여기서 바로 켠다
+  const [appNotify] = useState(canAppNotify)
+  const [appOn, setAppOn] = useState<boolean | null>(null)
+  useEffect(() => {
+    if (open && appNotify) appNotifyInfo().then((i) => setAppOn(i ? i.enabled && i.allowed : null))
+  }, [open, appNotify])
+  const appQuick = appNotify && appOn === false
   // 몇 명에게 보였는지 알아야 버튼을 누른 비율을 셀 수 있다
   const [shown] = useState(open)
   useEffect(() => {
@@ -115,7 +127,12 @@ export default function SettingsNudge({
         <h2 id="nudge-title" className="nudge-title">설정, 꼭 한 번 봐주세요!</h2>
         <p className="nudge-lead">내 입맛대로 바꾸는 기능이 설정에 다 있어요</p>
         <ul className="nudge-list">
-          {(isNativeApp() ? [WIDGET_FEATURE, ...FEATURES.slice(1)] : FEATURES).map(({ Icon, title, desc }) => (
+          {(appNotify
+            ? [APP_NOTIFY_FEATURE, WIDGET_FEATURE, ...FEATURES.slice(1, 3)]
+            : isNativeApp()
+              ? [WIDGET_FEATURE, ...FEATURES.slice(1)]
+              : FEATURES
+          ).map(({ Icon, title, desc }) => (
             <li key={title}>
               <span className="nudge-icon"><Icon size={20} weight="duotone" aria-hidden /></span>
               <span className="nudge-copy">
@@ -162,6 +179,46 @@ export default function SettingsNudge({
             </p>
           </div>
         )}
+        {appQuick && (
+          <div className="nudge-quick">
+            <button
+              type="button"
+              className="nudge-go"
+              disabled={busy}
+              onClick={async () => {
+                // 안드로이드 13+ 알림 허용 창은 이 버튼을 눌렀을 때만 (설정 화면과 같은 값으로 켠다)
+                setBusy(true)
+                const place = notifyPlace ?? FALLBACK_NOTIFY_PLACE
+                const r = await appNotifyEnable({
+                  lat: place.lat,
+                  lon: place.lon,
+                  label: place.label,
+                  persona,
+                  morning: savedTime('eojeboda:morningtime', '0730'),
+                  night: savedTime('eojeboda:nighttime', '2130'),
+                })
+                setBusy(false)
+                trackEvent('nudge_notify', { result: r, via: 'app' })
+                if (r === 'on') {
+                  trackEvent('notify_on', { source: 'popup-app' })
+                  setAppOn(true)
+                  onNotifyChange()
+                  setResult('알림을 켰어요! 아침엔 오늘 브리핑, 밤엔 내일 출근 준비가 와요.')
+                } else if (r === 'denied' || r === 'blocked') {
+                  setResult('알림이 막혀 있어요. 설정 > 날씨 알림에서 휴대폰 알림 설정을 열어 허용해 주세요.')
+                } else {
+                  setResult('알림을 켜지 못했어요. 잠시 뒤 설정에서 다시 시도해 주세요.')
+                }
+              }}
+            >
+              <Bell size={20} weight="bold" aria-hidden /> {busy ? '켜는 중…' : '알림 바로 켜기'}
+            </button>
+            <p className="nudge-note">
+              아침·밤 브리핑 · {notifyPlaceName(notifyPlace)} 기준
+              {notifyPlace ? '' : ' (위치를 허용하거나 기본 지역을 정하면 내 동네로 바뀌어요)'}
+            </p>
+          </div>
+        )}
         {notify === 'needs-install' && (
           <p className="nudge-steps">
             <DeviceMobile size={18} weight="duotone" aria-hidden /> 아이폰은 <b>공유 버튼 → 홈 화면에 추가</b> 후 홈 화면 앱에서 알림을 켤 수 있어요.
@@ -183,7 +240,7 @@ export default function SettingsNudge({
         {result && <p className="nudge-result" role="status">{result}</p>}
         <button
           type="button"
-          className={notify === 'off' ? 'nudge-secondary' : 'nudge-go'}
+          className={notify === 'off' || appQuick ? 'nudge-secondary' : 'nudge-go'}
           onClick={() => {
             trackEvent('nudge_go')
             setOpen(false)

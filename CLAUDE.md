@@ -39,8 +39,7 @@
 ## 확인 명령
 
 ```bash
-npx tsc -b && npx eslint . && npx vite build
-node --test test/*.mjs        # npm test 가 폴더를 못 읽는 Node 에서
+npx tsc -b && npx eslint . && npx vite build && npm test
 ```
 
 판단 로직(`src/lib/*.ts`)을 바꾸면 `test/` 에 테스트를 더한다.
