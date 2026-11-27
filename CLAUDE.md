@@ -30,6 +30,11 @@
 - 위젯 레이아웃 `widget_weather_compact.xml` 과 `widget_weather_wide.xml` 은 id 를 똑같이 맞춘다 (`WidgetStore` 가 같은 id 로 채운다. 하나에만 있으면 위젯이 "불러올 수 없음"으로 깨진다).
 - 위젯을 바꾸면 디버그 미리보기(`WidgetPreviewActivity`, README 참고)로 나쁜 값(-12°, 긴 동네 이름, 빈 화면, 글자 1.3배)과 작은 크기에서 잘리지 않는지 본다.
 - `AppUpdate` 는 받는 주소를 앱에 고정한다. 웹에서 주소를 넘겨받게 바꾸지 않는다.
+- 알림 문구·기준은 두 곳에 있다: 서버 `supabase/functions/weather-push`(웹 푸시)와 앱 `android/.../notify/Brief.java`(앱 알림). 하나를 바꾸면 다른 하나도 같이 바꾸고 `BriefTest` 를 고친다.
+  서버 함수는 이 저장소에서 배포되지 않는다 (Supabase 배포는 사용자가 따로) — 바꿨으면 배포가 필요하다고 알린다.
+- `persona.ts` 를 바꾸면 `node scripts/export-persona-lines.mjs` 로 `res/raw/persona_lines.json` 을 다시 만든다 (`test/persona-lines.test.mjs` 가 잡는다).
+- 앱 알림 기준 지역은 웹의 `pushPlace`(기본 지역). 위젯 지역(`WidgetBridge.setPlace`, 보고 있는 곳)을 알림에 쓰지 않는다.
+- `USE_EXACT_ALARM` 은 APK 직접 배포라서 쓴다. Play 스토어에 올리는 작업이면 먼저 이 권한 문제를 사용자에게 알린다.
 
 ## 확인 명령
 

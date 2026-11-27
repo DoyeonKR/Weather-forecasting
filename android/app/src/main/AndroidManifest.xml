@@ -39,6 +39,23 @@
             android:name=".UpdateResultReceiver"
             android:exported="false" />
 
+        <!-- 앱 날씨 알림: 아침·밤 알람 (내보내지 않는다 — 우리 알람만) -->
+        <receiver
+            android:name=".notify.NotifyAlarmReceiver"
+            android:exported="false" />
+
+        <!-- 재부팅·앱 업데이트·시간대 변경 뒤 알람 다시 걸기 -->
+        <receiver
+            android:name=".notify.NotifyBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+            </intent-filter>
+        </receiver>
+
         <!-- 홈 화면 날씨 위젯 -->
         <receiver
             android:name=".widget.WeatherWidget"
@@ -62,4 +79,12 @@
     <!-- 앱 안에서 새 버전 APK 설치 (처음 한 번 사용자가 허용) · 12+ 에서 확인 없이 업데이트 -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
+    <!-- 앱 날씨 알림: 알림 띄우기(13+ 는 처음 켤 때 묻는다) · 재부팅 뒤 알람 다시 걸기 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- 정해 둔 시각에 알림 — 없으면 안드로이드가 최대 1시간까지 미룬다(에뮬레이터 window=+1h 확인).
+         12 이하는 SCHEDULE_EXACT_ALARM(기본 허용), 13+ 는 USE_EXACT_ALARM(설치 때 자동 허용).
+         ⚠ USE_EXACT_ALARM 은 Play 스토어에서는 알람·캘린더 앱만 허용 — 스토어에 올릴 때는 다시 판단 (지금은 APK 직접 배포) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 </manifest>

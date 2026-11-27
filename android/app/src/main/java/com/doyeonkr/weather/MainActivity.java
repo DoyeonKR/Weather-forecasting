@@ -9,6 +9,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(WidgetBridge.class); // 앱 안 플러그인은 super.onCreate 전에 등록해야 웹에서 보인다
         registerPlugin(AppUpdate.class);
+        registerPlugin(AppNotify.class);
         super.onCreate(savedInstanceState);
         ExternalWindows.install(getBridge()); // 쿠팡 광고 등 "새 창" 링크를 쿠팡 앱·브라우저로
     }

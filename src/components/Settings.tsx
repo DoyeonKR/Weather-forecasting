@@ -19,6 +19,7 @@ import {
 } from '../lib/push'
 import type { Place } from '../lib/places'
 import { FALLBACK_NOTIFY_PLACE, notifyPlaceName, type NotifyPlace } from '../lib/notifyPlace'
+import AppNotifySection from './AppNotifySection'
 import { DEFAULT_ORDER, SECTION_LABEL, type SectionKey } from '../lib/sections'
 import { PERSONAS, say, type Persona } from '../../supabase/functions/_shared/persona.ts'
 import { DETAIL_KEYS, moveDetailSection } from '../lib/journal'
@@ -408,9 +409,14 @@ export default function Settings({
             )}
 
             <div className="settings-sec">
+              <h3 className="settings-sec-title"><Bell size={19} weight="duotone" aria-hidden /> 날씨 알림</h3>
+              {/* 앱(APK) 안: 웹뷰는 웹 푸시를 못 받는다 → 앱이 직접 알림 (AppNotifySection). 웹: 웹 푸시 */}
+              {native ? (
+                <AppNotifySection notifyPlace={notifyPlace} persona={persona} open={open} />
+              ) : (
+              <>
               <div className="notify-row">
                 <div>
-                  <h3 className="settings-sec-title"><Bell size={19} weight="duotone" aria-hidden /> 날씨 알림</h3>
                   <p className="muted small notify-desc">
                     아침엔 오늘 날씨 브리핑, 밤엔 내일이 오늘과 크게 다를 때 출근 준비물을
                     알려드려요. 시간은 아래에서 선택하세요.
@@ -420,11 +426,7 @@ export default function Settings({
                     {inApp && (notify === 'unsupported' || notify === 'needs-install')
                       ? ` ${inApp.name} 안에서는 알림을 받을 수 없어요. 기본 브라우저(크롬·사파리)에서 열어주세요.`
                       : ''}
-                    {!inApp && notify === 'unsupported'
-                      ? native
-                        ? ' 앱에서는 아직 알림을 받을 수 없어요. 알림은 크롬에서 사이트를 열어 켜 주세요.'
-                        : ' 이 브라우저에서는 지원되지 않아요.'
-                      : ''}
+                    {!inApp && notify === 'unsupported' ? ' 이 브라우저에서는 지원되지 않아요.' : ''}
                     {notify === 'blocked'
                       ? ' 브라우저에서 이 사이트의 알림을 차단해 뒀어요. 주소창 옆 자물쇠에서 알림을 허용으로 바꿔주세요.'
                       : ''}
@@ -467,7 +469,7 @@ export default function Settings({
                   {notice}
                 </p>
               )}
-              {/* 앱(APK) 안에서는 웹 푸시가 안 된다 — 시간·알림 종류는 숨긴다 */}
+              {/* 앱(APK) 안은 위 AppNotifySection 이 맡는다 */}
               {!native && (
               <>
               <div className="night-row">
@@ -564,6 +566,8 @@ export default function Settings({
                   <span className="notify-knob" />
                 </button>
               </div>
+              </>
+              )}
               </>
               )}
               <div className="persona-sec">
